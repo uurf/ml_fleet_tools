@@ -1,19 +1,28 @@
-Place adbkey.pub files here to pre-authorize additional machines.
+# authorized_keys/
 
-Each laptop/workstation used for KAGAMI fleet management should have
-its ADB public key in this folder so all devices trust all machines
-without ever showing the "Allow USB debugging" dialog.
+This folder contains ADB public keys for machines authorized to connect
+to fleet devices.
 
-To get the public key from any machine:
-  macOS/Linux:  cat ~/.android/adbkey.pub
-  (If it doesn't exist yet, run 'adb devices' once to generate it)
+## Fleet private key (adbkey)
 
-Copy the .pub file here with a descriptive name, e.g.:
-  macbook_stage_left.pub
-  macbook_stage_right.pub
-  macbook_ops_booth.pub
+The fleet private key `adbkey` is NOT stored in this repo for security reasons.
+It is distributed separately by the team lead.
 
-These keys are injected into every device during os_downgrade.sh.
-To inject them into already-provisioned devices over WiFi ADB:
-  ./ml_deploy.sh shell "cat /data/misc/adb/adb_keys"   # see current keys
-  # Then push an updated adb_keys file using ml_deploy.sh push
+To install it:
+1. Obtain `adbkey` from your team lead (AirDrop, 1Password, etc.)
+2. Place it in this folder: authorized_keys/adbkey
+3. Re-run ./install.sh — it will configure your machine automatically
+
+## Public keys (*.pub)
+
+One .pub file per authorized machine. These are committed to the repo.
+When a new machine is set up, its public key should be added here and committed.
+
+To get your machine's public key after running install.sh:
+  cat ~/.android/adbkey.pub
+
+Add it to this folder with a descriptive name, e.g.:
+  authorized_keys/macbook-neo.pub
+  authorized_keys/macbook-air-chris.pub
+
+Then commit and push so other machines pick it up on next git pull.

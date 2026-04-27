@@ -7,7 +7,7 @@
 #   chmod +x install.sh && ./install.sh
 #
 # Or one-liner from GitHub:
-#   curl -fsSL https://raw.githubusercontent.com/cconnors/ml_fleet_tools/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash
 # ============================================================
 
 set -euo pipefail
@@ -16,7 +16,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 TICK="${GREEN}✓${RESET}"; CROSS="${RED}✗${RESET}"
 
-REPO_URL="https://github.com/cconnors/ml_fleet_tools.git"
+REPO_URL="https://github.com/uurf/ml_fleet_tools.git"
 INSTALL_DIR="$HOME/Developer/ml_toolkit"
 
 echo ""
@@ -111,9 +111,6 @@ FLEET_KEY="$INSTALL_DIR/authorized_keys/adbkey"
 ADB_KEY="$HOME/.android/adbkey"
 
 if [[ -f "$FLEET_KEY" ]]; then
-  # Generate adbkey.pub first (forces key generation if needed)
-  adb devices &>/dev/null || true
-
   # Check if current adb key matches fleet key
   if [[ -f "$ADB_KEY" ]]; then
     CURRENT_PUB=$(ssh-keygen -y -f "$ADB_KEY" 2>/dev/null | awk '{print $2}' || echo "")
@@ -121,9 +118,7 @@ if [[ -f "$FLEET_KEY" ]]; then
     if [[ "$CURRENT_PUB" == "$FLEET_PUB" ]]; then
       printf "  %b  ADB fleet key already configured\n" "$TICK"
     else
-      echo -e "  ${YELLOW}Your current ADB key differs from the fleet key.${RESET}"
       echo -e "  ${YELLOW}Installing fleet key (your current key will be backed up).${RESET}"
-      mkdir -p "$HOME/.android"
       cp "$ADB_KEY" "$HOME/.android/adbkey.backup.$(date +%Y%m%d)" 2>/dev/null || true
       cp "$FLEET_KEY" "$ADB_KEY"
       chmod 600 "$ADB_KEY"
@@ -140,15 +135,16 @@ if [[ -f "$FLEET_KEY" ]]; then
     printf "  %b  Fleet ADB key installed\n" "$TICK"
   fi
 else
-  echo -e "  ${YELLOW}Fleet key not found at $FLEET_KEY${RESET}"
-  echo -e "  ${YELLOW}Generating a new ADB key for this machine...${RESET}"
-  mkdir -p "$HOME/.android"
-  adb devices &>/dev/null || true
-  if [[ -f "$ADB_KEY" ]]; then
-    ssh-keygen -y -f "$ADB_KEY" > "${ADB_KEY}.pub" 2>/dev/null || true
-    printf "  %b  ADB key generated\n" "$TICK"
-    echo -e "  ${YELLOW}Note: Add $HOME/.android/adbkey.pub to authorized_keys/ and commit to repo${RESET}"
-  fi
+  printf "  %b  ${YELLOW}Fleet ADB key not found${RESET}\n" "$CROSS"
+  echo ""
+  echo -e "  ${YELLOW}${BOLD}Action required:${RESET}"
+  echo -e "  The fleet ADB key is distributed separately for security."
+  echo -e "  Ask your team lead for the file: ${CYAN}adbkey${RESET}"
+  echo -e "  Then place it at: ${CYAN}$FLEET_KEY${RESET}"
+  echo -e "  And run: ${CYAN}./install.sh${RESET} again"
+  echo ""
+  echo -e "  ${DIM}Without this key, devices flashed on other machines will require"
+  echo -e "  a one-time 'Allow USB debugging' tap per laptop.${RESET}"
 fi
 
 # ---- Verify shell is using Homebrew bash ---------------------------

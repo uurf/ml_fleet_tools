@@ -11,6 +11,11 @@ logs/
 status/
 provisioned_devices.csv
 
+# Fleet private key — distribute separately, never commit
+authorized_keys/adbkey_oceans13
+authorized_keys/macbook-neo.pub
+authorized_keys/Oceans-13-macbook-air.pub
+
 # macOS
 .DS_Store
 
