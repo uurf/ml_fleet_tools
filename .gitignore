@@ -1,0 +1,19 @@
+# OS images — too large for git, downloaded from ML Hub
+os_images/
+
+# Show-specific files — not committed, configured per deployment
+devices.txt
+builds/
+assets/
+
+# Generated at runtime
+logs/
+status/
+provisioned_devices.csv
+
+# macOS
+.DS_Store
+
+# Backup files
+*.backup.*
+*.intel

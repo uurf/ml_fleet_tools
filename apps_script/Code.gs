@@ -1,0 +1,105 @@
+/**
+ * KAGAMI Fleet — Google Apps Script
+ * Tin Drum / Magic Leap 2 Fleet Management
+ *
+ * Deploy as a Web App:
+ *   Extensions → Apps Script → Deploy → New deployment
+ *   Type: Web app
+ *   Execute as: Me
+ *   Who has access: Anyone
+ *
+ * Called automatically by os_downgrade.sh and ml_provision.sh
+ */
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const sheet = SpreadsheetApp.getActiveSpreadsheet()
+      .getSheetByName("Kagami Osaka - Device status");
+
+    // Find column by header text — survives column insertions/moves
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    function col(headerText) {
+      const idx = headers.findIndex(h => String(h).trim() === headerText.trim());
+      return idx === -1 ? null : idx + 1;
+    }
+
+    const deviceNumCol    = col("Device #");
+    const statusCol       = col("Status");
+    const serialCol       = col("Device Serial Number");
+    const os141Col        = col("OS 1.4.1 (B3E.230928.10-R.098)");
+    const devModeCol      = col("Enable Developer mode : Settings/About/Click Build Number 7 Times");
+    const batterySaverCol = col("Battery: Battery Saver:  off");
+    const displayModesCol = col("Display Modes: none");
+    const autoBrightCol   = col("Display: Auto Brightness: Off");
+    const brightnessCol   = col("Display: Brightness : minimum");
+    const globalDimCol    = col("Display: Global Dimming: minimum");
+    const maxDimCol       = col("Display: Maximum Dimming: 100%");
+    const wifiCol         = col("Connect device to KAGAMI WiFi");
+    const notesCol        = col("Notes");
+
+    const lastRow = sheet.getLastRow();
+
+    // Find existing row by serial number
+    let targetRow = null;
+    for (let i = 2; i <= lastRow; i++) {
+      if (sheet.getRange(i, serialCol).getValue() === data.serial) {
+        targetRow = i;
+        break;
+      }
+    }
+
+    // If not found, find next empty row
+    if (!targetRow) {
+      for (let i = 2; i <= lastRow + 1; i++) {
+        if (!sheet.getRange(i, serialCol).getValue() &&
+            !sheet.getRange(i, deviceNumCol).getValue()) {
+          targetRow = i;
+          break;
+        }
+      }
+    }
+
+    // Always write serial
+    sheet.getRange(targetRow, serialCol).setValue(data.serial);
+
+    if (data.device_number) {
+      sheet.getRange(targetRow, deviceNumCol).setValue(data.device_number);
+    }
+
+    if (data.case_number) {
+      sheet.getRange(targetRow, notesCol).setValue("in case " + data.case_number);
+    }
+
+    if (data.action === "flash_start") {
+      sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
+
+    } else if (data.action === "flash_complete") {
+      sheet.getRange(targetRow, os141Col).setValue(true);
+      sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
+
+    } else if (data.action === "provision_start") {
+      sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
+
+    } else if (data.action === "provision_complete") {
+      sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
+      sheet.getRange(targetRow, devModeCol).setValue(true);
+      sheet.getRange(targetRow, batterySaverCol).setValue(true);
+      sheet.getRange(targetRow, displayModesCol).setValue(true);
+      sheet.getRange(targetRow, autoBrightCol).setValue(true);
+      sheet.getRange(targetRow, brightnessCol).setValue(true);
+      sheet.getRange(targetRow, globalDimCol).setValue(true);
+      sheet.getRange(targetRow, maxDimCol).setValue(true);
+      if (data.wifi_connected === "true") {
+        sheet.getRange(targetRow, wifiCol).setValue(true);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status: "ok", row: targetRow}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

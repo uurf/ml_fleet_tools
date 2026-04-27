@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAGAMI Fleet Status</title>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8ea;
+    --muted: #888892;
+    --pass: #3ecf8e;
+    --pass-bg: rgba(62,207,142,0.1);
+    --fail: #f87171;
+    --fail-bg: rgba(248,113,113,0.1);
+    --warn: #fbbf24;
+    --warn-bg: rgba(251,191,36,0.1);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.1);
+    --accent: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+  header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+  }
+  .logo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  h1 { font-size: 15px; font-weight: 500; color: var(--text); }
+  .header-meta { margin-left: auto; color: var(--muted); font-size: 11px; display: flex; gap: 20px; align-items: center; }
+  .pill {
+    padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pill.pass { background: var(--pass-bg); color: var(--pass); }
+  .pill.fail { background: var(--fail-bg); color: var(--fail); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.info { background: var(--blue-bg); color: var(--blue); }
+
+  .toolbar {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: var(--surface);
+  }
+  .summary-cards {
+    display: flex; gap: 10px; margin-right: auto; flex-wrap: wrap;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .stat-num { font-size: 20px; font-weight: 600; }
+  .stat-num.pass { color: var(--pass); }
+  .stat-num.fail { color: var(--fail); }
+  .stat-num.warn { color: var(--warn); }
+  .stat-num.blue { color: var(--blue); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input[type="text"] {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); padding: 6px 10px; border-radius: 6px;
+    font-family: inherit; font-size: 12px; outline: none; width: 200px;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  select {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); padding: 6px 10px; border-radius: 6px;
+    font-family: inherit; font-size: 12px; outline: none; cursor: pointer;
+  }
+  button {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); padding: 6px 12px; border-radius: 6px;
+    font-family: inherit; font-size: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  button:hover { background: #2a2a32; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #8b6ef0; }
+
+  .table-wrap { overflow-x: auto; padding: 0 0 80px; }
+  table { width: 100%; border-collapse: collapse; min-width: 960px; }
+  thead th {
+    padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0;
+    background: var(--bg); white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .sort-arrow { opacity: 0.4; margin-left: 4px; }
+  thead th.sorted .sort-arrow { opacity: 1; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--surface); }
+  tbody tr.has-issues { background: rgba(248,113,113,0.03); }
+  td { padding: 9px 12px; vertical-align: middle; white-space: nowrap; }
+  .ip { font-weight: 500; color: var(--text); font-size: 12px; }
+  .mono { font-size: 11px; color: var(--muted); }
+
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  }
+  .check.pass { color: var(--pass); }
+  .check.fail { color: var(--fail); background: var(--fail-bg); }
+  .check.unknown { color: var(--muted); }
+
+  .ver-badge {
+    font-size: 11px; padding: 2px 7px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  }
+  .ver-badge.mismatch { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+  .ver-badge.missing { background: var(--fail-bg); border-color: var(--fail); color: var(--fail); }
+  .ver-badge.ok { background: var(--pass-bg); border-color: var(--pass); color: var(--pass); }
+
+  .ssid { font-size: 11px; color: var(--blue); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+  .batt {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+  }
+  .batt-bar { width: 28px; height: 8px; border-radius: 2px; background: var(--surface2); border: 1px solid var(--border2); overflow: hidden; }
+  .batt-fill { height: 100%; border-radius: 1px; }
+
+  .row-status {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px;
+  }
+  .row-status.ok { background: var(--pass-bg); color: var(--pass); }
+  .row-status.issues { background: var(--fail-bg); color: var(--fail); }
+
+  .upload-zone {
+    margin: 40px auto; max-width: 480px; text-align: center;
+    border: 2px dashed var(--border2); border-radius: 12px; padding: 48px 32px;
+    background: var(--surface);
+  }
+  .upload-zone h2 { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+  .upload-zone p { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .upload-zone code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--accent); }
+
+  .footer-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 24px; display: flex; align-items: center; gap: 12px;
+    font-size: 11px; color: var(--muted);
+  }
+  .footer-bar span { display: flex; gap: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Tin Drum / KAGAMI</div>
+    <h1>Fleet Status Dashboard</h1>
+  </div>
+  <div class="header-meta">
+    <span id="ts">—</span>
+    <button class="primary" onclick="document.getElementById('file-input').click()">Load JSON ↑</button>
+    <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="summary-cards">
+    <div class="stat-card"><span class="stat-num blue" id="s-total">—</span><span class="stat-label">Total</span></div>
+    <div class="stat-card"><span class="stat-num pass" id="s-ok">—</span><span class="stat-label">All OK</span></div>
+    <div class="stat-card"><span class="stat-num fail" id="s-issues">—</span><span class="stat-label">Issues</span></div>
+    <div class="stat-card"><span class="stat-num warn" id="s-offline">—</span><span class="stat-label">Offline</span></div>
+  </div>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Filter by IP or version…" oninput="renderTable()">
+    <select id="filter-status" onchange="renderTable()">
+      <option value="all">All devices</option>
+      <option value="issues">Issues only</option>
+      <option value="ok">OK only</option>
+    </select>
+    <select id="filter-setting" onchange="renderTable()">
+      <option value="all">All settings</option>
+      <option value="sleep">Sleep issue</option>
+      <option value="wifi">WiFi issue</option>
+      <option value="bt">Bluetooth on</option>
+      <option value="dev">Dev mode off</option>
+      <option value="usb">USB debug off</option>
+      <option value="apk">APK mismatch</option>
+    </select>
+    <button onclick="exportCSV()">Export CSV ↓</button>
+  </div>
+</div>
+
+<div id="main-content">
+  <div class="upload-zone">
+    <h2>No data loaded</h2>
+    <p>
+      Run the status collector, then load the output here:<br><br>
+      <code>./ml_status.sh --json > status/latest.json</code><br><br>
+      Then click <strong>Load JSON</strong> above, or drag a JSON file onto the page.
+    </p>
+    <button class="primary" onclick="document.getElementById('file-input').click()">Load JSON file</button>
+    <br><br>
+    <button onclick="loadDemo()">Load demo data</button>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <span>
+    <span class="legend-item"><span class="check pass">✓</span> Pass</span>
+    <span class="legend-item"><span class="check fail">✗</span> Fail</span>
+    <span class="legend-item"><span class="check unknown">?</span> Unknown</span>
+  </span>
+  <span style="margin-left:auto">BT column = ✓ means OFF (desired for show)</span>
+</div>
+
+<script>
+let allDevices = [];
+let sortCol = 'ip';
+let sortAsc = true;
+
+const EXPECTED = {
+  os: '',
+  apk: '',
+};
+
+function loadFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      allDevices = Array.isArray(data) ? data : [data];
+      document.getElementById('ts').textContent = file.name + ' — ' + new Date().toLocaleTimeString();
+      renderTable();
+    } catch(err) {
+      alert('Could not parse JSON: ' + err.message);
+    }
+  };
+  r.readAsText(file);
+}
+
+function loadDemo() {
+  const ips = Array.from({length: 12}, (_, i) => `192.168.1.${101 + i}`);
+  const versions = ['2.1.0','2.1.0','2.0.9','2.1.0','2.1.0','2.1.0','2.0.8','2.1.0','2.1.0','2.1.0','2.1.0','2.1.0'];
+  const os_vers = ['1.4.1','1.4.1','1.4.1','1.3.2','1.4.1','1.4.1','1.4.1','1.4.1','1.4.1','1.3.2','1.4.1','1.4.1'];
+  allDevices = ips.map((ip, i) => ({
+    serial: ip + ':5555', ip,
+    timestamp: new Date().toISOString(),
+    os_version: os_vers[i],
+    build_id: 'B3E.220721.' + (100+i),
+    battery: String(60 + Math.floor(Math.random()*40)),
+    apk: {
+      package: 'com.tindrum.kagami',
+      installed: i !== 4,
+      version: i === 4 ? '' : versions[i],
+      version_code: String(210 + i)
+    },
+    settings: {
+      stay_awake: i !== 3,
+      wifi_connected: i !== 7,
+      wifi_ssid: i === 7 ? '' : 'KAGAMI-SHOW-5G',
+      bluetooth_on: i === 5,
+      screen_brightness: i === 2 ? 128 : 50,
+      developer_mode: true,
+      usb_debugging: i !== 9,
+      auto_update_off: i % 3 !== 0 ? 'true' : 'unknown'
+    }
+  }));
+  EXPECTED.os = '1.4.1';
+  EXPECTED.apk = '2.1.0';
+  document.getElementById('ts').textContent = 'Demo data — ' + new Date().toLocaleTimeString();
+  renderTable();
+}
+
+function deviceIssues(d) {
+  const s = d.settings;
+  const issues = [];
+  if (!s.stay_awake) issues.push('sleep');
+  if (!s.wifi_connected) issues.push('wifi');
+  if (s.bluetooth_on) issues.push('bt');
+  if (!s.developer_mode) issues.push('dev');
+  if (!s.usb_debugging) issues.push('usb');
+  if (s.auto_update_off === 'false') issues.push('update');
+  if (!d.apk.installed) issues.push('apk');
+  if (EXPECTED.apk && d.apk.version && d.apk.version !== EXPECTED.apk) issues.push('apk');
+  if (EXPECTED.os && d.os_version && d.os_version !== EXPECTED.os) issues.push('os');
+  return issues;
+}
+
+function sortDevices(devs) {
+  return [...devs].sort((a, b) => {
+    let va, vb;
+    switch(sortCol) {
+      case 'ip':      va = a.ip; vb = b.ip; break;
+      case 'os':      va = a.os_version; vb = b.os_version; break;
+      case 'apk':     va = a.apk.version; vb = b.apk.version; break;
+      case 'battery': va = +a.battery; vb = +b.battery; break;
+      case 'status':  va = deviceIssues(a).length; vb = deviceIssues(b).length; break;
+      default:        va = a.ip; vb = b.ip;
+    }
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ? 1 : -1;
+    return 0;
+  });
+}
+
+function setSort(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  renderTable();
+}
+
+function check(val, want, invert=false) {
+  if (want === '') return 'unknown';
+  const ok = val === want;
+  return (invert ? !ok : ok) ? 'pass' : 'fail';
+}
+
+function checkIcon(cls) {
+  const sym = cls === 'pass' ? '✓' : cls === 'fail' ? '✗' : '?';
+  return `<span class="check ${cls}">${sym}</span>`;
+}
+
+function battBar(pct) {
+  const n = Math.min(100, Math.max(0, +pct));
+  const col = n > 50 ? '#3ecf8e' : n > 20 ? '#fbbf24' : '#f87171';
+  return `<div class="batt">
+    <div class="batt-bar"><div class="batt-fill" style="width:${n}%;background:${col}"></div></div>
+    <span style="color:var(--muted)">${n}%</span>
+  </div>`;
+}
+
+function verBadge(ver, expected) {
+  if (!ver) return `<span class="ver-badge missing">MISSING</span>`;
+  if (expected && ver !== expected) return `<span class="ver-badge mismatch">${ver}</span>`;
+  if (expected && ver === expected) return `<span class="ver-badge ok">${ver}</span>`;
+  return `<span class="ver-badge">${ver}</span>`;
+}
+
+function renderTable() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const filterStatus = document.getElementById('filter-status').value;
+  const filterSetting = document.getElementById('filter-setting').value;
+
+  let devs = allDevices.filter(d => {
+    if (search && !d.ip.includes(search) && !(d.apk.version||'').includes(search) && !d.os_version.includes(search)) return false;
+    const issues = deviceIssues(d);
+    if (filterStatus === 'ok' && issues.length > 0) return false;
+    if (filterStatus === 'issues' && issues.length === 0) return false;
+    if (filterSetting !== 'all' && !issues.includes(filterSetting)) return false;
+    return true;
+  });
+
+  devs = sortDevices(devs);
+
+  // Summary cards
+  const total = allDevices.length;
+  const okCount = allDevices.filter(d => deviceIssues(d).length === 0).length;
+  const issueCount = total - okCount;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-ok').textContent = okCount;
+  document.getElementById('s-issues').textContent = issueCount;
+  document.getElementById('s-offline').textContent = '—';
+
+  const arrow = (col) => `<span class="sort-arrow">${sortCol===col ? (sortAsc?'▲':'▼') : '↕'}</span>`;
+  const th = (col, label) => `<th class="${sortCol===col?'sorted':''}" onclick="setSort('${col}')">${label}${arrow(col)}</th>`;
+
+  let html = `<table>
+  <thead><tr>
+    ${th('ip','IP Address')}
+    ${th('os','OS Ver')}
+    ${th('apk','APK Ver')}
+    ${th('battery','Battery')}
+    <th title="Stay awake while plugged in">Sleep</th>
+    <th title="WiFi connected">WiFi</th>
+    <th title="Bluetooth OFF = ✓">BT off</th>
+    <th title="Screen brightness">Bright</th>
+    <th title="Developer mode">Dev</th>
+    <th title="USB debugging">USB</th>
+    <th title="Auto-update disabled">NoUpd</th>
+    ${th('status','Status')}
+  </tr></thead>
+  <tbody>`;
+
+  devs.forEach(d => {
+    const s = d.settings;
+    const issues = deviceIssues(d);
+    const hasIssues = issues.length > 0;
+
+    const c_sleep  = s.stay_awake ? 'pass' : 'fail';
+    const c_wifi   = s.wifi_connected ? 'pass' : 'fail';
+    const c_bt     = !s.bluetooth_on ? 'pass' : 'fail';
+    const c_dev    = s.developer_mode ? 'pass' : 'fail';
+    const c_usb    = s.usb_debugging ? 'pass' : 'fail';
+    const c_update = s.auto_update_off === 'true' ? 'pass' : s.auto_update_off === 'unknown' ? 'unknown' : 'fail';
+
+    const ssidHtml = s.wifi_connected
+      ? `<div class="ssid" title="${s.wifi_ssid}">${s.wifi_ssid}</div>`
+      : `<span style="color:var(--fail);font-size:11px">disconnected</span>`;
+
+    const statusHtml = hasIssues
+      ? `<span class="row-status issues">${issues.length} issue${issues.length>1?'s':''}</span>`
+      : `<span class="row-status ok">OK</span>`;
+
+    html += `<tr class="${hasIssues?'has-issues':''}">
+      <td><span class="ip">${d.ip}</span></td>
+      <td>${verBadge(d.os_version, EXPECTED.os)}</td>
+      <td>${verBadge(d.apk.installed ? d.apk.version : '', EXPECTED.apk)}</td>
+      <td>${battBar(d.battery)}</td>
+      <td>${checkIcon(c_sleep)}</td>
+      <td><div style="display:flex;flex-direction:column;gap:2px">${checkIcon(c_wifi)}${ssidHtml}</div></td>
+      <td>${checkIcon(c_bt)}</td>
+      <td><span class="mono">${s.screen_brightness}</span></td>
+      <td>${checkIcon(c_dev)}</td>
+      <td>${checkIcon(c_usb)}</td>
+      <td>${checkIcon(c_update)}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('main-content').innerHTML = `<div class="table-wrap">${html}</div>`;
+}
+
+function exportCSV() {
+  if (!allDevices.length) return;
+  const cols = ['ip','os_version','apk_version','apk_installed','battery','stay_awake','wifi_connected','wifi_ssid','bluetooth_on','screen_brightness','developer_mode','usb_debugging','auto_update_off','issues'];
+  const rows = [cols.join(',')];
+  allDevices.forEach(d => {
+    const s = d.settings;
+    rows.push([
+      d.ip, d.os_version, d.apk.version||'', d.apk.installed, d.battery,
+      s.stay_awake, s.wifi_connected, s.wifi_ssid, s.bluetooth_on,
+      s.screen_brightness, s.developer_mode, s.usb_debugging, s.auto_update_off,
+      deviceIssues(d).join(';')
+    ].join(','));
+  });
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kagami_fleet_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// Drag and drop
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.json')) {
+    loadFile({target:{files:[file]}});
+  }
+});
+</script>
+</body>
+</html>

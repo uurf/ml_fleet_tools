@@ -1,0 +1,18 @@
+# Magic Leap 2 Fleet — KAGAMI Device List
+# One IP per line. Comments (#) and blank lines are ignored.
+# Assign static DHCP leases on your router so IPs never change.
+#
+# Format:
+#   <ip_address>   [optional comment]
+#
+# Group by venue/zone if helpful:
+
+# ── Venue A ──────────────────────────────
+192.168.1.101
+192.168.1.102
+192.168.1.103
+# ... add all 200 devices here
+
+# ── Venue B (if applicable) ──────────────
+# 10.0.1.101
+# 10.0.1.102
