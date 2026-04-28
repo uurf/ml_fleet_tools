@@ -72,7 +72,13 @@ function doPost(e) {
       sheet.getRange(targetRow, notesCol).setValue("in case " + data.case_number);
     }
 
-    if (data.action === "flash_start") {
+    if (data.action === "flash_failed") {
+      sheet.getRange(targetRow, statusCol).setValue("⚠ Flash failed — do not use");
+      if (data.operator_initials && operatorCol) {
+        sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
+      }
+
+    } else if (data.action === "flash_start") {
       sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
       if (data.operator_initials && operatorCol) {
         sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);

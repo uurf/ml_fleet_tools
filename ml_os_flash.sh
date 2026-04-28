@@ -295,19 +295,48 @@ sed -i '' 's|&& -e "\$uname/usbrecovery_host"||g' "$FLASH_SCRIPT"
 sed -i '' 's|recovery=\$(command -v usbrecovery_host)|recovery=true|g' "$FLASH_SCRIPT"
 # ecfw (EC firmware) consistently fails when downgrading from newer OS versions
 # because the EC firmware is already newer. This is harmless — all critical
-# partitions flash successfully. We treat non-zero exit as a warning, not fatal.
+# partitions flash successfully. Other partition failures (kernel, system, etc.)
+# are serious and indicate a real problem (USB drop, bad device, etc.).
+FLASH_LOG=$(mktemp)
 FLASH_EXIT=0
-(cd "$SELECTED_DIR" && bash flashall_amd.sh) || FLASH_EXIT=$?
+(cd "$SELECTED_DIR" && bash flashall_amd.sh) 2>&1 | tee "$FLASH_LOG" || FLASH_EXIT=$?
+
 if [[ $FLASH_EXIT -ne 0 ]]; then
   echo ""
-  echo -e "${YELLOW}Note: flashall_amd.sh exited with code $FLASH_EXIT${RESET}"
-  echo -e "${YELLOW}This is typically the ecfw partition failing — all critical partitions flashed OK.${RESET}"
-  # Device may still be in fastboot — kick it to reboot
-  if fastboot devices 2>/dev/null | grep -q .; then
-    echo -e "${CYAN}Device still in fastboot — rebooting automatically...${RESET}"
-    fastboot reboot 2>/dev/null || true
+  # Determine which partition failed
+  FAILED_PARTITION=$(grep -oE "Writing '[^']+'" "$FLASH_LOG" | tail -1 | grep -oE "'[^']+'" | tr -d "'" || echo "")
+  LAST_ERROR=$(grep -E "FAILED|ERROR" "$FLASH_LOG" | tail -1 || echo "")
+
+  if [[ "$FAILED_PARTITION" == "ecfw"* ]]; then
+    echo -e "${YELLOW}Note: flashall_amd.sh exited with code $FLASH_EXIT${RESET}"
+    echo -e "${YELLOW}ecfw partition failed — this is normal when downgrading. All critical partitions flashed OK.${RESET}"
+    # Device may still be in fastboot — kick it to reboot
+    if fastboot devices 2>/dev/null | grep -q .; then
+      echo -e "${CYAN}Device still in fastboot — rebooting automatically...${RESET}"
+      fastboot reboot 2>/dev/null || true
+    fi
+  else
+    echo -e "${RED}┌─────────────────────────────────────────────────┐${RESET}"
+    echo -e "${RED}│  FLASH FAILED — critical partition error         │${RESET}"
+    echo -e "${RED}└─────────────────────────────────────────────────┘${RESET}"
+    echo ""
+    [[ -n "$FAILED_PARTITION" ]] && echo -e "  Failed partition: ${RED}$FAILED_PARTITION${RESET}"
+    [[ -n "$LAST_ERROR"       ]] && echo -e "  Error:            ${RED}$LAST_ERROR${RESET}"
+    echo ""
+    echo -e "  Likely causes:"
+    echo -e "   • MacBook went to sleep / USB dropped during flash"
+    echo -e "     ${DIM}(plug in and use caffeinate next time)${RESET}"
+    echo -e "   • Faulty USB-C cable or port — try a different one"
+    echo -e "   • Device hardware issue — mark for inspection"
+    echo ""
+    echo -e "  ${YELLOW}Do NOT continue — this device was not fully flashed.${RESET}"
+    echo -e "  Log saved to: $FLASH_LOG"
+    echo ""
+    update_sheet "flash_failed" "$SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$OPERATOR_INITIALS"
+    exit 1
   fi
 fi
+rm -f "$FLASH_LOG" 
 
 # ---- Post-flash ------------------------------------------------------
 
