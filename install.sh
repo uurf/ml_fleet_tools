@@ -107,7 +107,7 @@ echo ""
 echo -e "${BOLD}Setting up ADB fleet key...${RESET}"
 echo ""
 
-FLEET_KEY="$INSTALL_DIR/authorized_keys/adbkey"
+FLEET_KEY="$INSTALL_DIR/authorized_keys/adbkey_kagami_fleet"
 ADB_KEY="$HOME/.android/adbkey"
 
 if [[ -f "$FLEET_KEY" ]]; then
