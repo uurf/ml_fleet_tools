@@ -35,12 +35,12 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 SHEETS_URL="https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec"
 
 update_sheet() {
-  local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}"
+  local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}" operator_initials="${5:-}"
   python3 -c "
 import urllib.request, json, sys
 url = 'https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec'
-data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM'}).encode()
-data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode())
+data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM','operator_initials':'INITIALS'}).encode()
+data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode()).replace(b'INITIALS', '$operator_initials'.encode())
 req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/json'})
 try:
   urllib.request.urlopen(req, timeout=10)
@@ -203,13 +203,14 @@ read -rp "" CONFIRM
 echo ""
 echo -e "${BOLD}Device tracking${RESET}"
 read -rp "  Device number (or Enter to skip): " DEVICE_NUMBER
-read -rp "  Case number   (or Enter to skip): " CASE_NUMBER
-export DEVICE_NUMBER CASE_NUMBER
+read -rp "  Case number   (press Enter if it matches the device number, or is unknown): " CASE_NUMBER
+read -rp "  Operator initials: " OPERATOR_INITIALS
+export DEVICE_NUMBER CASE_NUMBER OPERATOR_INITIALS
 echo ""
 
 # Notify sheet that flash has started
 if [[ -n "$SERIAL" ]]; then
-  update_sheet "flash_start" "$SERIAL"
+  update_sheet "flash_start" "$SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$OPERATOR_INITIALS"
 fi
 
 # ---- Flash -----------------------------------------------------------
@@ -395,7 +396,7 @@ echo ""
 if [[ "$NEW_BUILD" == *"$TARGET_VERSION"* ]]; then
   echo -e "${GREEN}✓ Flash complete!${RESET}"
   echo -e "${DIM}  Updating sheet...${RESET}"
-  update_sheet "flash_complete" "$SERIAL"
+  update_sheet "flash_complete" "$SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$OPERATOR_INITIALS"
   echo -e "  ${GREEN}Sheet updated${RESET}"
 else
   echo -e "${YELLOW}⚠ Build ID $NEW_BUILD — verify this matches expected $TARGET_VERSION${RESET}"
@@ -411,7 +412,7 @@ if [[ -f "$PROVISION_SCRIPT" ]]; then
   sleep 30
   echo -e "${CYAN}Running provisioning (settings, WiFi, permissions)...${RESET}"
   echo ""
-  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" bash "$PROVISION_SCRIPT"
+  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" OPERATOR_INITIALS="$OPERATOR_INITIALS" bash "$PROVISION_SCRIPT"
 else
   echo ""
   echo -e "${YELLOW}ml_provision.sh not found — skipping auto-provisioning${RESET}"

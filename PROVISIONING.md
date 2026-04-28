@@ -21,7 +21,7 @@ This guide covers the complete process for flashing and provisioning a single Ma
 | Phase | Who | Time | Notes |
 |---|---|---|---|
 | Flash OS | Script (unattended) | ~10 min | Just watch for errors |
-| Provisioning | Script (unattended) | ~2 min | Enter device/case # first |
+| Provisioning | Script (unattended) | ~2 min | Enter device/case/initials first |
 | Controller update | Manual | ~2 min | Connect USB-C to compute pack |
 | Headset settings | Manual | ~2 min | 4 settings to change |
 
@@ -81,10 +81,15 @@ Press **Enter** to continue, then enter the device tracking information:
 ```
 Device tracking
   Device number (or Enter to skip): [enter device number]
-  Case number   (or Enter to skip): [enter case number]
+  Case number   (press Enter if it matches the device number, or is unknown): [enter case number]
+  Operator initials: [your initials, e.g. JD]
 ```
 
 After entering these, the script runs completely unattended for ~10 minutes. You will see partition flashing progress on screen.
+
+> **Case number:** Enter the physical case number if it differs from the device number. Press Enter to leave it blank — the sheet will treat a blank case number as matching the device number, or unknown.
+>
+> **Operator initials:** These are written to the "Operator name - Phase 1" column in the tracking sheet. Enter 2–4 characters, e.g. `JD` or `MLC`.
 
 ---
 
@@ -114,6 +119,7 @@ Manual steps — put on headset and complete:
   [ ] Settings → System → Advanced → OS Updater → Check for updates → Never
 
   Device #:      [number]
+  Operator:      [initials]
   Device Serial: [serial]
   Device IP:     [ip]
 ```

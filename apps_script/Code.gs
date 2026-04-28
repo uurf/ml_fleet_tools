@@ -37,6 +37,7 @@ function doPost(e) {
     const maxDimCol       = col("Display: Maximum Dimming: 100%");
     const wifiCol         = col("Connect device to KAGAMI WiFi");
     const notesCol        = col("Notes");
+    const operatorCol     = col("Operator name - Phase 1");
 
     const lastRow = sheet.getLastRow();
 
@@ -73,13 +74,26 @@ function doPost(e) {
 
     if (data.action === "flash_start") {
       sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
+      if (data.operator_initials && operatorCol) {
+        sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
+      }
 
     } else if (data.action === "flash_complete") {
       sheet.getRange(targetRow, os141Col).setValue(true);
       sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
+      // Confirm initials at flash_complete — catches cases where flash_start fired without network
+      if (data.operator_initials && operatorCol) {
+        sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
+      }
 
     } else if (data.action === "provision_start") {
       sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
+      // Fallback: write initials if not already set (e.g. ml_provision.sh run standalone)
+      if (data.operator_initials && operatorCol) {
+        if (!sheet.getRange(targetRow, operatorCol).getValue()) {
+          sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
+        }
+      }
 
     } else if (data.action === "provision_complete") {
       sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
@@ -92,6 +106,12 @@ function doPost(e) {
       sheet.getRange(targetRow, maxDimCol).setValue(true);
       if (data.wifi_connected === "true") {
         sheet.getRange(targetRow, wifiCol).setValue(true);
+      }
+      // Same fallback as provision_start
+      if (data.operator_initials && operatorCol) {
+        if (!sheet.getRange(targetRow, operatorCol).getValue()) {
+          sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
+        }
       }
     }
 

@@ -31,12 +31,12 @@ SKIP="${DIM}–${RESET}"
 SHEETS_URL="https://script.google.com/macros/s/AKfycbyPsoVvtkarMWli8iZMoZSwcQpL5Ra5xcOT9hfuEOaYkhVfT9Z8LjivdswgHrU5W508/exec"
 
 update_sheet() {
-  local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}" wifi_ok="${5:-false}"
+  local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}" wifi_ok="${5:-false}" operator_initials="${6:-}"
   python3 -c "
 import urllib.request, json, sys
 url = 'https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec'
-data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM','wifi_connected':'WIFIOK'}).encode()
-data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode()).replace(b'WIFIOK', '$wifi_ok'.encode())
+data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM','wifi_connected':'WIFIOK','operator_initials':'INITIALS'}).encode()
+data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode()).replace(b'WIFIOK', '$wifi_ok'.encode()).replace(b'INITIALS', '$operator_initials'.encode())
 req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/json'})
 try:
   urllib.request.urlopen(req, timeout=10)
@@ -142,18 +142,20 @@ fi
 # Only prompt in full mode, not check or discover
 DEVICE_NUMBER="${DEVICE_NUMBER:-}"
 CASE_NUMBER="${CASE_NUMBER:-}"
+OPERATOR_INITIALS="${OPERATOR_INITIALS:-}"
 
 if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" ]]; then
   echo ""
   echo -e "${BOLD}Device tracking${RESET}"
   read -rp "  Device number (or Enter to skip): " DEVICE_NUMBER
-  read -rp "  Case number   (or Enter to skip): " CASE_NUMBER
+  read -rp "  Case number   (press Enter if it matches the device number, or is unknown): " CASE_NUMBER
+  read -rp "  Operator initials: " OPERATOR_INITIALS
   echo ""
 fi
 
 # Notify sheet that configuration has started
 if [[ "$MODE" == "full" ]]; then
-  update_sheet "provision_start" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER"
+  update_sheet "provision_start" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "false" "$OPERATOR_INITIALS"
 fi
 
 if [[ "$MODE" == "discover" ]]; then
@@ -540,11 +542,11 @@ echo -e "${BOLD}═════════════════════�
 if [[ "$MODE" != "check" ]]; then
   # Append to provisioning log
   LOG_FILE="$(dirname "${BASH_SOURCE[0]}")/provisioned_devices.csv"
-  [[ ! -f "$LOG_FILE" ]] && echo "timestamp,device_number,case_number,serial,mac,ip,ml_os,build_id,build_type" > "$LOG_FILE"
-  echo "$(date +%Y-%m-%dT%H:%M:%S),$DEVICE_NUMBER,$CASE_NUMBER,$DEVICE_SERIAL,$MAC,$DEVICE_IP,${LUMIN_VERSION:-$BUILD_ID},$BUILD_ID,$BUILD_TYPE" >> "$LOG_FILE"
+  [[ ! -f "$LOG_FILE" ]] && echo "timestamp,device_number,case_number,operator,serial,mac,ip,ml_os,build_id,build_type" > "$LOG_FILE"
+  echo "$(date +%Y-%m-%dT%H:%M:%S),$DEVICE_NUMBER,$CASE_NUMBER,$OPERATOR_INITIALS,$DEVICE_SERIAL,$MAC,$DEVICE_IP,${LUMIN_VERSION:-$BUILD_ID},$BUILD_ID,$BUILD_TYPE" >> "$LOG_FILE"
   echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
   # Notify sheet that provisioning is complete and set all auto-configured checkboxes
-  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED"
+  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
 else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
@@ -563,6 +565,7 @@ fi
 echo ""
 [[ -n "$DEVICE_NUMBER" ]] && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
 [[ -n "$CASE_NUMBER"   ]] && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
+[[ -n "$OPERATOR_INITIALS" ]] && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
 echo -e "  Device Serial: ${CYAN}$DEVICE_SERIAL${RESET}"
 echo -e "  Device IP:     ${CYAN}$DEVICE_IP${RESET}"
 echo -e "  MAC Address:   ${CYAN}$MAC${RESET}"
@@ -571,7 +574,7 @@ echo ""
 
 # Notify sheet that provisioning is complete
 if [[ "$MODE" == "full" ]]; then
-  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED"
+  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
 fi
 
 # Copy serial number to clipboard for easy entry into tracking spreadsheet
