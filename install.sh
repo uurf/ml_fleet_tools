@@ -154,13 +154,8 @@ echo ""
 
 BREW_BASH="/opt/homebrew/bin/bash"
 if [[ -f "$BREW_BASH" ]]; then
-  # Update shebangs if needed
-  for script in "$INSTALL_DIR"/*.sh; do
-    if head -1 "$script" | grep -q "#!/usr/bin/env bash"; then
-      sed -i '' "1s|#!/usr/bin/env bash|#!$BREW_BASH|" "$script" 2>/dev/null || true
-    fi
-  done
-  printf "  %b  Scripts configured for Homebrew bash\n" "$TICK"
+  # Scripts already use Homebrew bash shebang — no modification needed
+  printf "  %b  Homebrew bash available at %s\n" "$TICK" "$BREW_BASH"
 else
   printf "  %b  ${YELLOW}Homebrew bash not found — scripts may fail on Apple Silicon${RESET}\n" "$CROSS"
 fi
