@@ -12,7 +12,7 @@ status/
 provisioned_devices.csv
 
 # Fleet private key — distribute separately, never commit
-authorized_keys/adbkey_oceans13
+authorized_keys/adbkey_kagami_fleet
 authorized_keys/macbook-neo.pub
 authorized_keys/Oceans-13-macbook-air.pub
 
