@@ -16,6 +16,32 @@ mkdir -p "$LOG_DIR"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
+# ---- Check for toolkit updates -------------------------------------
+# Requires network — silently skips if offline.
+# Hard stops if local repo is behind origin/main.
+check_for_updates() {
+  if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
+    echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
+    return 0
+  fi
+
+  local local_sha origin_sha
+  local_sha=$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null)
+  origin_sha=$(git -C "$SCRIPT_DIR" rev-parse origin/main 2>/dev/null)
+
+  if [[ "$local_sha" != "$origin_sha" ]]; then
+    echo ""
+    echo -e "${RED}┌─────────────────────────────────────────────────┐${RESET}"
+    echo -e "${RED}│  Toolkit is out of date — please update first   │${RESET}"
+    echo -e "${RED}└─────────────────────────────────────────────────┘${RESET}"
+    echo ""
+    echo -e "  Run: ${CYAN}./update.sh${RESET}"
+    echo ""
+    exit 1
+  fi
+}
+check_for_updates
+
 usage() {
   echo ""
   echo -e "${BOLD}ML Fleet Deploy — KAGAMI${RESET}"

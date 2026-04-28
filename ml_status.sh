@@ -21,6 +21,32 @@ DEVICES_FILE="$SCRIPT_DIR/devices.txt"
 STATUS_DIR="$SCRIPT_DIR/status"
 MAX_PARALLEL=30
 
+# ---- Check for toolkit updates -------------------------------------
+# Requires network — silently skips if offline.
+# Hard stops if local repo is behind origin/main.
+check_for_updates() {
+  if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
+    echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
+    return 0
+  fi
+
+  local local_sha origin_sha
+  local_sha=$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null)
+  origin_sha=$(git -C "$SCRIPT_DIR" rev-parse origin/main 2>/dev/null)
+
+  if [[ "$local_sha" != "$origin_sha" ]]; then
+    echo ""
+    echo -e "${RED}┌─────────────────────────────────────────────────┐${RESET}"
+    echo -e "${RED}│  Toolkit is out of date — please update first   │${RESET}"
+    echo -e "${RED}└─────────────────────────────────────────────────┘${RESET}"
+    echo ""
+    echo -e "  Run: ${CYAN}./update.sh${RESET}"
+    echo ""
+    exit 1
+  fi
+}
+check_for_updates
+
 # ── Defaults (override via args or edit here) ────────────────
 TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagami}"
 EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip check
