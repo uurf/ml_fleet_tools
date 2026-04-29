@@ -63,7 +63,7 @@ Or if you skipped Step 3:
 cd ~/Developer/ml_toolkit && ./ml_os_flash.sh
 ```
 
-The script will automatically find the OS image in `os_images/` and use it. If there is more than one OS version in that folder, it will ask you to choose — but in normal operation there will only be one.
+The script will automatically find the OS image in `os_images/` and use it. If there is more than one OS version in that folder, it will ask you to choose — but in normal operation there will only be one. You can also pass the version name directly to skip the menu, e.g. `./ml_os_flash.sh [directory name in os_images]`.
 
 The script will detect the device and show you a confirmation screen like this:
 
