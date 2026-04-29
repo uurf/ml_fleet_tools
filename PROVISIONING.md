@@ -111,8 +111,9 @@ Provisioning complete.
 
 Manual steps — put on headset and complete:
   [ ] Connect controller to device via USB-C → allow firmware update
-  [ ] Connect device to laptop → tap Allow on USB debugging dialog
-  [ ] Tap Allow on USB device transfer dialog
+  [ ] Connect device to laptop — two dialogs will appear:
+        • "Allow USB debugging" → check "Always allow from this computer" → Allow
+        • "USB Device Detected" → OK
   [ ] Settings → Battery → Compute Pack Standby → Off
   [ ] Settings → Display → Display Override → Off
   [ ] Settings → Display → Segmented Dimming → Off
@@ -142,9 +143,20 @@ The serial number is automatically copied to your clipboard.
 Using the controller, navigate to each setting:
 
 **Allow USB Debugging (if prompted):**
-- A dialog may appear asking to allow USB debugging
-- Tap **Always allow from this computer**
-- Tap **Allow** on the USB device transfer dialog
+
+Two dialogs appear when the device is connected to the laptop.
+
+![Allow USB debugging dialog](docs/images/usb_debugging_dialog.jpeg)
+
+1. **"Allow USB debugging"** — check **Always allow from this computer**, then tap **Allow**
+
+   This blesses the fleet ADB key so this dialog won't appear again for this laptop.
+
+![USB Device Detected dialog](docs/images/usb_device_detected_dialog.jpeg)
+
+2. **"USB Device Detected"** — tap **OK**
+
+   This dialog appears on every connection regardless of authorization — just dismiss it.
 
 **Battery:**
 - Settings → Battery → **Compute Pack Standby → Off**

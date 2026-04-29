@@ -582,8 +582,9 @@ fi
 echo ""
 echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
 echo -e "  ${YELLOW}[ ]${RESET} Connect controller to device via USB-C → allow firmware update"
-echo -e "  ${YELLOW}[ ]${RESET} Connect device to laptop → tap Allow on USB debugging dialog"
-echo -e "  ${YELLOW}[ ]${RESET} Tap Allow on USB device transfer dialog"
+echo -e "  ${YELLOW}[ ]${RESET} Connect device to laptop — two dialogs will appear:"
+echo -e "        ${BOLD}Allow USB debugging${RESET} → check 'Always allow from this computer' → Allow"
+echo -e "        ${BOLD}USB Device Detected${RESET} → OK""
 if [[ ${#MANUAL_STEPS[@]} -gt 0 ]]; then
   for step in "${MANUAL_STEPS[@]}"; do
     echo -e "  ${YELLOW}[ ]${RESET} $step"
