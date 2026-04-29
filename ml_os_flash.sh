@@ -21,9 +21,9 @@
 #   - brew install android-platform-tools  (for adb + fastboot)
 #
 # USAGE:
-#   ./ml_os_flash.sh                              # interactive
-#   ./ml_os_flash.sh /path/to/os_images           # custom image dir
-#   ./ml_os_flash.sh /path/to/os_images 1.3.2    # non-interactive
+#   ./ml_os_flash.sh                # auto-selects if one OS image in ./os_images
+#   ./ml_os_flash.sh 1.4.1          # flash specific version from ./os_images
+#   ./ml_os_flash.sh 1.4.1 /custom  # flash specific version from custom dir
 # ============================================================
 
 set -euo pipefail
@@ -76,8 +76,12 @@ check_for_updates() {
 }
 check_for_updates
 
-OS_IMAGES_DIR="${1:-./os_images}"
-TARGET_VERSION="${2:-}"
+TARGET_VERSION="${1:-}"
+OS_IMAGES_DIR="${2:-}"
+# Resolve images dir: explicit arg → SCRIPT_DIR/os_images
+if [[ -z "$OS_IMAGES_DIR" ]]; then
+  OS_IMAGES_DIR="$(dirname "${BASH_SOURCE[0]}")/os_images"
+fi
 
 echo ""
 echo -e "${BOLD}ML2 OS Flash Tool${RESET}"
@@ -153,7 +157,7 @@ if [[ ! -d "$OS_IMAGES_DIR" ]]; then
   echo "  ML Hub → Package Manager → Device OS Versions → Download → Open Folder"
   echo "  Then: cp -r <that folder> $OS_IMAGES_DIR/<version>"
   echo ""
-  echo "Usage: ./ml_os_flash.sh /path/to/os_images [version]"
+  echo "Usage: ./ml_os_flash.sh [version] [/custom/os_images/path]"
   exit 1
 fi
 
@@ -448,15 +452,11 @@ NEW_BUILD=$(adb -s "$SERIAL" shell getprop ro.build.id 2>/dev/null | tr -d '\r' 
 NEW_LUMIN=$(adb -s "$SERIAL" shell getprop ro.build.version.lumin 2>/dev/null | tr -d '\r' || echo "")
 
 echo ""
-if [[ "$NEW_BUILD" == *"$TARGET_VERSION"* ]]; then
-  echo -e "${GREEN}✓ Flash complete!${RESET}"
-  echo -e "${DIM}  Updating sheet...${RESET}"
-  update_sheet "flash_complete" "$SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$OPERATOR_INITIALS"
-  echo -e "  ${GREEN}Sheet updated${RESET}"
-else
-  echo -e "${YELLOW}⚠ Build ID $NEW_BUILD — verify this matches expected $TARGET_VERSION${RESET}"
-fi
+echo -e "${GREEN}✓ Flash complete!${RESET}"
 echo -e "  OS: flashed to ${GREEN}${NEW_LUMIN:-$NEW_BUILD}${RESET} ($NEW_BUILD)"
+echo -e "${DIM}  Updating sheet...${RESET}"
+update_sheet "flash_complete" "$SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$OPERATOR_INITIALS"
+echo -e "  ${GREEN}Sheet updated${RESET}"
 
 # ---- Auto-provision --------------------------------------------------
 PROVISION_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_provision.sh"

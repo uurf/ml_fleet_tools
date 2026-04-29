@@ -13,7 +13,7 @@ git clone https://github.com/cconnors/ml_toolkit_tools.git ~/Developer/ml_toolki
 cd ~/Developer/ml_toolkit && chmod +x install.sh && ./install.sh
 
 # Flash and provision a device (in fastboot mode)
-./ml_os_flash.sh ./os_images B3E.230928.10-R.098
+./ml_os_flash.sh 1.4.1
 ```
 
 See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-device workflow.
@@ -38,7 +38,7 @@ See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-dev
 ```
 ml_toolkit/
 ├── os_images/                        ← gitignored — download from ML Hub
-│   └── B3E.230928.10-R.098_user_secure/
+│   └── 1.4.1/
 ├── builds/                           ← gitignored — APKs and assets
 ├── authorized_keys/
 │   ├── adbkey                        ← fleet private key (distribute to all machines)
@@ -68,7 +68,7 @@ Or just run `./install.sh` — it handles this automatically.
 
 | Setting | Value |
 |---|---|
-| Target OS | 1.4.1 (B3E.230928.10-R.098) |
+| Target OS | 1.4.1 |
 | WiFi SSID | KAGAMI |
 | App package | com.tindrum.kagami |
 | ADB port | 5555 |

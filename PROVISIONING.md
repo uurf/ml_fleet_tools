@@ -54,7 +54,7 @@ cd ~/Developer/ml_toolkit
 ## Step 4 — Run the flash script
 
 ```
-./ml_os_flash.sh ./os_images B3E.230928.10-R.098
+./ml_os_flash.sh 1.4.1
 ```
 
 The script will detect the device and show you a confirmation screen like this:
@@ -67,7 +67,7 @@ ML2 OS Flash Helper
 
   Device:  G572XT1000XX
   From:    unknown
-  To:      B3E.230928.10-R.098_user_secure
+  To:      1.4.1
 
 Press Enter to continue or Ctrl+C to abort...
 ```
@@ -211,7 +211,7 @@ Disconnect the device and repeat from Step 1 for the next device.
 
 **"No arrows" in headset UI after provisioning**
 - This indicates a corrupted provisioning state
-- Reflash the device: run `./ml_os_flash.sh ./os_images B3E.230928.10-R.098` again
+- Reflash the device: run `./ml_os_flash.sh 1.4.1` again
 
 ---
 
@@ -219,7 +219,7 @@ Disconnect the device and repeat from Step 1 for the next device.
 
 ```bash
 # Flash and provision a device
-./ml_os_flash.sh ./os_images B3E.230928.10-R.098
+./ml_os_flash.sh 1.4.1
 
 # Provision only (no flash)
 ./ml_provision.sh

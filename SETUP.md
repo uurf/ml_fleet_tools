@@ -61,10 +61,10 @@ The OS image file is too large to store in GitHub — you need to download it se
 
 1. Open **Magic Leap Hub** on your Mac
 2. Go to **Package Manager**
-3. Find **Device OS Versions** → select version **1.4.1 (B3E.230928.10-R.098)**
+3. Find **Device OS Versions** → select version **1.4.1**
 4. Click **Apply Changes** and wait for the download to complete
 5. Click **Open Folder** to find where it downloaded
-6. Copy the entire folder (named `B3E.230928.10-R.098_user_secure`) into:
+6. Copy the entire folder (named `1.4.1`) into:
    ```
    ~/Developer/ml_toolkit/os_images/
    ```
@@ -73,7 +73,7 @@ Your folder structure should look like:
 ```
 ml_toolkit/
 └── os_images/
-    └── B3E.230928.10-R.098_user_secure/
+    └── 1.4.1/
         ├── flashall_amd.sh
         └── *.img files
 ```
@@ -125,7 +125,7 @@ You need to download the OS image — see Step 4 above.
 **Script exits immediately with no output**
 Make sure you're using Homebrew bash:
 ```
-/opt/homebrew/bin/bash ./ml_os_flash.sh ./os_images B3E.230928.10-R.098
+/opt/homebrew/bin/bash ./ml_os_flash.sh 1.4.1
 ```
 
 ---
