@@ -180,15 +180,12 @@ Two dialogs appear when the device is connected to the laptop.
 
 ## Step 9 — Add device IP to fleet list
 
-Back in Terminal, run the command shown at the end of provisioning:
+> **Note:** The IP shown at the end of provisioning is on the provisioning WiFi network. It will be different on site once the show APs are configured with static IPs. You'll rebuild `devices.txt` on site before running `ml_deploy.sh` or `ml_status.sh`.
+
+For reference, the command to add an IP is:
 
 ```
 echo '[device ip]' >> devices.txt
-```
-
-For example:
-```
-echo '10.0.0.45' >> devices.txt
 ```
 
 ---

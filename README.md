@@ -37,14 +37,16 @@ See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-dev
 
 ```
 ml_toolkit/
-├── os_images/                        ← gitignored — download from ML Hub
-│   └── B3E.230928.10-R.098_user_secure/
-├── builds/                           ← gitignored — APKs and assets
-├── authorized_keys/
+├── os_images/                        ← gitignored — created by install.sh; download OS from ML Hub
+│   └── 1.4.1/                        ← name folder by version number
+├── builds/                           ← gitignored — created by install.sh; APKs and assets
+├── logs/                             ← gitignored — created by install.sh
+├── status/                           ← gitignored — created by install.sh
+├── authorized_keys/                  ← in repo
 │   ├── adbkey                        ← fleet private key (distribute to all machines)
 │   └── *.pub                         ← public keys per machine
-├── devices.txt                       ← gitignored — one IP per line
-└── provisioned_devices.csv           ← gitignored — serial/MAC/IP/device# log
+├── devices.txt                       ← gitignored — one IP per line; built on site with show-network IPs
+└── provisioned_devices.csv           ← gitignored — created on first use; serial/MAC/IP/device# log
 ```
 
 ---
