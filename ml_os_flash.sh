@@ -182,8 +182,32 @@ for i in "${!IMAGE_DIRS[@]}"; do
 done
 echo ""
 
+# ---- Version selection ---------------------------------------------
+# Shared prompt used when no version arg given, or given version not found
+select_from_menu() {
+  echo ""
+  echo "Available OS versions:"
+  echo ""
+  for i in "${!IMAGE_DIRS[@]}"; do
+    echo "  [$((i+1))] $(basename "${IMAGE_DIRS[$i]}")"
+  done
+  echo "  [Enter] Exit"
+  echo ""
+  read -rp "Select version number: " IDX
+  if [[ -z "$IDX" ]]; then
+    echo "Exiting."
+    exit 0
+  fi
+  IDX=$(( IDX - 1 ))
+  if [[ $IDX -lt 0 || $IDX -ge ${#IMAGE_DIRS[@]} ]]; then
+    echo -e "${RED}Invalid selection.${RESET}"
+    exit 1
+  fi
+  SELECTED_DIR="${IMAGE_DIRS[$IDX]}"
+}
+
+SELECTED_DIR=""
 if [[ -n "$TARGET_VERSION" ]]; then
-  SELECTED_DIR=""
   for dir in "${IMAGE_DIRS[@]}"; do
     if [[ "$(basename "$dir")" == *"$TARGET_VERSION"* ]]; then
       SELECTED_DIR="$dir"
@@ -191,8 +215,8 @@ if [[ -n "$TARGET_VERSION" ]]; then
     fi
   done
   if [[ -z "$SELECTED_DIR" ]]; then
-    echo -e "${RED}Version '$TARGET_VERSION' not found in $OS_IMAGES_DIR${RESET}"
-    exit 1
+    echo -e "${YELLOW}'$TARGET_VERSION' not found in $OS_IMAGES_DIR${RESET}"
+    select_from_menu
   fi
 else
   if [[ ${#IMAGE_DIRS[@]} -eq 1 ]]; then
@@ -200,8 +224,7 @@ else
     SELECTED_DIR="${IMAGE_DIRS[0]}"
     echo -e "  Auto-selected: $(basename "${IMAGE_DIRS[0]}")"
   else
-    read -rp "Select image number: " IDX
-    SELECTED_DIR="${IMAGE_DIRS[$IDX]}"
+    select_from_menu
   fi
 fi
 
