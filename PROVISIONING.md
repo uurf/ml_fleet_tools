@@ -150,7 +150,7 @@ Two dialogs appear when the device is connected to the laptop.
 
 1. **"Allow USB debugging"** — check **Always allow from this computer**, then tap **Allow**
 
-   This blesses the fleet ADB key so this dialog won't appear again for this laptop.
+   This blesses the fleet ADB key so this dialog won't appear again for this laptop, or any other laptop using the fleet ADB key.
 
 ![USB Device Detected dialog](docs/images/usb_device_detected_dialog.jpeg)
 
