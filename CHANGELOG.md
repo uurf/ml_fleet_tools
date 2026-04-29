@@ -16,7 +16,7 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
-## [v1.0.0] — 2025-xx-xx — KAGAMI initial release
+## [v0.5.0] — 2025-xx-xx — KAGAMI initial release
 
 ### Added
 - `ml_os_flash.sh` — OS flash via `flashall_amd.sh`; ADB key injection; OOBE bypass; auto-provisions after flash
