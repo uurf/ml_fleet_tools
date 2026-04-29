@@ -54,8 +54,16 @@ cd ~/Developer/ml_toolkit
 ## Step 4 — Run the flash script
 
 ```
-./ml_os_flash.sh 1.4.1
+./ml_os_flash.sh
 ```
+
+Or if you skipped Step 3:
+
+```
+cd ~/Developer/ml_toolkit && ./ml_os_flash.sh
+```
+
+The script will automatically find the OS image in `os_images/` and use it. If there is more than one OS version in that folder, it will ask you to choose — but in normal operation there will only be one.
 
 The script will detect the device and show you a confirmation screen like this:
 
@@ -230,7 +238,10 @@ Disconnect the device and repeat from Step 1 for the next device.
 ## Quick reference — Terminal commands
 
 ```bash
-# Flash and provision a device
+# Flash and provision a device (auto-selects the OS in os_images/)
+./ml_os_flash.sh
+
+# Flash a specific version (if multiple OS versions are in os_images/)
 ./ml_os_flash.sh 1.4.1
 
 # Provision only (no flash)
