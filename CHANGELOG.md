@@ -16,7 +16,25 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
-## [v0.5.0] — 2025-xx-xx — KAGAMI initial release
+## [v0.6.0] — planned — Deploy workflow
+
+- `ml_deploy.sh` tested and validated on site
+- `ml_status.sh` validated against full fleet
+- `fleet_dashboard.html` wired to live fleet data
+- `devices.txt` populated with show-site static IPs
+
+---
+
+## [v0.5.0] — 2025-xx-xx — KAGAMI provisioning pipeline
+
+Initial working release. Flash, provision, and sheet tracking validated end-to-end.
+
+### Versioning roadmap
+| Version | Milestone |
+|---|---|
+| `v0.5.x` | Bug fixes and doc updates during provisioning phase |
+| `v0.6.0` | Deploy workflow tested and validated on site |
+| `v1.0.0` | Full pipeline proven in production — KAGAMI opens |
 
 ### Added
 - `ml_os_flash.sh` — OS flash via `flashall_amd.sh`; ADB key injection; OOBE bypass; auto-provisions after flash
