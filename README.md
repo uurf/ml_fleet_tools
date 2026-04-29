@@ -9,11 +9,11 @@ Zero-MDM fleet management for Magic Leap 2 devices. Handles OS flash, provisioni
 
 ```bash
 # Clone and install
-git clone https://github.com/cconnors/ml_toolkit_tools.git ~/Developer/ml_toolkit
+git clone https://github.com/uurf/ml_fleet_tools.git ~/Developer/ml_toolkit
 cd ~/Developer/ml_toolkit && chmod +x install.sh && ./install.sh
 
 # Flash and provision a device (in fastboot mode)
-./ml_os_flash.sh ./os_images B3E.230928.10-R.098
+./ml_os_flash.sh
 ```
 
 See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-device workflow.
