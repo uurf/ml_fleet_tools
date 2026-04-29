@@ -43,7 +43,7 @@ ml_toolkit/
 ├── logs/                             ← gitignored — created by install.sh
 ├── status/                           ← gitignored — created by install.sh
 ├── authorized_keys/                  ← in repo
-│   ├── adbkey                        ← fleet private key (distribute to all machines)
+│   ├── adbkey_kagami_fleet           ← fleet private key (distribute to all machines)
 │   └── *.pub                         ← public keys per machine
 ├── devices.txt                       ← gitignored — one IP per line; built on site with show-network IPs
 └── provisioned_devices.csv           ← gitignored — created on first use; serial/MAC/IP/device# log
@@ -56,7 +56,7 @@ ml_toolkit/
 Any machine that needs to connect to fleet devices must use the shared fleet ADB key:
 
 ```bash
-cp authorized_keys/adbkey ~/.android/adbkey
+cp authorized_keys/adbkey_kagami_fleet ~/.android/adbkey
 chmod 600 ~/.android/adbkey
 ssh-keygen -y -f ~/.android/adbkey > ~/.android/adbkey.pub
 adb kill-server && adb start-server
