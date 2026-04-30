@@ -31,6 +31,8 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ---- Google Sheets update ------------------------------------------
 SHEETS_URL="https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec"
 
@@ -74,6 +76,7 @@ check_for_updates() {
     exit 1
   fi
 }
+TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
 TARGET_VERSION="${1:-}"
@@ -84,7 +87,7 @@ if [[ -z "$OS_IMAGES_DIR" ]]; then
 fi
 
 echo ""
-echo -e "${BOLD}ML2 OS Flash Tool${RESET}"
+echo -e "${BOLD}ML2 OS Flash Tool${RESET} ${DIM}$TOOLKIT_VERSION${RESET}"
 echo ""
 
 # ---- Preflight checks -----------------------------------------------
