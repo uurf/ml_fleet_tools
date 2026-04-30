@@ -72,6 +72,7 @@ check_for_updates() {
     exit 1
   fi
 }
+TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
 # ============================================================
@@ -152,7 +153,7 @@ BUILD_TYPE=$(sh getprop ro.build.type)
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}║   KAGAMI Device Provisioning — Tin Drum      ║${RESET}"
-echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET} ${DIM}$TOOLKIT_VERSION${RESET}"
 echo ""
 echo -e "  Model:          ${CYAN}$MODEL${RESET}"
 echo -e "  Device Serial:  ${CYAN}$DEVICE_SERIAL${RESET}"
@@ -584,7 +585,7 @@ echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
 echo -e "  ${YELLOW}[ ]${RESET} Connect controller to device via USB-C → allow firmware update"
 echo -e "  ${YELLOW}[ ]${RESET} Connect device to laptop — two dialogs will appear:"
 echo -e "        ${BOLD}Allow USB debugging${RESET} → check 'Always allow from this computer' → Allow"
-echo -e "        ${BOLD}USB Device Detected${RESET} → OK""
+echo -e "        ${BOLD}USB Device Detected${RESET} → OK"
 if [[ ${#MANUAL_STEPS[@]} -gt 0 ]]; then
   for step in "${MANUAL_STEPS[@]}"; do
     echo -e "  ${YELLOW}[ ]${RESET} $step"
