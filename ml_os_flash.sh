@@ -87,7 +87,8 @@ if [[ -z "$OS_IMAGES_DIR" ]]; then
 fi
 
 echo ""
-echo -e "${BOLD}ML2 OS Flash Tool${RESET} ${DIM}$TOOLKIT_VERSION${RESET}"
+echo -e "${BOLD}ML2 OS Flash Tool${RESET}"
+echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
 echo ""
 
 # ---- Preflight checks -----------------------------------------------

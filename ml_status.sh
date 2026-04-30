@@ -45,6 +45,7 @@ check_for_updates() {
     exit 1
   fi
 }
+TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
 # ── Defaults (override via args or edit here) ────────────────
@@ -390,7 +391,7 @@ if [[ -z "$DEVICES" ]]; then
 fi
 
 COUNT=$(echo "$DEVICES" | wc -l | tr -d ' ')
-echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET}"
+echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}"
 
 # Parallel collection
 PIDS=()

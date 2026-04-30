@@ -25,7 +25,22 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
-## [v0.5.0] — 2025-xx-xx — KAGAMI provisioning pipeline
+## [v0.5.2] — 2025-05-01 — Bug fixes
+
+### Fixed
+- `ml_os_flash.sh`: missing `SCRIPT_DIR` definition causing unbound variable error on startup
+- `ml_provision.sh`: stray quote in USB dialog checklist causing unbound variable error
+
+---
+
+## [v0.5.1] — 2025-04-30 — Bug fix
+
+### Fixed
+- `ml_provision.sh`: missing `SCRIPT_DIR` definition causing unbound variable error on startup
+
+---
+
+## [v0.5.0] — 2025-04-30 — KAGAMI provisioning pipeline
 
 Initial working release. Flash, provision, and sheet tracking validated end-to-end.
 

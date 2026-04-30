@@ -40,11 +40,13 @@ check_for_updates() {
     exit 1
   fi
 }
+TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
 usage() {
   echo ""
   echo -e "${BOLD}ML Fleet Deploy — KAGAMI${RESET}"
+  echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
   echo ""
   echo "  Commands:"
   echo "    connect               Connect to all devices over WiFi ADB"
