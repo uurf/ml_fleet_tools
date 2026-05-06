@@ -13,6 +13,7 @@ This guide covers the complete process for flashing and provisioning a single Ma
   - Password: `KAGAmius`
 - You need the device number and case number from the tracking sheet
 - Have the controller for the device ready
+- Your laptop must be set up with the fleet ADB key (see SETUP.md) — all machines connecting to fleet devices must use the same key
 
 ---
 
@@ -124,7 +125,7 @@ Manual steps — put on headset and complete:
         • "USB Device Detected" → OK
   [ ] Settings → Battery → Compute Pack Standby → Off
   [ ] Settings → Display → Display Override → Off
-  [ ] Settings → Display → Segmented Dimming → Off
+  [ ] Settings → Display → Segmented Dimming → On
   [ ] Settings → System → Advanced → OS Updater → Check for updates → Never
 
   Device #:      [number]
@@ -158,7 +159,7 @@ Two dialogs appear when the device is connected to the laptop.
 
 1. **"Allow USB debugging"** — check **Always allow from this computer**, then tap **Allow**
 
-   This blesses the fleet ADB key so this dialog won't appear again for this laptop, or any other laptop using the fleet ADB key.
+   This authorizes the fleet ADB key on the device. Any laptop using the fleet ADB key will connect without this dialog in future — but every machine that connects to fleet devices must be set up with the fleet key first (see SETUP.md).
 
 ![USB Device Detected dialog](docs/images/usb_device_detected_dialog.jpeg)
 
@@ -171,7 +172,7 @@ Two dialogs appear when the device is connected to the laptop.
 
 **Display:**
 - Settings → Display → **Display Override → Off**
-- Settings → Display → **Segmented Dimming → Off**
+- Settings → Display → **Segmented Dimming → On**
 
 **System:**
 - Settings → System → Advanced → OS Updater → **Check for updates → Never**
