@@ -268,7 +268,7 @@ else
     sh "setprop persist.adb.auth 0" &>/dev/null || true
     printf "  %b  Pre-authorized ADB (userdebug build)\n" "$TICK"
   else
-    printf "  %b  ADB keys pre-injected during flash — no dialog expected\n" "$TICK"
+    printf "  %b  USB debugging dialog will appear on first connection — tap Allow\n" "$TICK"
   fi
 fi
 
@@ -339,7 +339,7 @@ else
   sh "service call SurfaceFlinger 1008 i32 0" &>/dev/null || true              # best-effort
   sh "service call power 31 i32 0" &>/dev/null || true                         # best-effort
   mark_manual "Settings → Display → Display Override → Off"
-  mark_manual "Settings → Display → Segmented Dimming → Off"
+  mark_manual "Settings → Display → Segmented Dimming → On"
 fi
 
 # ====================================================================
@@ -527,39 +527,6 @@ fi
 
 # ====================================================================
 # NETWORK / IDENTITY SUMMARY
-# ====================================================================
-# ====================================================================
-# ADB KEYS — push all authorized keys while we have confirmed ADB access
-# ====================================================================
-section "ADB key authorization"
-
-ADB_KEY="$HOME/.android/adbkey.pub"
-EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
-ALL_KEYS_TMP=$(mktemp)
-
-if [[ -f "$ADB_KEY" ]]; then
-  cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
-  echo "" >> "$ALL_KEYS_TMP"
-fi
-if [[ -d "$EXTRA_KEYS_DIR" ]]; then
-  for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
-    [[ -f "$keyfile" ]] || continue
-    cat "$keyfile" >> "$ALL_KEYS_TMP"
-    echo "" >> "$ALL_KEYS_TMP"
-  done
-fi
-
-if [[ -s "$ALL_KEYS_TMP" ]]; then
-  KEY_COUNT=$(grep -c "." "$ALL_KEYS_TMP" 2>/dev/null || echo "0")
-  command adb -s "$SERIAL" push "$ALL_KEYS_TMP" /data/misc/adb/adb_keys &>/dev/null &&     sh "chmod 0640 /data/misc/adb/adb_keys" 2>/dev/null || true
-  sh "setprop ctl.restart adbd" 2>/dev/null || true
-  sleep 1
-  printf "  %b  %-52s ${DIM}%s keys${RESET}\n" "$TICK" "All authorized keys pushed" "$KEY_COUNT"
-else
-  printf "  %b  No keys found in authorized_keys/\n" "$CROSS"
-fi
-rm -f "$ALL_KEYS_TMP"
-
 section "Network"
 sleep 3
 DEVICE_IP=$(sh "ip addr show wlan0 2>/dev/null | grep 'inet ' | awk '{print \$2}' | cut -d/ -f1" || echo "not connected")

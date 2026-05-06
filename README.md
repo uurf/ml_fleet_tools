@@ -27,7 +27,7 @@ See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-dev
 | `install.sh` | One-command environment setup for new machines |
 | `ml_os_flash.sh` | Flash OS 1.4.1, inject ADB keys, skip OOBE, run provisioning |
 | `ml_provision.sh` | Apply all device settings; `--check` to verify |
-| `ml_deploy.sh` | Deploy APKs, push assets, launch/restart app across fleet |
+| `ml_deploy.sh` | Deploy APKs and assets to fleet; `deploy` command connects automatically, prompts for APK selection, pushes assets, and installs |
 | `ml_status.sh` | Collect OS/APK/settings status from all online devices |
 | `fleet_dashboard.html` | Visual dashboard — load JSON from `ml_status.sh --json` |
 

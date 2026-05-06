@@ -403,76 +403,57 @@ sleep 45
 adb wait-for-device
 sleep 8  # give system services time to start before pushing files
 
-# ---- Pre-authorize this laptop's ADB key ----------------------------
-#
-# When a user taps "Always allow" on the USB debugging dialog, Android
-# simply appends the laptop's public key to /data/misc/adb/adb_keys.
-# We do the same thing programmatically right after first boot, while
-# we still have adb access from the flash session.
-#
-# After this, the dialog will NEVER appear again on this device for
-# this laptop — and any other laptops whose keys are in EXTRA_ADB_KEYS.
-#
-# To add keys from other machines (e.g. other laptops in your fleet
-# provisioning setup), put their adbkey.pub contents in:
-#   ./authorized_keys/  (one .pub file per machine)
-
-echo ""
-echo -e "${CYAN}Pre-authorizing ADB keys (bypass 'Allow USB debugging' dialog)...${RESET}"
-
-ADB_KEY="$HOME/.android/adbkey.pub"
-EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
-DEVICE_KEYS_PATH="/data/misc/adb/adb_keys"
-
-# Collect all keys to inject
-ALL_KEYS_TMP=$(mktemp)
-
-if [[ -f "$ADB_KEY" ]]; then
-  cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
-  echo "" >> "$ALL_KEYS_TMP"  # ensure newline between keys
-  echo -e "  Adding key: $(basename "$HOME") (this machine)"
-else
-  echo -e "  ${YELLOW}Warning: ~/.android/adbkey.pub not found — run 'adb devices' once to generate it${RESET}"
-fi
-
-# Add any extra machine keys from authorized_keys/ directory
-if [[ -d "$EXTRA_KEYS_DIR" ]]; then
-  for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
-    [[ -f "$keyfile" ]] || continue
-    cat "$keyfile" >> "$ALL_KEYS_TMP"
-    echo "" >> "$ALL_KEYS_TMP"
-    echo -e "  Adding key: $(basename "$keyfile")"
-  done
-fi
-
-if [[ -s "$ALL_KEYS_TMP" ]]; then
-  # Ensure the adb directory exists and push the keys file
-  adb -s "$SERIAL" shell "mkdir -p /data/misc/adb" 2>/dev/null || true
-  adb -s "$SERIAL" push "$ALL_KEYS_TMP" "$DEVICE_KEYS_PATH" &>/dev/null && \
-    adb -s "$SERIAL" shell "chmod 0640 $DEVICE_KEYS_PATH" 2>/dev/null || true
-  # Restart adbd so it picks up the new key immediately
-  adb -s "$SERIAL" shell "setprop ctl.restart adbd" 2>/dev/null || true
-  sleep 2
-  echo -e "  ${GREEN}✓ ADB keys injected — dialog will not appear on this device${RESET}"
-
 # ---- Skip OOBE / setup wizard ---------------------------------------
 # Mark device as provisioned so the first-time setup wizard is skipped.
 # Must run before the wizard launches — we do it immediately after boot.
 # Force-stop the wizard package in case it already started.
 echo ""
 echo -e "${CYAN}Skipping setup wizard (OOBE)...${RESET}"
-# Mark device as fully provisioned
 adb -s "$SERIAL" shell "settings put secure user_setup_complete 1" 2>/dev/null || true
 adb -s "$SERIAL" shell "settings put global device_provisioned 1" 2>/dev/null || true
 adb -s "$SERIAL" shell "settings put global setup_wizard_has_run 1" 2>/dev/null || true
-# Force-stop and disable the ML2 OOBE package
 adb -s "$SERIAL" shell "am force-stop com.magicleap.oobe" 2>/dev/null || true
 adb -s "$SERIAL" shell "pm disable-user --user 0 com.magicleap.oobe" 2>/dev/null || true
 echo -e "  ${GREEN}✓ Setup wizard bypassed${RESET}"
-else
-  echo -e "  ${YELLOW}No keys found to inject — USB debugging dialog will still appear${RESET}"
+
+# ---- Pre-authorize ADB keys -----------------------------------------
+# /data/misc/adb/ may be writable immediately after first boot before
+# the OS fully hardens. We attempt injection here — it fails silently
+# on user builds where the path is locked down, but succeeds on fresh
+# flashes where it is still accessible.
+# All connecting machines must use the fleet key regardless.
+echo ""
+echo -e "${CYAN}Injecting ADB keys...${RESET}"
+
+ADB_KEY="$HOME/.android/adbkey.pub"
+EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
+DEVICE_KEYS_PATH="/data/misc/adb/adb_keys"
+ALL_KEYS_TMP=$(mktemp)
+
+if [[ -f "$ADB_KEY" ]]; then
+  cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
+  echo "" >> "$ALL_KEYS_TMP"
+fi
+if [[ -d "$EXTRA_KEYS_DIR" ]]; then
+  for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
+    [[ -f "$keyfile" ]] || continue
+    cat "$keyfile" >> "$ALL_KEYS_TMP"
+    echo "" >> "$ALL_KEYS_TMP"
+  done
 fi
 
+if [[ -s "$ALL_KEYS_TMP" ]]; then
+  adb -s "$SERIAL" shell "mkdir -p /data/misc/adb" 2>/dev/null || true
+  if adb -s "$SERIAL" push "$ALL_KEYS_TMP" "$DEVICE_KEYS_PATH" &>/dev/null; then
+    adb -s "$SERIAL" shell "chmod 0640 $DEVICE_KEYS_PATH" 2>/dev/null || true
+    adb -s "$SERIAL" shell "setprop ctl.restart adbd" 2>/dev/null || true
+    sleep 2
+    echo -e "  ${GREEN}✓ Keys injected — Allow USB debugging dialog may not appear${RESET}"
+  else
+    echo -e "  ${YELLOW}⚠ Key injection failed — Allow USB debugging dialog will appear on first connection${RESET}"
+    echo -e "  ${DIM}This is normal on user builds. Tap Allow and check 'Always allow from this computer'.${RESET}"
+  fi
+fi
 rm -f "$ALL_KEYS_TMP"
 
 NEW_BUILD=$(adb -s "$SERIAL" shell getprop ro.build.id 2>/dev/null | tr -d '\r' || echo "unknown")
