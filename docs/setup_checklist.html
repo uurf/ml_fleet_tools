@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAGAMI — Machine Setup Checklist</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 2rem 2.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { font-size: 11px; color: var(--muted); }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+  }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.55rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .checkbox {
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-content { flex: 1; }
+
+  .step-label {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 2px;
+  }
+
+  .step-detail {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0px 4px;
+    color: var(--ink);
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 3px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .note {
+    margin-top: 1.5rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  footer {
+    margin-top: 1.25rem;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 1.2rem 1.5rem; }
+    @page { margin: 1.2cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Machine setup checklist</div>
+    <div class="subtitle" style="margin-top:3px;">One-time setup per laptop · see SETUP.md for full instructions</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<!-- BEFORE YOU START -->
+<div class="section-label">Before you start</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Mac with a free USB-C port while plugged in to power</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Fleet ADB key file from your team lead</div>
+    <div class="step-detail"><code>adbkey_kagami_fleet</code> — every machine connecting to fleet devices must use this key</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Internet connection</div>
+  </div>
+</div>
+
+<!-- INSTALL -->
+<div class="section-label">Install</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Open Terminal</div>
+    <div class="step-detail">Press <em>Cmd+Space</em>, type <em>Terminal</em>, press Enter</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Run the installer</div>
+    <div class="step-detail" style="margin-top:3px;"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
+    <div class="step-detail" style="margin-top:4px;">Enter your Mac password if prompted. Wait for <em>Installation complete!</em></div>
+  </div>
+</div>
+
+<!-- FLEET KEY -->
+<div class="section-label">Fleet ADB key</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Copy fleet key to toolkit</div>
+    <div class="step-detail">Place <code>adbkey_kagami_fleet</code> at:</div>
+    <div class="step-detail" style="margin-top:3px;"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Run installer again to activate key</div>
+    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
+    <div class="step-detail" style="margin-top:4px;">Look for <em>Fleet ADB key installed</em></div>
+  </div>
+</div>
+
+<!-- OS IMAGE -->
+<div class="section-label">OS image</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Download OS image from Magic Leap Hub</div>
+    <div class="step-detail">Package Manager → Device OS Versions → select version → Apply Changes → wait → Open Folder</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Copy image folder to toolkit and rename to version number</div>
+    <div class="step-detail" style="margin-top:3px;"><code>~/Developer/ml_toolkit/os_images/1.4.1/</code></div>
+    <div class="step-detail" style="margin-top:4px;">Folder must contain <code>flashall_amd.sh</code> and <code>*.img</code> files</div>
+  </div>
+</div>
+
+<!-- VERIFY -->
+<div class="section-label">Verify</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Run flash script to confirm setup</div>
+    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</code></div>
+    <div class="step-detail" style="margin-top:4px;">Should show OS auto-selection or version menu — not an error</div>
+  </div>
+</div>
+
+<div class="note">
+  To update the toolkit later: <code>cd ~/Developer/ml_toolkit && ./update.sh</code><br>
+  If a script tells you to update when you run it, this is the command to use.
+</div>
+
+<footer>
+  <span>KAGAMI / Tin Drum &nbsp;·&nbsp; one-time machine setup</span>
+  <span>docs/setup_checklist.html</span>
+</footer>
+
+</body>
+</html>
