@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAGAMI — Flash &amp; Provision Checklist</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 2rem 2.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { font-size: 11px; color: var(--muted); }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+  }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.55rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .checkbox {
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-content { flex: 1; }
+
+  .step-label {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 2px;
+  }
+
+  .step-detail {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0px 4px;
+    color: var(--ink);
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 3px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+
+  .input-field { flex: 1; }
+  .input-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .input-line {
+    border-bottom: 1px solid var(--ink);
+    height: 20px;
+  }
+
+  .repeat {
+    margin-top: 1.5rem;
+    padding: 0.65rem 0.9rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  footer {
+    margin-top: 1.25rem;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 1.2rem 1.5rem; }
+    @page { margin: 1.2cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Flash &amp; provision checklist</div>
+    <div class="subtitle" style="margin-top:3px;">Per device · laptop must be plugged in · see PROVISIONING.md for full instructions</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<!-- BEFORE YOU START -->
+<div class="section-label">Before you start</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Laptop is plugged in to power</div>
+    <div class="step-detail">USB suspend during flash will corrupt the device</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">KAGAMI WiFi network is broadcasting nearby</div>
+    <div class="step-detail">SSID: <em>KAGAMI</em> &nbsp;·&nbsp; Password: <em>KAGAmius</em></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Device number and case number from tracking sheet</div>
+  </div>
+</div>
+
+<!-- PUT DEVICE IN FASTBOOT -->
+<div class="section-label">Put device into fastboot</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Power off the device</div>
+    <div class="step-detail">Hold <em>Power</em> until it shuts down completely</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Boot into fastboot mode</div>
+    <div class="step-detail">Hold <em>Volume Down</em> + press <em>Power</em> — wait for fastboot LED on Compute Pack</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Connect Compute Pack to laptop via USB-C</div>
+  </div>
+</div>
+
+<!-- RUN FLASH SCRIPT -->
+<div class="section-label">Flash &amp; provision</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Open Terminal and navigate to toolkit</div>
+    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit</code></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Run flash script</div>
+    <div class="step-detail" style="margin-top:3px;"><code>./ml_os_flash.sh</code></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Press Enter to confirm, then enter device info</div>
+    <div class="step-detail">Device number · case number · operator initials</div>
+    <div class="step-detail" style="margin-top:3px;">Script runs unattended for ~10 min after this — you can walk away</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Wait for "Provisioning complete"</div>
+    <div class="step-detail">Flash ~10 min · provision ~2 min · sheet updated automatically</div>
+    <div class="step-detail" style="margin-top:3px;">Serial number is copied to clipboard when done</div>
+  </div>
+</div>
+
+<!-- DEVICE INFO -->
+<div class="input-row">
+  <div class="input-field">
+    <div class="input-label">Device #</div>
+    <div class="input-line"></div>
+  </div>
+  <div class="input-field">
+    <div class="input-label">Case #</div>
+    <div class="input-line"></div>
+  </div>
+  <div class="input-field">
+    <div class="input-label">Operator</div>
+    <div class="input-line"></div>
+  </div>
+  <div class="input-field" style="flex:2;">
+    <div class="input-label">Serial</div>
+    <div class="input-line"></div>
+  </div>
+</div>
+
+<div class="repeat">Now continue with the Required Manual Headset Settings Checklist.</div>
+
+<footer>
+  <span>KAGAMI / Tin Drum &nbsp;·&nbsp; per-device flash &amp; provision</span>
+  <span>docs/flash_checklist.html</span>
+</footer>
+
+</body>
+</html>
