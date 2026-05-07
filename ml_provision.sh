@@ -268,7 +268,7 @@ else
     sh "setprop persist.adb.auth 0" &>/dev/null || true
     printf "  %b  Pre-authorized ADB (userdebug build)\n" "$TICK"
   else
-    printf "  %b  USB debugging dialog will appear on first connection — tap Allow\n" "$TICK"
+    printf "  %b  ADB keys pre-injected during flash — no dialog expected\n" "$TICK"
   fi
 fi
 
@@ -305,41 +305,41 @@ section "Display"
 # Display Override: Off
 # Display Modes: none
 # Auto Brightness: Off
-# Brightness: minimum
-# Global Dimming: minimum
-# Segmented Dimming: Off
-# Maximum Dimming: 100%
+# Brightness: between t and n in "Brightness" label (manual — slider position)
+# Global Dimming: just below maximum, even with h in "light" (manual — slider position)
+# Segmented Dimming: On
+# Maximum Dimming: just below maximum, even with l in "display" (manual — slider position)
 
 if [[ "$MODE" == "check" ]]; then
   check_bool "Auto-brightness: Off" "$(get_system screen_brightness_mode)" "false"
-  check_val  "Brightness (0 = min)" "$(get_system screen_brightness)" "0"
+  check_val  "Brightness (target: 12)" "$(get_system screen_brightness)" "12"
   for label in \
     "Display Override: Off" \
     "Display Modes: none" \
-    "Global Dimming: minimum" \
-    "Segmented Dimming: Off" \
-    "Maximum Dimming: 100%"
+    "Global Dimming: just below maximum (even with h in 'light')" \
+    "Segmented Dimming: On" \
+    "Maximum Dimming: just below maximum (even with l in 'display')"
   do
-    printf "  %b  %-52s ${DIM}ML system service — verify in headset UI${RESET}\n" "$MANUAL" "$label"
+    printf "  %b  %-52s ${DIM}verify in headset UI${RESET}\n" "$MANUAL" "$label"
   done
 else
   # ── Standard Android ──────────────────────────────────────────
   apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
   apply "Brightness: minimum (0)"   put_system screen_brightness 0
 
-  # ── ML2-specific display service calls ────────────────────────
-  # Confirmed working on OS 1.4.1 user build:
-  sh "service call MagicLeapDimmer 1 f 0.0" &>/dev/null || true  # Global Dimming → min
-  sh "service call MagicLeapDimmer 3 f 1.0" &>/dev/null || true  # Maximum Dimming → 100%
-  # Display Modes → none is already default on fresh flash
-  printf "  %b  Global Dimming → min, Maximum Dimming → 100%%, Display Modes → none\n" "$TICK"
+  # ── Standard Android ──────────────────────────────────────────
+  apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
+  apply "Brightness: 12"            put_system screen_brightness 12
 
-  # Confirmed NOT working via service calls on 1.4.1 user build — manual required:
-  sh "settings put secure ml_segmented_dimming_enabled 0" &>/dev/null || true  # best-effort
-  sh "service call SurfaceFlinger 1008 i32 0" &>/dev/null || true              # best-effort
+  # ── ML2-specific display service calls ────────────────────────
+  # Global Dimming, Segmented Dimming, Maximum Dimming are ML2-specific —
+  # not readable or settable via Android settings APIs or service calls
+  # on OS 1.4.1 user build. Manual headset steps required.
   sh "service call power 31 i32 0" &>/dev/null || true                         # best-effort
   mark_manual "Settings → Display → Display Override → Off"
+  mark_manual "Settings → Display → Global Dimming → just below max, even with h in 'light'"
   mark_manual "Settings → Display → Segmented Dimming → On"
+  mark_manual "Settings → Display → Maximum Dimming → just below max, even with l in 'display'"
 fi
 
 # ====================================================================
@@ -523,10 +523,46 @@ if [[ "$MODE" != "check" ]]; then
   sh "setprop service.adb.tcp.port 5555" &>/dev/null || true
   sh "stop adbd && start adbd" &>/dev/null || true
   printf "  %b  WiFi ADB enabled on port 5555\n" "$TICK"
+  # Create asset directory so USB-C drive copy script puts files in the right place
+  sh "mkdir -p /sdcard/Kagami/data" &>/dev/null || true
+  printf "  %b  /sdcard/Kagami/data created\n" "$TICK"
 fi
 
 # ====================================================================
 # NETWORK / IDENTITY SUMMARY
+# ====================================================================
+# ====================================================================
+# ADB KEYS — push all authorized keys while we have confirmed ADB access
+# ====================================================================
+section "ADB key authorization"
+
+ADB_KEY="$HOME/.android/adbkey.pub"
+EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
+ALL_KEYS_TMP=$(mktemp)
+
+if [[ -f "$ADB_KEY" ]]; then
+  cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
+  echo "" >> "$ALL_KEYS_TMP"
+fi
+if [[ -d "$EXTRA_KEYS_DIR" ]]; then
+  for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
+    [[ -f "$keyfile" ]] || continue
+    cat "$keyfile" >> "$ALL_KEYS_TMP"
+    echo "" >> "$ALL_KEYS_TMP"
+  done
+fi
+
+if [[ -s "$ALL_KEYS_TMP" ]]; then
+  KEY_COUNT=$(grep -c "." "$ALL_KEYS_TMP" 2>/dev/null || echo "0")
+  command adb -s "$SERIAL" push "$ALL_KEYS_TMP" /data/misc/adb/adb_keys &>/dev/null &&     sh "chmod 0640 /data/misc/adb/adb_keys" 2>/dev/null || true
+  sh "setprop ctl.restart adbd" 2>/dev/null || true
+  sleep 1
+  printf "  %b  %-52s ${DIM}%s keys${RESET}\n" "$TICK" "All authorized keys pushed" "$KEY_COUNT"
+else
+  printf "  %b  No keys found in authorized_keys/\n" "$CROSS"
+fi
+rm -f "$ALL_KEYS_TMP"
+
 section "Network"
 sleep 3
 DEVICE_IP=$(sh "ip addr show wlan0 2>/dev/null | grep 'inet ' | awk '{print \$2}' | cut -d/ -f1" || echo "not connected")
