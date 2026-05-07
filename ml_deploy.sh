@@ -10,8 +10,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEVICES_FILE="$SCRIPT_DIR/devices.txt"
 LOG_DIR="$SCRIPT_DIR/logs"
 BUILDS_DIR="$SCRIPT_DIR/builds"
-ASSETS_SRC="$BUILDS_DIR/assets/data"
-ASSETS_DEST="/sdcard/Kagami/data"
 MAX_PARALLEL=20  # tune based on your network/router limits
 
 mkdir -p "$LOG_DIR"
@@ -392,7 +390,7 @@ cmd_deploy() {
   for i in "${!APKS[@]}"; do
     local size
     size=$(du -sh "${APKS[$i]}" 2>/dev/null | awk '{print $1}')
-    echo "  [$((i+1))] $(basename "${APKS[$i]}")  ${DIM}(${size})${RESET}"
+    echo -e "  [$((i+1))] $(basename "${APKS[$i]}")  ${DIM}(${size})${RESET}"
   done
   echo ""
   echo -e "  Enter numbers separated by spaces to install multiple, e.g. ${DIM}1 2${RESET}"
@@ -430,26 +428,10 @@ cmd_deploy() {
   for apk in "${SELECTED_APKS[@]}"; do
     echo -e "  APK:    ${CYAN}$(basename "$apk")${RESET}"
   done
-  if [[ -d "$ASSETS_SRC" ]]; then
-    local asset_count
-    asset_count=$(find "$ASSETS_SRC" -type f | wc -l | tr -d ' ')
-    echo -e "  Assets: ${CYAN}$ASSETS_SRC${RESET} ${DIM}(${asset_count} files → $ASSETS_DEST)${RESET}"
-  else
-    echo -e "  Assets: ${YELLOW}$ASSETS_SRC not found — skipping asset push${RESET}"
-  fi
   echo -e "  Target: ${CYAN}$device_count device(s) online${RESET}"
   echo ""
   echo -e "${YELLOW}Press Enter to continue or Ctrl+C to abort...${RESET}"
   read -rp ""
-
-  # ---- Push assets ---------------------------------------------------
-  if [[ -d "$ASSETS_SRC" ]]; then
-    echo ""
-    echo -e "${BOLD}── Pushing assets ──────────────────────────────${RESET}"
-    echo -e "${DIM}  $ASSETS_SRC → $ASSETS_DEST${RESET}"
-    echo ""
-    run_push "$ASSETS_SRC" "$ASSETS_DEST"
-  fi
 
   # ---- Install APKs --------------------------------------------------
   for apk in "${SELECTED_APKS[@]}"; do
@@ -457,6 +439,13 @@ cmd_deploy() {
     echo -e "${BOLD}── Installing $(basename "$apk") ──────────────────────────────${RESET}"
     run_parallel do_install "$apk"
   done
+
+  # ---- Set home app --------------------------------------------------
+  echo ""
+  echo -e "${BOLD}── Setting home app ──────────────────────────────${RESET}"
+  do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
+  export -f do_set_home 2>/dev/null || true
+  run_parallel do_set_home
 
   echo ""
   echo -e "${GREEN}${BOLD}Deploy complete.${RESET}"

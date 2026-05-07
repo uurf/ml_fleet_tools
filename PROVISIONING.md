@@ -13,7 +13,6 @@ This guide covers the complete process for flashing and provisioning a single Ma
   - Password: `KAGAmius`
 - You need the device number and case number from the tracking sheet
 - Have the controller for the device ready
-- Your laptop must be set up with the fleet ADB key (see SETUP.md) — all machines connecting to fleet devices must use the same key
 
 ---
 
@@ -125,7 +124,7 @@ Manual steps — put on headset and complete:
         • "USB Device Detected" → OK
   [ ] Settings → Battery → Compute Pack Standby → Off
   [ ] Settings → Display → Display Override → Off
-  [ ] Settings → Display → Segmented Dimming → On
+  [ ] Settings → Display → Segmented Dimming → Off
   [ ] Settings → System → Advanced → OS Updater → Check for updates → Never
 
   Device #:      [number]
@@ -159,7 +158,7 @@ Two dialogs appear when the device is connected to the laptop.
 
 1. **"Allow USB debugging"** — check **Always allow from this computer**, then tap **Allow**
 
-   This authorizes the fleet ADB key on the device. Any laptop using the fleet ADB key will connect without this dialog in future — but every machine that connects to fleet devices must be set up with the fleet key first (see SETUP.md).
+   This blesses the fleet ADB key so this dialog won't appear again for this laptop, or any other laptop using the fleet ADB key.
 
 ![USB Device Detected dialog](docs/images/usb_device_detected_dialog.jpeg)
 
@@ -172,7 +171,7 @@ Two dialogs appear when the device is connected to the laptop.
 
 **Display:**
 - Settings → Display → **Display Override → Off**
-- Settings → Display → **Segmented Dimming → On**
+- Settings → Display → **Segmented Dimming → Off**
 
 **System:**
 - Settings → System → Advanced → OS Updater → **Check for updates → Never**
@@ -248,15 +247,39 @@ Disconnect the device and repeat from Step 1 for the next device.
 # Check device settings
 ./ml_provision.sh --check
 
-# Install APK on a specific device
-./ml_deploy.sh -d [ip] install builds/kagami_offline.apk
+# Deploy to a single device — connects, prompts for APK selection, pushes assets, installs
+./ml_deploy.sh -d [ip] deploy
 
-# Push assets to a specific device  
-./ml_deploy.sh -d [ip] push builds/assets/ /sdcard/KAGAMI/
+# Deploy to all devices in devices.txt
+./ml_deploy.sh deploy
+
+# Connect to all devices over WiFi (done automatically by deploy)
+./ml_deploy.sh connect
 
 # Check status of all devices in fleet
 ./ml_status.sh
-
-# Connect to all devices over WiFi
-./ml_deploy.sh connect
 ```
+
+### ml_deploy.sh commands
+
+| Command | Description |
+|---|---|
+| `deploy` | Interactive: select APK(s), install, set kiosk as home app — connects automatically |
+| `connect` | Connect to all devices in `devices.txt` over WiFi ADB |
+| `status` | Show online/offline status of all devices |
+| `install <path.apk>` | Install a specific APK to all online devices |
+| `push <src> <dest>` | Push a file or folder to all online devices |
+| `launch <package>` | Launch an app by package name on all online devices |
+| `stop <package>` | Force-stop an app on all online devices |
+| `restart <package>` | Stop then relaunch an app on all online devices |
+| `reboot` | Reboot all online devices |
+| `shell <cmd>` | Run any `adb shell` command on all online devices |
+| `logs <package>` | Stream logcat for a package from all online devices |
+
+### ml_deploy.sh options
+
+| Option | Description |
+|---|---|
+| `-d <ip>` | Target a single device by IP instead of all devices in `devices.txt` |
+| `-f <file>` | Use an alternate devices file (default: `devices.txt`) |
+| `-j <n>` | Max parallel jobs (default: 20) |
