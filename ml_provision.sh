@@ -305,7 +305,7 @@ section "Display"
 # Display Override: Off
 # Display Modes: none
 # Auto Brightness: Off
-# Brightness: between t and n in "Brightness" label (manual — slider position)
+# Brightness: 12
 # Global Dimming: just below maximum, even with h in "light" (manual — slider position)
 # Segmented Dimming: On
 # Maximum Dimming: just below maximum, even with l in "display" (manual — slider position)
@@ -323,10 +323,6 @@ if [[ "$MODE" == "check" ]]; then
     printf "  %b  %-52s ${DIM}verify in headset UI${RESET}\n" "$MANUAL" "$label"
   done
 else
-  # ── Standard Android ──────────────────────────────────────────
-  apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
-  apply "Brightness: minimum (0)"   put_system screen_brightness 0
-
   # ── Standard Android ──────────────────────────────────────────
   apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
   apply "Brightness: 12"            put_system screen_brightness 12
@@ -582,6 +578,20 @@ if [[ "$MODE" != "check" ]]; then
   echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
   # Notify sheet that provisioning is complete and set all auto-configured checkboxes
   update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
+
+  # ---- Chain to deploy — only when called from ml_os_flash.sh -------
+  DEPLOY_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_deploy.sh"
+  if [[ "${ML_CHAINED:-0}" == "1" ]]; then
+    if [[ -f "$DEPLOY_SCRIPT" ]]; then
+      echo ""
+      echo -e "${BOLD}═══════════════════════════════════════════════════${RESET}"
+      echo ""
+      ANDROID_SERIAL="$SERIAL" bash "$DEPLOY_SCRIPT" --all
+      update_sheet "deploy_complete" "$DEVICE_SERIAL"
+    else
+      echo -e "${YELLOW}⚠ ml_deploy.sh not found — skipping APK install${RESET}"
+    fi
+  fi
 else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
