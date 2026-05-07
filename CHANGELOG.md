@@ -15,8 +15,14 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
 ---
+## [v0.5.5] — 2026-05-07 — SSD copy utility
 
-## [v0.6.0] — planned — Deploy workflow
+### Added
+- `utilities/ml_ssd_copy.sh` — copies show data from a USB-C attached SSD to `/sdcard/[showName]/data` on all fleet devices; discovers `[showName]_data` directories on the SSD and prompts operator to select a show if multiple are present; single-show drives auto-confirm; supports `-d <ip>` for single device or `devices.txt` for full fleet; parallel copy with progress display
+
+---
+
+## [v0.5.4] — planned — Deploy workflow
 
 - `ml_deploy.sh` tested and validated on site
 - `ml_status.sh` validated against full fleet
