@@ -109,29 +109,6 @@
     letter-spacing: 0.02em;
   }
 
-  .input-row {
-    display: flex;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-    padding: 0.75rem 0.9rem;
-    border: 1px solid var(--rule);
-    border-radius: 4px;
-  }
-
-  .input-field { flex: 1; }
-  .input-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-  .input-line {
-    border-bottom: 1px solid var(--ink);
-    height: 20px;
-  }
-
   .repeat {
     margin-top: 1.5rem;
     padding: 0.65rem 0.9rem;
@@ -189,7 +166,7 @@
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Device number and case number from tracking sheet</div>
+    <div class="step-label">Device number and case number for Google tracking sheet</div>
   </div>
 </div>
 
@@ -253,26 +230,6 @@
     <div class="step-label">Wait for "Provisioning complete"</div>
     <div class="step-detail">Flash ~10 min · provision ~2 min · sheet updated automatically</div>
     <div class="step-detail" style="margin-top:3px;">Serial number is copied to clipboard when done</div>
-  </div>
-</div>
-
-<!-- DEVICE INFO -->
-<div class="input-row">
-  <div class="input-field">
-    <div class="input-label">Device #</div>
-    <div class="input-line"></div>
-  </div>
-  <div class="input-field">
-    <div class="input-label">Case #</div>
-    <div class="input-line"></div>
-  </div>
-  <div class="input-field">
-    <div class="input-label">Operator</div>
-    <div class="input-line"></div>
-  </div>
-  <div class="input-field" style="flex:2;">
-    <div class="input-label">Serial</div>
-    <div class="input-line"></div>
   </div>
 </div>
 
