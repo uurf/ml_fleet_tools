@@ -24,20 +24,22 @@ function doPost(e) {
       return idx === -1 ? null : idx + 1;
     }
 
-    const deviceNumCol    = col("Device #");
-    const statusCol       = col("Status");
-    const serialCol       = col("Device Serial Number");
-    const os141Col        = col("OS 1.4.1 (B3E.230928.10-R.098)");
-    const devModeCol      = col("Enable Developer mode : Settings/About/Click Build Number 7 Times");
-    const batterySaverCol = col("Battery: Battery Saver:  off");
-    const displayModesCol = col("Display Modes: none");
-    const autoBrightCol   = col("Display: Auto Brightness: Off");
-    const brightnessCol   = col("Display: Brightness : minimum");
-    const globalDimCol    = col("Display: Global Dimming: minimum");
-    const maxDimCol       = col("Display: Maximum Dimming: 100%");
-    const wifiCol         = col("Connect device to KAGAMI WiFi");
-    const notesCol        = col("Notes");
-    const operatorCol     = col("Operator name - Phase 1");
+    const deviceNumCol       = col("Device #");
+    const statusCol          = col("Status");
+    const serialCol          = col("Device Serial Number");
+    const os141Col           = col("OS 1.4.1 (B3E.230928.10-R.098)");
+    const devModeCol         = col("Enable Developer mode : Settings/About/Click Build Number 7 Times ");
+    const batterySaverCol    = col("Battery: Battery Saver:  off");
+    const computeStandbyCol  = col("Battery: Compute Pack Standby: Off");
+    const displayModesCol    = col("Display Modes: none");
+    const autoBrightCol      = col("Display: Auto Brightness: Off");
+    const brightnessCol      = col("Display: Brightness : 12");
+    const globalDimCol       = col("Display: Global Dimming: just below max, even with h in 'light'");
+    const segDimmingCol      = col("Display: Segmented Dimming: On");
+    const maxDimCol          = col("Display: Maximum Dimming: just below max, even with l in 'display'");
+    const wifiCol            = col("Connect device to KAGAMI WiFi");
+    const notesCol           = col("Notes");
+    const operatorCol        = col("Operator name - Phase 1");
 
     const lastRow = sheet.getLastRow();
 
@@ -105,10 +107,12 @@ function doPost(e) {
       sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
       sheet.getRange(targetRow, devModeCol).setValue(true);
       sheet.getRange(targetRow, batterySaverCol).setValue(true);
+      if (computeStandbyCol) sheet.getRange(targetRow, computeStandbyCol).setValue(true);
       sheet.getRange(targetRow, displayModesCol).setValue(true);
       sheet.getRange(targetRow, autoBrightCol).setValue(true);
       sheet.getRange(targetRow, brightnessCol).setValue(true);
       sheet.getRange(targetRow, globalDimCol).setValue(true);
+      if (segDimmingCol) sheet.getRange(targetRow, segDimmingCol).setValue(true);
       sheet.getRange(targetRow, maxDimCol).setValue(true);
       if (data.wifi_connected === "true") {
         sheet.getRange(targetRow, wifiCol).setValue(true);

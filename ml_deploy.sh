@@ -452,7 +452,62 @@ cmd_deploy() {
   echo ""
 }
 
-# ---- Main ----
+# ---- Non-interactive deploy — installs all APKs in builds/ ----------
+# Called by ml_provision.sh at end of provisioning over USB.
+# Uses ANDROID_SERIAL env var if set, otherwise falls back to online_devices.
+cmd_deploy_all() {
+  echo ""
+  echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}║   KAGAMI Deploy — installing all APKs        ║${RESET}"
+  echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+  echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
+  echo ""
+
+  # If called from ml_provision.sh, ANDROID_SERIAL is set — use it directly
+  if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+    online_devices() { echo "$ANDROID_SERIAL"; }
+    echo -e "${CYAN}Using USB device: $ANDROID_SERIAL${RESET}"
+  fi
+
+  # ---- Find APKs -----------------------------------------------------
+  if [[ ! -d "$BUILDS_DIR" ]]; then
+    echo -e "${RED}builds/ directory not found at $BUILDS_DIR${RESET}"
+    exit 1
+  fi
+
+  mapfile -t APKS < <(find "$BUILDS_DIR" -maxdepth 1 -name "*.apk" | sort)
+
+  if [[ ${#APKS[@]} -eq 0 ]]; then
+    echo -e "${RED}No APK files found in $BUILDS_DIR${RESET}"
+    exit 1
+  fi
+
+  echo -e "${BOLD}Installing all APKs in builds/:${RESET}"
+  echo ""
+  for apk in "${APKS[@]}"; do
+    local size
+    size=$(du -sh "$apk" 2>/dev/null | awk '{print $1}')
+    echo -e "  ${CYAN}$(basename "$apk")${RESET}  ${DIM}(${size})${RESET}"
+  done
+  echo ""
+
+  # ---- Install -------------------------------------------------------
+  for apk in "${APKS[@]}"; do
+    echo -e "${BOLD}── Installing $(basename "$apk") ──────────────────────────────${RESET}"
+    run_parallel do_install "$apk"
+    echo ""
+  done
+
+  # ---- Set home app --------------------------------------------------
+  echo -e "${BOLD}── Setting home app ──────────────────────────────${RESET}"
+  do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
+  export -f do_set_home 2>/dev/null || true
+  run_parallel do_set_home
+
+  echo ""
+  echo -e "${GREEN}${BOLD}APK install complete.${RESET}"
+  echo ""
+}
 SINGLE_DEVICE=""
 
 # Parse flags
@@ -461,12 +516,13 @@ while [[ $# -gt 0 ]]; do
     -d) SINGLE_DEVICE="$2:5555"; shift 2 ;;
     -f) DEVICES_FILE="$2"; shift 2 ;;
     -j) MAX_PARALLEL="$2"; shift 2 ;;
+    --all) COMMAND="deploy-all"; shift ;;
     -h|--help) usage ;;
     *) break ;;
   esac
 done
 
-COMMAND="${1:-help}"
+COMMAND="${COMMAND:-${1:-help}}"
 shift || true
 
 # Override online_devices if single device mode
@@ -475,7 +531,8 @@ if [[ -n "$SINGLE_DEVICE" ]]; then
 fi
 
 case "$COMMAND" in
-  deploy)    cmd_deploy ;;
+  deploy)      cmd_deploy ;;
+  deploy-all)  cmd_deploy_all ;;
   connect)   cmd_connect ;;
   status)    cmd_status ;;
   install)
