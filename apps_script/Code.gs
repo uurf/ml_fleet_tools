@@ -30,14 +30,22 @@ function doPost(e) {
     const os141Col           = col("OS 1.4.1 (B3E.230928.10-R.098)");
     const devModeCol         = col("Enable Developer mode : Settings/About/Click Build Number 7 Times ");
     const batterySaverCol    = col("Battery: Battery Saver:  off");
-    const computeStandbyCol  = col("Battery: Compute Pack Standby: Off");
+    // Manual — never set by script:
+    // const computeStandbyCol  = col("Battery: Compute Pack Standby: Off");
+    // const displayOverrideCol = col("Display: Display Override: Off");
     const displayModesCol    = col("Display Modes: none");
     const autoBrightCol      = col("Display: Auto Brightness: Off");
     const brightnessCol      = col("Display: Brightness : 12");
-    const globalDimCol       = col("Display: Global Dimming: just below max, even with h in 'light'");
-    const segDimmingCol      = col("Display: Segmented Dimming: On");
-    const maxDimCol          = col("Display: Maximum Dimming: just below max, even with l in 'display'");
+    // Manual — never set by script:
+    // const globalDimCol       = col("Display: Global Dimming: just below max, even with h in 'light'");
+    // const segDimmingCol      = col("Display: Segmented Dimming: On");
+    // const maxDimCol          = col("Display: Maximum Dimming: just below max, even with l in 'display'");
+    // const osUpdaterCol       = col("System: Advanced: Os Updater: Check for updates: Never");
     const wifiCol            = col("Connect device to KAGAMI WiFi");
+    const kioskScriptCol     = col("Kiosk mode script");
+    const deployApkCol       = col("Deploy Kagami APK 1.24");
+    const grantPermsCol      = col("Grant App Access Permissions");
+    const removeAppsCol      = col("Remove other apps (An Ark, The Life, Medusa)");
     const notesCol           = col("Notes");
     const operatorCol        = col("Operator name - Phase 1");
 
@@ -88,11 +96,18 @@ function doPost(e) {
 
     } else if (data.action === "flash_complete") {
       sheet.getRange(targetRow, os141Col).setValue(true);
+      if (removeAppsCol) sheet.getRange(targetRow, removeAppsCol).setValue(true);
       sheet.getRange(targetRow, statusCol).setValue("Firmware update in progress");
       // Confirm initials at flash_complete — catches cases where flash_start fired without network
       if (data.operator_initials && operatorCol) {
         sheet.getRange(targetRow, operatorCol).setValue(data.operator_initials);
       }
+
+    } else if (data.action === "deploy_complete") {
+      if (kioskScriptCol) sheet.getRange(targetRow, kioskScriptCol).setValue(true);
+      if (deployApkCol)   sheet.getRange(targetRow, deployApkCol).setValue(true);
+      if (grantPermsCol)  sheet.getRange(targetRow, grantPermsCol).setValue(true);
+      sheet.getRange(targetRow, statusCol).setValue("Ready for asset loading");
 
     } else if (data.action === "provision_start") {
       sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
@@ -107,13 +122,9 @@ function doPost(e) {
       sheet.getRange(targetRow, statusCol).setValue("Configuration in progress");
       sheet.getRange(targetRow, devModeCol).setValue(true);
       sheet.getRange(targetRow, batterySaverCol).setValue(true);
-      if (computeStandbyCol) sheet.getRange(targetRow, computeStandbyCol).setValue(true);
       sheet.getRange(targetRow, displayModesCol).setValue(true);
       sheet.getRange(targetRow, autoBrightCol).setValue(true);
       sheet.getRange(targetRow, brightnessCol).setValue(true);
-      sheet.getRange(targetRow, globalDimCol).setValue(true);
-      if (segDimmingCol) sheet.getRange(targetRow, segDimmingCol).setValue(true);
-      sheet.getRange(targetRow, maxDimCol).setValue(true);
       if (data.wifi_connected === "true") {
         sheet.getRange(targetRow, wifiCol).setValue(true);
       }
