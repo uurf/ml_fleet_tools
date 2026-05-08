@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/usr/bin/env bash
 # ============================================================
 # ML Fleet Toolkit — Update Script
 # Run this to get the latest version of all scripts.
