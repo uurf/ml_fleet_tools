@@ -11,7 +11,7 @@
 #   ./ml_status.sh --csv                  # CSV for spreadsheet
 #   ./ml_status.sh --failures             # only show problem devices
 #   ./ml_status.sh --fix                  # auto-fix bad settings
-#   ./ml_status.sh --expected-kagami 2.1.0 --expected-kiosk 1.0.0
+#   ./ml_status.sh --package com.foo.bar  # override APK to check
 # ============================================================
 
 set -euo pipefail
@@ -21,12 +21,15 @@ DEVICES_FILE="$SCRIPT_DIR/devices.txt"
 STATUS_DIR="$SCRIPT_DIR/status"
 MAX_PARALLEL=30
 
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
+
 # ---- Check for toolkit updates -------------------------------------
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
-    echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}" >&2
+    echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
     return 0
   fi
 
@@ -36,11 +39,11 @@ check_for_updates() {
 
   if [[ "$local_sha" != "$origin_sha" ]]; then
     echo ""
-    echo -e "${RED}┌─────────────────────────────────────────────────┐${RESET}" >&2
-    echo -e "${RED}│  Toolkit is out of date — please update first   │${RESET}" >&2
-    echo -e "${RED}└─────────────────────────────────────────────────┘${RESET}" >&2
+    echo -e "${RED}┌─────────────────────────────────────────────────┐${RESET}"
+    echo -e "${RED}│  Toolkit is out of date — please update first   │${RESET}"
+    echo -e "${RED}└─────────────────────────────────────────────────┘${RESET}"
     echo ""
-    echo -e "  Run: ${CYAN}./update.sh${RESET}" >&2
+    echo -e "  Run: ${CYAN}./update.sh${RESET}"
     echo ""
     exit 1
   fi
@@ -49,11 +52,9 @@ TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null ||
 check_for_updates
 
 # ── Defaults (override via args or edit here) ────────────────
-PKG_KAGAMI="com.tindrum.kagamu"
-PKG_KIOSK="com.tindrum.kiosk"
+TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagami}"
 EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip check
-EXPECTED_KAGAMI="${ML_EXPECTED_KAGAMI:-}"  # e.g. "2.1.0" — leave blank to skip check
-EXPECTED_KIOSK="${ML_EXPECTED_KIOSK:-}"   # e.g. "1.0.0" — leave blank to skip check
+EXPECTED_APK="${ML_EXPECTED_APK:-}"      # e.g. "2.1.0" — leave blank to skip check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
 WANT_STAY_AWAKE="1"        # 1 = stay awake while charging
@@ -69,8 +70,6 @@ MODE="table"   # table | json | csv
 FAILURES_ONLY=false
 AUTO_FIX=false
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 TICK="${GREEN}✓${RESET}"; CROSS="${RED}✗${RESET}"; WARN="${YELLOW}~${RESET}"
 
 # ── Arg parsing ──────────────────────────────────────────────
@@ -80,9 +79,9 @@ while [[ $# -gt 0 ]]; do
     --csv)        MODE="csv" ;;
     --failures)   FAILURES_ONLY=true ;;
     --fix)        AUTO_FIX=true ;;
-    --expected-os)      EXPECTED_OS="$2"; shift ;;
-    --expected-kagami)  EXPECTED_KAGAMI="$2"; shift ;;
-    --expected-kiosk)   EXPECTED_KIOSK="$2"; shift ;;
+    --package)    TARGET_PACKAGE="$2"; shift ;;
+    --expected-os)  EXPECTED_OS="$2"; shift ;;
+    --expected-apk) EXPECTED_APK="$2"; shift ;;
     -f)           DEVICES_FILE="$2"; shift ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
@@ -112,31 +111,20 @@ collect_device() {
 
   # ── Versions ─────────────────────────────────────────────
   local os_version
-  os_version=$(adb_s getprop ro.build.version.lumin)
+  os_version=$(adb_s getprop ro.build.version.release)
 
   local build_id
   build_id=$(adb_s getprop ro.build.id)
 
-  get_apk_version() {
-    local pkg="$1"
-    if adb -s "$serial" shell pm list packages 2>/dev/null | grep -q "$pkg"; then
-      local ver code
-      ver=$(adb_s "dumpsys package $pkg" | grep versionName | head -1 | sed 's/.*versionName=//')
-      code=$(adb_s "dumpsys package $pkg" | grep versionCode | head -1 | sed 's/.*versionCode=//; s/ .*//')
-      echo "true|$ver|$code"
-    else
-      echo "false||"
-    fi
-  }
-
-  local kagami_info kiosk_info
-  kagami_info=$(get_apk_version "$PKG_KAGAMI")
-  kiosk_info=$(get_apk_version "$PKG_KIOSK")
-
-  local kagami_installed kagami_version kagami_code
-  IFS='|' read -r kagami_installed kagami_version kagami_code <<< "$kagami_info"
-  local kiosk_installed kiosk_version kiosk_code
-  IFS='|' read -r kiosk_installed kiosk_version kiosk_code <<< "$kiosk_info"
+  local apk_version=""
+  local apk_code=""
+  if adb -s "$serial" shell pm list packages 2>/dev/null | grep -q "$TARGET_PACKAGE"; then
+    apk_version=$(adb_s "dumpsys package $TARGET_PACKAGE" | grep versionName | head -1 | sed 's/.*versionName=//')
+    apk_code=$(adb_s "dumpsys package $TARGET_PACKAGE" | grep versionCode | head -1 | sed 's/.*versionCode=//; s/ .*//')
+    apk_installed="true"
+  else
+    apk_installed="false"
+  fi
 
   # ── Settings ─────────────────────────────────────────────
   local stay_awake
@@ -148,7 +136,7 @@ collect_device() {
   [[ "$stay_awake" != "0" ]] && stay_awake_on="true"
 
   local wifi_ssid
-  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | sed 's/SSID: //' | tr -d '"' | head -1 || echo "")
+  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | sed 's/SSID: //' | tr -d '"' || echo "")
   local wifi_connected="false"
   [[ -n "$wifi_ssid" && "$wifi_ssid" != "<unknown ssid>" ]] && wifi_connected="true"
 
@@ -195,17 +183,11 @@ collect_device() {
   "os_version": "$os_version",
   "build_id": "$build_id",
   "battery": "$battery",
-  "kagami": {
-    "package": "$PKG_KAGAMI",
-    "installed": $kagami_installed,
-    "version": "$kagami_version",
-    "version_code": "$kagami_code"
-  },
-  "kiosk": {
-    "package": "$PKG_KIOSK",
-    "installed": $kiosk_installed,
-    "version": "$kiosk_version",
-    "version_code": "$kiosk_code"
+  "apk": {
+    "package": "$TARGET_PACKAGE",
+    "installed": $apk_installed,
+    "version": "$apk_version",
+    "version_code": "$apk_code"
   },
   "settings": {
     "stay_awake": $stay_awake_on,
@@ -268,17 +250,17 @@ render_table() {
 
   # Header
   printf "\n"
-  printf "${BOLD}%-18s %-8s %-12s %-12s %-7s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
-    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
-  printf "%-18s %-8s %-12s %-12s %-7s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
-    "──────────────────" "────────" "────────────" "────────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
+  printf "${BOLD}%-18s %-8s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
+    "IP" "OS" "APK" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
+  printf "%-18s %-8s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
+    "──────────────────" "────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
 
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     ((total++)) || true
 
     # Parse JSON with python3 (available on macOS)
-    read -r ip os_ver kagami_ver kiosk_ver battery stay_awake wifi_ok wifi_ssid bt_on brightness dev_on usb_on auto_off <<< \
+    read -r ip os_ver apk_ver battery stay_awake wifi_ok wifi_ssid bt_on brightness dev_on usb_on auto_off <<< \
       "$(python3 -c "
 import json, sys
 d = json.load(open('$f'))
@@ -286,8 +268,7 @@ s = d['settings']
 print(
   d['ip'],
   d['os_version'],
-  d['kagami']['version'] if d['kagami']['installed'] else 'MISSING',
-  d['kiosk']['version'] if d['kiosk']['installed'] else 'MISSING',
+  d['apk']['version'] if d['apk']['installed'] else 'MISSING',
   d['battery'],
   str(s['stay_awake']).lower(),
   str(s['wifi_connected']).lower(),
@@ -301,7 +282,7 @@ print(
 " 2>/dev/null || echo "error")"
 
     # Pass/fail per setting
-    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_kagami c_kiosk
+    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
     c_bt=$(check "$bt_on" "false")          # want BT OFF
@@ -310,8 +291,7 @@ print(
     c_usb=$(check "$usb_on" "true")
     c_update=$(check "$auto_off" "true")
     c_os=$(check "$os_ver" "$EXPECTED_OS")
-    c_kagami=$(check "$kagami_ver" "$EXPECTED_KAGAMI")
-    c_kiosk=$(check "$kiosk_ver" "$EXPECTED_KIOSK")
+    c_apk=$(check "$apk_ver" "$EXPECTED_APK")
 
     # Overall pass?
     local all_ok=true
@@ -319,8 +299,7 @@ print(
       [[ "$c" == "fail" ]] && all_ok=false
     done
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && all_ok=false
-    [[ -n "$EXPECTED_KAGAMI" && "$c_kagami" == "fail" ]] && all_ok=false
-    [[ -n "$EXPECTED_KIOSK" && "$c_kiosk" == "fail" ]] && all_ok=false
+    [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && all_ok=false
 
     $FAILURES_ONLY && $all_ok && continue
 
@@ -342,13 +321,9 @@ print(
     s_usb=$(fmt_bool "$usb_on" "$c_usb")
     s_update=$(fmt_bool "$auto_off" "$c_update")
 
-    local kagami_disp="$kagami_ver"
-    [[ "$kagami_ver" == "MISSING" ]] && kagami_disp="${RED}MISSING${RESET}"
-    [[ -n "$EXPECTED_KAGAMI" && "$c_kagami" == "fail" ]] && kagami_disp="${YELLOW}$kagami_ver${RESET}"
-
-    local kiosk_disp="$kiosk_ver"
-    [[ "$kiosk_ver" == "MISSING" ]] && kiosk_disp="${RED}MISSING${RESET}"
-    [[ -n "$EXPECTED_KIOSK" && "$c_kiosk" == "fail" ]] && kiosk_disp="${YELLOW}$kiosk_ver${RESET}"
+    local apk_disp="$apk_ver"
+    [[ "$apk_ver" == "MISSING" ]] && apk_disp="${RED}MISSING${RESET}"
+    [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && apk_disp="${YELLOW}$apk_ver${RESET}"
 
     local os_disp="$os_ver"
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && os_disp="${YELLOW}$os_ver${RESET}"
@@ -361,8 +336,8 @@ print(
       ((fail_count++)) || true
     fi
 
-    printf "%-18s %-8b %-12b %-12b %-7s  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
-      "$ip" "$os_disp" "$kagami_disp" "$kiosk_disp" "$battery" \
+    printf "%-18s %-8b %-10b %-7s%%  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
+      "$ip" "$os_disp" "$apk_disp" "$battery" \
       "$s_sleep" "$s_wifi" "$s_bt" "$brightness" \
       "$s_dev" "$s_usb" "$s_update" "$s_ok"
   done
@@ -375,18 +350,17 @@ print(
 # ── Render CSV ───────────────────────────────────────────────
 render_csv() {
   local files=("$RUN_DIR"/*.json)
-  echo "ip,os_version,build_id,kagami_version,kagami_installed,kiosk_version,kiosk_installed,battery,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,developer_mode,usb_debugging,auto_update_off"
+  echo "ip,os_version,build_id,apk_version,apk_installed,battery,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,developer_mode,usb_debugging,auto_update_off"
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     python3 -c "
 import json
 d = json.load(open('$f'))
 s = d['settings']
-k = d['kagami']
-ki = d['kiosk']
+a = d['apk']
 print(','.join(str(x) for x in [
   d['ip'], d['os_version'], d['build_id'],
-  k['version'], k['installed'], ki['version'], ki['installed'], d['battery'],
+  a['version'], a['installed'], d['battery'],
   s['stay_awake'], s['wifi_connected'], s['wifi_ssid'],
   s['bluetooth_on'], s['screen_brightness'],
   s['developer_mode'], s['usb_debugging'], s['auto_update_off']
@@ -410,24 +384,15 @@ render_json() {
 }
 
 # ── Main ─────────────────────────────────────────────────────
-
-# Connect to all devices in devices.txt before checking status
-if [[ -f "$DEVICES_FILE" ]]; then
-  while IFS= read -r ip; do
-    [[ -z "$ip" ]] && continue
-    adb connect "${ip}:5555" &>/dev/null
-  done < <(load_devices)
-fi
-
 DEVICES=$(online_devices)
 
 if [[ -z "$DEVICES" ]]; then
-  echo -e "${RED}No devices online. Check that devices in $DEVICES_FILE are reachable.${RESET}" >&2
+  echo -e "${RED}No devices online. Run: ./ml_deploy.sh connect${RESET}"
   exit 1
 fi
 
 COUNT=$(echo "$DEVICES" | wc -l | tr -d ' ')
-echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}" >&2
+echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}"
 
 # Parallel collection
 PIDS=()
@@ -445,7 +410,7 @@ wait "${PIDS[@]}" 2>/dev/null || true
 
 # Auto-fix if requested (runs after collection)
 if $AUTO_FIX; then
-  echo -e "${YELLOW}Auto-fixing settings on affected devices...${RESET}" >&2
+  echo -e "${YELLOW}Auto-fixing settings on affected devices...${RESET}"
   while IFS= read -r serial; do
     [[ -z "$serial" ]] && continue
     fix_device "$serial" &
