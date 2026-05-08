@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/usr/bin/env bash
 # ============================================================
 # Magic Leap 2 Device Provisioning — KAGAMI / Tin Drum
 # Target OS: 1.4.1 (B3E.230928.10-R.098)
@@ -305,37 +305,41 @@ section "Display"
 # Display Override: Off
 # Display Modes: none
 # Auto Brightness: Off
-# Brightness: 12
-# Global Dimming: just below maximum, even with h in "light" (manual — slider position)
-# Segmented Dimming: On
-# Maximum Dimming: just below maximum, even with l in "display" (manual — slider position)
+# Brightness: minimum
+# Global Dimming: minimum
+# Segmented Dimming: Off
+# Maximum Dimming: 100%
 
 if [[ "$MODE" == "check" ]]; then
   check_bool "Auto-brightness: Off" "$(get_system screen_brightness_mode)" "false"
-  check_val  "Brightness (target: 12)" "$(get_system screen_brightness)" "12"
+  check_val  "Brightness (0 = min)" "$(get_system screen_brightness)" "0"
   for label in \
     "Display Override: Off" \
     "Display Modes: none" \
-    "Global Dimming: just below maximum (even with h in 'light')" \
-    "Segmented Dimming: On" \
-    "Maximum Dimming: just below maximum (even with l in 'display')"
+    "Global Dimming: minimum" \
+    "Segmented Dimming: Off" \
+    "Maximum Dimming: 100%"
   do
-    printf "  %b  %-52s ${DIM}verify in headset UI${RESET}\n" "$MANUAL" "$label"
+    printf "  %b  %-52s ${DIM}ML system service — verify in headset UI${RESET}\n" "$MANUAL" "$label"
   done
 else
   # ── Standard Android ──────────────────────────────────────────
   apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
-  apply "Brightness: 12"            put_system screen_brightness 12
+  apply "Brightness: minimum (0)"   put_system screen_brightness 0
 
   # ── ML2-specific display service calls ────────────────────────
-  # Global Dimming, Segmented Dimming, Maximum Dimming are ML2-specific —
-  # not readable or settable via Android settings APIs or service calls
-  # on OS 1.4.1 user build. Manual headset steps required.
+  # Confirmed working on OS 1.4.1 user build:
+  sh "service call MagicLeapDimmer 1 f 0.0" &>/dev/null || true  # Global Dimming → min
+  sh "service call MagicLeapDimmer 3 f 1.0" &>/dev/null || true  # Maximum Dimming → 100%
+  # Display Modes → none is already default on fresh flash
+  printf "  %b  Global Dimming → min, Maximum Dimming → 100%%, Display Modes → none\n" "$TICK"
+
+  # Confirmed NOT working via service calls on 1.4.1 user build — manual required:
+  sh "settings put secure ml_segmented_dimming_enabled 0" &>/dev/null || true  # best-effort
+  sh "service call SurfaceFlinger 1008 i32 0" &>/dev/null || true              # best-effort
   sh "service call power 31 i32 0" &>/dev/null || true                         # best-effort
   mark_manual "Settings → Display → Display Override → Off"
-  mark_manual "Settings → Display → Global Dimming → just below max, even with h in 'light'"
-  mark_manual "Settings → Display → Segmented Dimming → On"
-  mark_manual "Settings → Display → Maximum Dimming → just below max, even with l in 'display'"
+  mark_manual "Settings → Display → Segmented Dimming → Off"
 fi
 
 # ====================================================================
@@ -519,9 +523,6 @@ if [[ "$MODE" != "check" ]]; then
   sh "setprop service.adb.tcp.port 5555" &>/dev/null || true
   sh "stop adbd && start adbd" &>/dev/null || true
   printf "  %b  WiFi ADB enabled on port 5555\n" "$TICK"
-  # Create asset directory so USB-C drive copy script puts files in the right place
-  sh "mkdir -p /sdcard/Kagami/data" &>/dev/null || true
-  printf "  %b  /sdcard/Kagami/data created\n" "$TICK"
 fi
 
 # ====================================================================
@@ -578,20 +579,6 @@ if [[ "$MODE" != "check" ]]; then
   echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
   # Notify sheet that provisioning is complete and set all auto-configured checkboxes
   update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
-
-  # ---- Chain to deploy — only when called from ml_os_flash.sh -------
-  DEPLOY_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_deploy.sh"
-  if [[ "${ML_CHAINED:-0}" == "1" ]]; then
-    if [[ -f "$DEPLOY_SCRIPT" ]]; then
-      echo ""
-      echo -e "${BOLD}═══════════════════════════════════════════════════${RESET}"
-      echo ""
-      ANDROID_SERIAL="$SERIAL" bash "$DEPLOY_SCRIPT" --all
-      update_sheet "deploy_complete" "$DEVICE_SERIAL"
-    else
-      echo -e "${YELLOW}⚠ ml_deploy.sh not found — skipping APK install${RESET}"
-    fi
-  fi
 else
   echo -e "${BOLD}Check complete.${RESET}"
 fi

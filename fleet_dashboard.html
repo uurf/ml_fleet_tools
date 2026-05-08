@@ -208,7 +208,8 @@
       <option value="bt">Bluetooth on</option>
       <option value="dev">Dev mode off</option>
       <option value="usb">USB debug off</option>
-      <option value="apk">APK mismatch</option>
+      <option value="kagami">Kagami missing/mismatch</option>
+      <option value="kiosk">Kiosk missing/mismatch</option>
     </select>
     <button onclick="exportCSV()">Export CSV ↓</button>
   </div>
@@ -244,7 +245,8 @@ let sortAsc = true;
 
 const EXPECTED = {
   os: '',
-  apk: '',
+  kagami: '',
+  kiosk: '',
 };
 
 function loadFile(e) {
@@ -274,11 +276,17 @@ function loadDemo() {
     os_version: os_vers[i],
     build_id: 'B3E.220721.' + (100+i),
     battery: String(60 + Math.floor(Math.random()*40)),
-    apk: {
-      package: 'com.tindrum.kagami',
+    kagami: {
+      package: 'com.tindrum.kagamu',
       installed: i !== 4,
       version: i === 4 ? '' : versions[i],
       version_code: String(210 + i)
+    },
+    kiosk: {
+      package: 'com.tindrum.kiosk',
+      installed: i !== 7,
+      version: i === 7 ? '' : '1.0.' + i,
+      version_code: String(100 + i)
     },
     settings: {
       stay_awake: i !== 3,
@@ -292,7 +300,8 @@ function loadDemo() {
     }
   }));
   EXPECTED.os = '1.4.1';
-  EXPECTED.apk = '2.1.0';
+  EXPECTED.kagami = '2.1.0';
+  EXPECTED.kiosk = '1.0.0';
   document.getElementById('ts').textContent = 'Demo data — ' + new Date().toLocaleTimeString();
   renderTable();
 }
@@ -306,8 +315,10 @@ function deviceIssues(d) {
   if (!s.developer_mode) issues.push('dev');
   if (!s.usb_debugging) issues.push('usb');
   if (s.auto_update_off === 'false') issues.push('update');
-  if (!d.apk.installed) issues.push('apk');
-  if (EXPECTED.apk && d.apk.version && d.apk.version !== EXPECTED.apk) issues.push('apk');
+  if (!d.kagami.installed) issues.push('kagami');
+  if (EXPECTED.kagami && d.kagami.version && d.kagami.version !== EXPECTED.kagami) issues.push('kagami');
+  if (!d.kiosk.installed) issues.push('kiosk');
+  if (EXPECTED.kiosk && d.kiosk.version && d.kiosk.version !== EXPECTED.kiosk) issues.push('kiosk');
   if (EXPECTED.os && d.os_version && d.os_version !== EXPECTED.os) issues.push('os');
   return issues;
 }
@@ -318,7 +329,8 @@ function sortDevices(devs) {
     switch(sortCol) {
       case 'ip':      va = a.ip; vb = b.ip; break;
       case 'os':      va = a.os_version; vb = b.os_version; break;
-      case 'apk':     va = a.apk.version; vb = b.apk.version; break;
+      case 'kagami':  va = a.kagami.version; vb = b.kagami.version; break;
+      case 'kiosk':   va = a.kiosk.version; vb = b.kiosk.version; break;
       case 'battery': va = +a.battery; vb = +b.battery; break;
       case 'status':  va = deviceIssues(a).length; vb = deviceIssues(b).length; break;
       default:        va = a.ip; vb = b.ip;
@@ -368,7 +380,7 @@ function renderTable() {
   const filterSetting = document.getElementById('filter-setting').value;
 
   let devs = allDevices.filter(d => {
-    if (search && !d.ip.includes(search) && !(d.apk.version||'').includes(search) && !d.os_version.includes(search)) return false;
+    if (search && !d.ip.includes(search) && !(d.kagami&&d.kagami.version||'').includes(search) && !(d.kiosk&&d.kiosk.version||'').includes(search) && !d.os_version.includes(search)) return false;
     const issues = deviceIssues(d);
     if (filterStatus === 'ok' && issues.length > 0) return false;
     if (filterStatus === 'issues' && issues.length === 0) return false;
@@ -394,7 +406,8 @@ function renderTable() {
   <thead><tr>
     ${th('ip','IP Address')}
     ${th('os','OS Ver')}
-    ${th('apk','APK Ver')}
+    ${th('kagami','Kagami')}
+    ${th('kiosk','Kiosk')}
     ${th('battery','Battery')}
     <th title="Stay awake while plugged in">Sleep</th>
     <th title="WiFi connected">WiFi</th>
@@ -430,7 +443,8 @@ function renderTable() {
     html += `<tr class="${hasIssues?'has-issues':''}">
       <td><span class="ip">${d.ip}</span></td>
       <td>${verBadge(d.os_version, EXPECTED.os)}</td>
-      <td>${verBadge(d.apk.installed ? d.apk.version : '', EXPECTED.apk)}</td>
+      <td>${verBadge(d.kagami ? (d.kagami.installed ? d.kagami.version : '') : '', EXPECTED.kagami)}</td>
+      <td>${verBadge(d.kiosk ? (d.kiosk.installed ? d.kiosk.version : '') : '', EXPECTED.kiosk)}</td>
       <td>${battBar(d.battery)}</td>
       <td>${checkIcon(c_sleep)}</td>
       <td><div style="display:flex;flex-direction:column;gap:2px">${checkIcon(c_wifi)}${ssidHtml}</div></td>
@@ -449,12 +463,12 @@ function renderTable() {
 
 function exportCSV() {
   if (!allDevices.length) return;
-  const cols = ['ip','os_version','apk_version','apk_installed','battery','stay_awake','wifi_connected','wifi_ssid','bluetooth_on','screen_brightness','developer_mode','usb_debugging','auto_update_off','issues'];
+  const cols = ['ip','os_version','kagami_version','kagami_installed','kiosk_version','kiosk_installed','battery','stay_awake','wifi_connected','wifi_ssid','bluetooth_on','screen_brightness','developer_mode','usb_debugging','auto_update_off','issues'];
   const rows = [cols.join(',')];
   allDevices.forEach(d => {
     const s = d.settings;
     rows.push([
-      d.ip, d.os_version, d.apk.version||'', d.apk.installed, d.battery,
+      d.ip, d.os_version, d.kagami&&d.kagami.version||'', d.kagami&&d.kagami.installed||false, d.kiosk&&d.kiosk.version||'', d.kiosk&&d.kiosk.installed||false, d.battery,
       s.stay_awake, s.wifi_connected, s.wifi_ssid, s.bluetooth_on,
       s.screen_brightness, s.developer_mode, s.usb_debugging, s.auto_update_off,
       deviceIssues(d).join(';')
