@@ -52,7 +52,8 @@ TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null ||
 check_for_updates
 
 # ── Defaults (override via args or edit here) ────────────────
-TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagami}"
+TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagamu}"
+KIOSK_PACKAGE="com.tindrum.kiosk"
 EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip check
 EXPECTED_APK="${ML_EXPECTED_APK:-}"      # e.g. "2.1.0" — leave blank to skip check
 
@@ -111,10 +112,13 @@ collect_device() {
 
   # ── Versions ─────────────────────────────────────────────
   local os_version
-  os_version=$(adb_s getprop ro.build.version.release)
+  os_version=$(adb_s getprop ro.build.version.lumin)
 
   local build_id
   build_id=$(adb_s getprop ro.build.id)
+
+  local hw_serial
+  hw_serial=$(adb_s getprop ro.serialno)
 
   local apk_version=""
   local apk_code=""
@@ -124,6 +128,13 @@ collect_device() {
     apk_installed="true"
   else
     apk_installed="false"
+  fi
+
+  local kiosk_version=""
+  local kiosk_installed="false"
+  if adb -s "$serial" shell pm list packages 2>/dev/null | grep -q "$KIOSK_PACKAGE"; then
+    kiosk_version=$(adb_s "dumpsys package $KIOSK_PACKAGE" | grep versionName | head -1 | sed 's/.*versionName=//')
+    kiosk_installed="true"
   fi
 
   # ── Settings ─────────────────────────────────────────────
@@ -136,7 +147,7 @@ collect_device() {
   [[ "$stay_awake" != "0" ]] && stay_awake_on="true"
 
   local wifi_ssid
-  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | sed 's/SSID: //' | tr -d '"' || echo "")
+  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '"' || echo "")
   local wifi_connected="false"
   [[ -n "$wifi_ssid" && "$wifi_ssid" != "<unknown ssid>" ]] && wifi_connected="true"
 
@@ -178,6 +189,7 @@ collect_device() {
   cat > "$out" <<EOF
 {
   "serial": "$serial",
+  "hw_serial": "$hw_serial",
   "ip": "${serial%%:*}",
   "timestamp": "$TIMESTAMP",
   "os_version": "$os_version",
@@ -188,6 +200,11 @@ collect_device() {
     "installed": $apk_installed,
     "version": "$apk_version",
     "version_code": "$apk_code"
+  },
+  "kiosk": {
+    "package": "$KIOSK_PACKAGE",
+    "installed": $kiosk_installed,
+    "version": "$kiosk_version"
   },
   "settings": {
     "stay_awake": $stay_awake_on,
@@ -250,17 +267,17 @@ render_table() {
 
   # Header
   printf "\n"
-  printf "${BOLD}%-18s %-8s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
-    "IP" "OS" "APK" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
-  printf "%-18s %-8s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
-    "──────────────────" "────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
+  printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
+    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
+  printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
+    "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
 
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     ((total++)) || true
 
     # Parse JSON with python3 (available on macOS)
-    read -r ip os_ver apk_ver battery stay_awake wifi_ok wifi_ssid bt_on brightness dev_on usb_on auto_off <<< \
+    read -r ip os_ver apk_ver kiosk_ver battery stay_awake wifi_ok wifi_ssid bt_on brightness dev_on usb_on auto_off <<< \
       "$(python3 -c "
 import json, sys
 d = json.load(open('$f'))
@@ -269,6 +286,7 @@ print(
   d['ip'],
   d['os_version'],
   d['apk']['version'] if d['apk']['installed'] else 'MISSING',
+  d.get('kiosk', {}).get('version', '') if d.get('kiosk', {}).get('installed') else 'MISSING',
   d['battery'],
   str(s['stay_awake']).lower(),
   str(s['wifi_connected']).lower(),
@@ -298,6 +316,8 @@ print(
     for c in "$c_sleep" "$c_wifi" "$c_bt" "$c_dev" "$c_usb"; do
       [[ "$c" == "fail" ]] && all_ok=false
     done
+    [[ "$apk_ver" == "MISSING" ]] && all_ok=false
+    [[ "$kiosk_ver" == "MISSING" ]] && all_ok=false
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && all_ok=false
     [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && all_ok=false
 
@@ -325,6 +345,9 @@ print(
     [[ "$apk_ver" == "MISSING" ]] && apk_disp="${RED}MISSING${RESET}"
     [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && apk_disp="${YELLOW}$apk_ver${RESET}"
 
+    local kiosk_disp="$kiosk_ver"
+    [[ "$kiosk_ver" == "MISSING" ]] && kiosk_disp="${RED}MISSING${RESET}"
+
     local os_disp="$os_ver"
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && os_disp="${YELLOW}$os_ver${RESET}"
 
@@ -336,8 +359,8 @@ print(
       ((fail_count++)) || true
     fi
 
-    printf "%-18s %-8b %-10b %-7s%%  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
-      "$ip" "$os_disp" "$apk_disp" "$battery" \
+    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
+      "$ip" "$os_disp" "$apk_disp" "$kiosk_disp" "$battery" \
       "$s_sleep" "$s_wifi" "$s_bt" "$brightness" \
       "$s_dev" "$s_usb" "$s_update" "$s_ok"
   done
@@ -387,12 +410,12 @@ render_json() {
 DEVICES=$(online_devices)
 
 if [[ -z "$DEVICES" ]]; then
-  echo -e "${RED}No devices online. Run: ./ml_deploy.sh connect${RESET}"
+  echo -e "${RED}No devices online. Run: ./ml_deploy.sh connect${RESET}" >&2
   exit 1
 fi
 
 COUNT=$(echo "$DEVICES" | wc -l | tr -d ' ')
-echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}"
+echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}" >&2
 
 # Parallel collection
 PIDS=()
