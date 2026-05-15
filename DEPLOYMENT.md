@@ -60,16 +60,21 @@ Handled by `ml_deploy.sh deploy`, called automatically by `ml_provision.sh` at t
 
 ---
 
-## Phase 3 — Asset Loading (USB-C drive, per device)
+## Phase 3 — Asset Loading (USB-C drive or laptop)
 
-Handled by the kiosk APK's built-in copy script — no laptop required.
+Handled by `ml_ssd_copy.sh` — copies show data from a USB-C SSD to all fleet devices over WiFi ADB in parallel.
 
-- Load all show assets onto a USB-C drive
-- Connect drive to each device's Compute Pack
-- Kiosk script detects the drive and copies contents to `/sdcard/Kagami/data/`
-- Disconnect drive and move to next device
+- Attach a USB-C SSD containing `[showName]_data/` to one of the fleet devices
+- Run from a laptop on the same network:
 
-> Multiple operators with multiple drives can run this in parallel.
+```bash
+./utilities/ml_ssd_copy.sh              # all devices in devices.txt
+./utilities/ml_ssd_copy.sh -d <ip>      # single device
+```
+
+- Script discovers the SSD mount, prompts for show selection if multiple shows are present, copies to `/sdcard/[showName]/data/` on each device in parallel
+
+> Multiple laptops running `ml_ssd_copy.sh` against different device subsets can run in parallel to speed up large fleets.
 
 ---
 
@@ -95,6 +100,7 @@ Handled by `ml_status.sh` — confirms fleet is show-ready.
 |---|---|---|---|
 | Flash & provision | `ml_os_flash.sh` → `ml_provision.sh` | USB | 1 operator per device |
 | APK install (first run) | `ml_provision.sh` → `ml_deploy.sh` | USB | 1 operator per device |
-| Asset loading | Kiosk copy script | USB-C drive | Multiple operators in parallel |
+| Settings remediation | `ml_provision.sh --fleet` | WiFi | 1 operator, all devices |
+| Asset loading | `ml_ssd_copy.sh` | WiFi + USB-C SSD | 1 operator, all devices |
 | APK updates (field) | `ml_deploy.sh deploy` | WiFi | 1 operator, all devices |
 | Verification | `ml_status.sh` | WiFi | 1 operator, all devices |

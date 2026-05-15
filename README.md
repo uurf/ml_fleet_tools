@@ -26,9 +26,11 @@ See **SETUP.md** for full setup instructions and **PROVISIONING.md** for per-dev
 |---|---|
 | `install.sh` | One-command environment setup for new machines |
 | `ml_os_flash.sh` | Flash OS 1.4.1, inject ADB keys, skip OOBE, run provisioning |
-| `ml_provision.sh` | Apply all device settings; `--check` to verify |
+| `ml_provision.sh` | Single-device: apply all settings over USB; `-d <ip>` for WiFi; `--check` to verify |
+| `ml_provision.sh --fleet` | Apply ADB-settable settings to all `devices.txt` devices in parallel; `--check` for fleet-wide audit |
 | `ml_deploy.sh` | Deploy APKs and assets to fleet; `deploy` command connects automatically, prompts for APK selection, pushes assets, and installs |
 | `ml_status.sh` | Collect OS/APK/settings status from all online devices |
+| `utilities/ml_scan.sh` | Scan local network for ML2 devices on port 5555, write `devices.txt` |
 | `fleet_dashboard.html` | Visual dashboard — load JSON from `ml_status.sh --json` |
 
 ---
@@ -91,8 +93,10 @@ Or just run `./install.sh` — it handles this automatically.
 1. Controller USB-C → firmware update (~2 min)
 2. Settings → Battery → Compute Pack Standby → Off
 3. Settings → Display → Display Override → Off
-4. Settings → Display → Segmented Dimming → Off
-5. Settings → System → Advanced → OS Updater → Check for updates → Never
+4. Settings → Display → Global Dimming → just below max
+5. Settings → Display → Segmented Dimming → On
+6. Settings → Display → Maximum Dimming → just below max
+7. Settings → System → Advanced → OS Updater → Check for updates → Never
 
 ---
 
