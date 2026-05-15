@@ -72,7 +72,7 @@ usage() {
   echo "    ./ml_deploy.sh -d 192.168.1.45 deploy"
   echo "    ./ml_deploy.sh install builds/kagami_v2.apk"
   echo "    ./ml_deploy.sh push assets/ /sdcard/KAGAMI/"
-  echo "    ./ml_deploy.sh restart com.tindrum.kagami"
+  echo "    ./ml_deploy.sh restart com.tindrum.kagamu"
   echo "    ./ml_deploy.sh shell 'pm list packages'"
   echo ""
   exit 0

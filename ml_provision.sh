@@ -91,7 +91,7 @@ WIFI_SSID="KAGAMI"
 WIFI_PASSWORD="KAGAmius"
 WIFI_SECURITY="wpa2"
 
-APP_PACKAGE="com.tindrum.kagami"
+APP_PACKAGE="com.tindrum.kagamu"
 APP_PERMISSIONS=(
   "android.permission.CAMERA"
   "android.permission.RECORD_AUDIO"
@@ -492,7 +492,7 @@ section "App permissions — $APP_PACKAGE"
 
 if ! sh "pm list packages" | grep -q "$APP_PACKAGE"; then
   printf "  %b  ${YELLOW}%s not installed — skipping permissions${RESET}\n" "$SKIP" "$APP_PACKAGE"
-  echo "      Install: ./ml_deploy.sh install builds/kagami.apk"
+  echo "      Install: ./ml_deploy.sh install builds/kagamu.apk"
 else
   for perm in "${APP_PERMISSIONS[@]}"; do
     if [[ "$MODE" == "check" ]]; then

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **ml_toolkit** is a zero-MDM fleet management system for Magic Leap 2 (ML2) XR headsets, built for the KAGAMI show (Tin Drum). It handles the complete device lifecycle over ADB: OS flashing via fastboot, device provisioning, APK/asset deployment, and fleet monitoring over WiFi ADB.
 
 **Target OS**: ML2 1.4.1 (Build B3E.230928.10-R.098)  
-**Show App**: com.tindrum.kagami  
+**Show App**: com.tindrum.kagamu  
 **Kiosk/Home App**: com.tindrum.kiosk  
 **WiFi SSID**: KAGAMI / KAGAmius  
 **ADB Port**: 5555 (WiFi)
