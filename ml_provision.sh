@@ -606,9 +606,9 @@ section "Input"
 # Hand navigation must be on — controllers may not be paired on every device
 
 if [[ "$MODE" == "check" ]]; then
-  check_bool "Hand navigation: On" "$(get_secure enable_home_gesture_inputs)" "true"
+  check_bool "Hand navigation: On" "$(get_system enable_pinch_gesture_inputs)" "true"
 else
-  apply "Hand navigation: On" put_secure enable_home_gesture_inputs 1
+  apply "Hand navigation: On" put_system enable_pinch_gesture_inputs 1
 fi
 
 # ====================================================================

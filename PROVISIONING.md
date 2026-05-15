@@ -122,10 +122,12 @@ Manual steps — put on headset and complete:
   [ ] Connect device to laptop — two dialogs will appear:
         • "Allow USB debugging" → check "Always allow from this computer" → Allow
         • "USB Device Detected" → OK
-  [ ] Settings → Battery → Compute Pack Standby → Off
-  [ ] Settings → Display → Display Override → Off
-  [ ] Settings → Display → Segmented Dimming → Off
-  [ ] Settings → System → Advanced → OS Updater → Check for updates → Never
+  [ ] Battery → Compute Pack Standby → Off
+  [ ] Display → Display Override → Off
+  [ ] Display → Global Dimming → just below max, even with h in 'light'
+  [ ] Display → Segmented Dimming → On
+  [ ] Display → Maximum Dimming → just below max, even with l in 'display'
+  [ ] System → Advanced → OS Updater → Check for updates → Never
 
   Device #:      [number]
   Operator:      [initials]
@@ -171,7 +173,9 @@ Two dialogs appear when the device is connected to the laptop.
 
 **Display:**
 - Settings → Display → **Display Override → Off**
-- Settings → Display → **Segmented Dimming → Off**
+- Settings → Display → **Global Dimming** → just below maximum, even with the *h* in "light"
+- Settings → Display → **Segmented Dimming → On**
+- Settings → Display → **Maximum Dimming** → just below maximum, even with the *l* in "display"
 
 **System:**
 - Settings → System → Advanced → OS Updater → **Check for updates → Never**
@@ -241,11 +245,23 @@ Disconnect the device and repeat from Step 1 for the next device.
 # Flash a specific version (if multiple OS versions are in os_images/)
 ./ml_os_flash.sh 1.4.1
 
-# Provision only (no flash)
+# Provision only (no flash) — single USB-connected device
 ./ml_provision.sh
 
-# Check device settings
+# Provision a specific device by IP
+./ml_provision.sh -d [ip]
+
+# Check device settings — single device
 ./ml_provision.sh --check
+
+# Apply ADB-settable settings to all devices in devices.txt (fleet remediation)
+./ml_provision.sh --fleet
+
+# Check settings across entire fleet
+./ml_provision.sh --fleet --check
+
+# Scan network and write devices.txt
+./utilities/ml_scan.sh
 
 # Deploy to a single device — connects, prompts for APK selection, pushes assets, installs
 ./ml_deploy.sh -d [ip] deploy

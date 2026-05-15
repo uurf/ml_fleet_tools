@@ -19,11 +19,13 @@ There is no build system. All scripts are standalone bash and run directly:
 ```bash
 ./install.sh                        # First-time machine setup (macOS only, Homebrew)
 ./update.sh                         # Pull latest from main, protect fleet key
-./ml_os_flash.sh [version] [path]   # Flash OS, pre-auth ADB, skip OOBE, chain to provision
-./ml_provision.sh [--check|--discover]  # Apply device settings, WiFi, permissions
-./ml_deploy.sh <command> [options]  # Fleet APK install, asset push, app management
-./ml_status.sh [--json|--csv|--failures|--fix]  # Parallel status collection
-./utilities/ml_ssd_copy.sh          # Copy show assets from USB-C SSD to fleet
+./ml_os_flash.sh [version] [path]              # Flash OS, pre-auth ADB, skip OOBE, chain to provision
+./ml_provision.sh [-d <ip>] [--check|--discover]  # Single-device: apply settings, WiFi, permissions
+./ml_provision.sh --fleet [--check]            # Fleet: apply/check ADB-settable settings on all devices.txt devices
+./ml_deploy.sh <command> [options]             # Fleet APK install, asset push, app management
+./ml_status.sh [--json|--csv|--failures|--fix] # Parallel status collection
+./utilities/ml_scan.sh [--subnet] [--append]   # Scan network for ML2 devices, write devices.txt
+./utilities/ml_ssd_copy.sh                     # Copy show assets from USB-C SSD to fleet
 ```
 
 **Shell requirement**: Scripts require bash 5+ (macOS ships with bash 3.2; Homebrew bash is required). `install.sh` handles this.
@@ -82,6 +84,15 @@ Some ML2 settings cannot be configured via ADB on the user build and require man
 - OS Updater → Never
 
 `ml_provision.sh` prints a checklist for these after auto-config completes. `--check` mode verifies which are still missing.
+
+### ADB-Settable Settings (applied by `ml_provision.sh`)
+
+Key non-obvious settings and their ADB keys:
+- **Hand navigation** (pinch-to-interact): `settings put system enable_pinch_gesture_inputs 1`  
+  — NOT `enable_home_gesture_inputs` (that is the fist-to-home gesture only)
+- **Auto-brightness off**: `settings put system screen_brightness_mode 0`
+- **Brightness**: `settings put system screen_brightness 0`
+- **Screen timeout never**: `settings put system screen_off_timeout 2147483647`
 
 ## Key Files
 
