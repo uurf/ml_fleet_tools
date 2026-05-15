@@ -16,6 +16,20 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.1] — 2026-05-15 — Shellcheck cleanup
+
+### Fixed
+- `ml_os_flash.sh`: `find | xargs -I{}` → `find -exec` (SC2038 — handles filenames with spaces)
+- `ml_status.sh`, `utilities/ml_ssd_copy.sh`: `PIDS=($(…))` → `mapfile -t PIDS < <(…)` (SC2207 — word-splitting safe)
+
+### Removed
+- Dead variables: `WANT_STAY_AWAKE/WIFI/BT/DEV_MODE/USB_DEBUG/AUTO_UPDATE`, `WARN`, `s_bright`, `v` in `ml_status.sh`; `YELLOW` in `update.sh`; `TARGET_OS` in `ml_provision.sh`
+
+### Added
+- `utilities/ml_scan.sh` — scans local network for ML2 devices on port 5555, prompts to confirm, writes discovered IPs to `devices.txt`
+
+---
+
 ## [v0.6.0] — 2026-05-15 — Deploy workflow validated end-to-end
 
 ### Fixed
