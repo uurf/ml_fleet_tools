@@ -16,6 +16,13 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.2] — 2026-05-15 — ml_scan.sh fix
+
+### Fixed
+- `utilities/ml_scan.sh`: `devices.txt` now written to repo root instead of `utilities/`
+
+---
+
 ## [v0.6.1] — 2026-05-15 — Shellcheck cleanup
 
 ### Fixed
