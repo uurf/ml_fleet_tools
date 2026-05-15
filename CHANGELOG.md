@@ -16,6 +16,19 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.6] — 2026-05-15 — Hand navigation fix and doc updates
+
+### Fixed
+- `ml_provision.sh`: Hand navigation now sets `enable_pinch_gesture_inputs` (system namespace) — the correct key for pinch-to-interact pointer navigation. Previous key (`enable_home_gesture_inputs`, secure) controls the fist-to-home gesture only and does not enable hand navigation.
+
+### Changed
+- `PROVISIONING.md`: Fixed Segmented Dimming direction (Off → On); added Global Dimming and Maximum Dimming slider steps; added `--fleet`, `--fleet --check`, `-d <ip>`, and `ml_scan.sh` to quick reference
+- `DEPLOYMENT.md`: Phase 3 now describes `ml_ssd_copy.sh`; summary table adds fleet settings remediation row
+- `README.md`: Fixed Segmented Dimming direction; added Global/Max Dimming steps; updated script table with `--fleet` and `ml_scan.sh`
+- `CLAUDE.md`: Updated script listing; added ADB-settable settings section documenting correct hand navigation key
+
+---
+
 ## [v0.6.5] — 2026-05-15 — Package name fix
 
 ### Fixed
