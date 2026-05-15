@@ -16,6 +16,13 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.5] — 2026-05-15 — Package name fix
+
+### Fixed
+- Corrected show app package name from `com.tindrum.kagami` → `com.tindrum.kagamu` in `ml_provision.sh`, `ml_deploy.sh`, `fleet_dashboard.html`, `CLAUDE.md`, and `README.md` (`ml_status.sh` was already correct)
+
+---
+
 ## [v0.6.4] — 2026-05-15 — Fleet settings mode
 
 ### Added
