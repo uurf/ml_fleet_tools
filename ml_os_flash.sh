@@ -34,6 +34,7 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---- Google Sheets update ------------------------------------------
+# shellcheck disable=SC2034  # used inside Python subprocess string
 SHEETS_URL="https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec"
 
 update_sheet() {
@@ -166,7 +167,7 @@ if [[ ! -d "$OS_IMAGES_DIR" ]]; then
 fi
 
 # Find subdirs that contain a flashall_amd.sh (ML2's bundled flash script)
-mapfile -t IMAGE_DIRS < <(find "$OS_IMAGES_DIR" -name "flashall_amd.sh" | xargs -I{} dirname {} | sort)
+mapfile -t IMAGE_DIRS < <(find "$OS_IMAGES_DIR" -name "flashall_amd.sh" -exec dirname {} \; | sort)
 
 if [[ ${#IMAGE_DIRS[@]} -eq 0 ]]; then
   echo -e "${RED}No valid OS image directories found in $OS_IMAGES_DIR${RESET}"
@@ -254,7 +255,7 @@ echo -e "  To:      ${CYAN}$TARGET_OS${RESET}"
 echo -e "  Script:  $FLASH_SCRIPT"
 echo ""
 echo -e "${YELLOW}Press Enter to continue or Ctrl+C to abort...${RESET}"
-read -rp "" CONFIRM
+read -rp "" _
 
 # Collect device tracking info upfront so operator can walk away during flash
 echo ""

@@ -98,7 +98,7 @@ list_show_dirs() {
 
 # ── Copy for a single device ───────────────────────────────
 copy_device() {
-  local serial="$1" show_name="$2" src="$3" dest="$4"
+  local serial="$1" _show_name="$2" src="$3" dest="$4"
   local ip="${serial%%:*}"
   local prefix="  [${CYAN}${ip}${RESET}]"
 
@@ -270,7 +270,7 @@ pids=()
 
 for serial in "${DEVICES_TO_RUN[@]}"; do
   while (( ${#pids[@]} >= MAX_PARALLEL )); do
-    pids=($(for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done))
+    mapfile -t pids < <(for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
     sleep 0.2
   done
 

@@ -30,6 +30,7 @@ SKIP="${DIM}–${RESET}"
 
 
 # ---- Google Sheets update ------------------------------------------
+# shellcheck disable=SC2034  # used inside Python subprocess string
 SHEETS_URL="https://script.google.com/macros/s/AKfycbyPsoVvtkarMWli8iZMoZSwcQpL5Ra5xcOT9hfuEOaYkhVfT9Z8LjivdswgHrU5W508/exec"
 
 update_sheet() {
@@ -81,7 +82,6 @@ check_for_updates
 # CONFIG
 # ============================================================
 
-TARGET_OS="1.4.1"
 TARGET_BUILD="B3E.230928.10-R.098"
 
 WIFI_SSID="KAGAMI"
