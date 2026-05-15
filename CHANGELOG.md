@@ -14,11 +14,22 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
+---
+
+## [v0.6.0] — 2026-05-15 — Deploy workflow validated end-to-end
+
 ### Fixed
-- `ml_provision.sh`: WiFi ADB enable moved to after IP query, using `adb tcpip 5555` (host-side) instead of broken `stop adbd && start adbd` via shell; auto-deploy wait extended to 60s
-- `ml_provision.sh`: `--deploy` flag added; `ml_os_flash.sh` now passes it when chaining, fixing auto-deploy not running after provisioning
-- `ml_provision.sh`: Manual steps unified into `MANUAL_STEPS[]` array and printed once at the end; fixed steps that were scattered across config sections
-- `ml_provision.sh`: Removed `MagicLeapDimmer` service calls that don't work on 1.4.1 user build and were falsely shown as successful
+- `ml_provision.sh`: Restored chain deploy — `--deploy` flag triggers APK install over USB immediately after provisioning; `ml_os_flash.sh` passes the flag when chaining
+- `ml_provision.sh`: Deploy now runs over USB *before* `adb tcpip 5555` so the ADB connection is still authorized when APKs are installed
+- `ml_provision.sh`: Operator pause added at manual steps checklist when `--deploy` is set — press Enter after completing headset steps to begin APK install
+- `ml_provision.sh`: Replaced broken `stop adbd && start adbd` (via shell) with `adb tcpip 5555` (host-side) as the last USB command
+- `ml_provision.sh`: All manual steps unified into `MANUAL_STEPS[]`, printed once at the end with consistent `→` delimiters
+- `ml_provision.sh`: Removed `MagicLeapDimmer` service calls that don't work on 1.4.1 user build
+- `ml_os_flash.sh`: `adb disconnect` before post-flash boot wait clears stale WiFi ADB sessions; `adb wait-for-device` pinned to `$SERIAL` to avoid "more than one device" error
+- `ml_deploy.sh`: `cmd_deploy_all` exits cleanly with a warning when `builds/` has no APKs
+
+### Added
+- `CLAUDE.md`: Repo guidance for Claude Code sessions
 
 ---
 
