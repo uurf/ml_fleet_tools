@@ -14,7 +14,60 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
+### Fixed
+- `ml_provision.sh`: WiFi ADB enable moved to after IP query, using `adb tcpip 5555` (host-side) instead of broken `stop adbd && start adbd` via shell; auto-deploy wait extended to 60s
+- `ml_provision.sh`: `--deploy` flag added; `ml_os_flash.sh` now passes it when chaining, fixing auto-deploy not running after provisioning
+- `ml_provision.sh`: Manual steps unified into `MANUAL_STEPS[]` array and printed once at the end; fixed steps that were scattered across config sections
+- `ml_provision.sh`: Removed `MagicLeapDimmer` service calls that don't work on 1.4.1 user build and were falsely shown as successful
+
 ---
+
+## [v0.5.9] — 2026-05-08 — Device number mapping in dashboard
+
+### Added
+- `asset_serial_list.csv` — 200-device hardware serial → device number mapping
+- `fleet_dashboard.html`: Load CSV button maps hw_serial to device number; dashboard now shows Device # and Serial columns; search by device number or serial; default sort by device number
+
+### Changed
+- `ml_status.sh`: Adds `hw_serial` (physical serial from `ro.serialno`) to per-device JSON output
+- `apps_script/Code.gs`: `deploy_complete` action added — checks off kiosk, APK, and permissions columns and sets status to "Ready for asset loading"; manual-only columns (Compute Pack Standby, Display dimming, OS Updater) removed from `provision_complete` auto-check
+- `docs/headset_checklist.html`: Added "Tracking sheet" section listing manual items to check off in the Google Sheet after headset steps
+
+---
+
+## [v0.5.8] — 2026-05-08 — Shebang fix, Intel Mac support, status improvements
+
+### Added
+- `ml_status.sh`: Tracks both Kagami and Kiosk APKs separately in JSON output and table; auto-connects all devices in `devices.txt` before collecting status
+- `fleet_dashboard.html`: Separate Kagami and Kiosk columns in table, filter, and CSV export
+
+### Fixed
+- `ml_os_flash.sh`, `ml_provision.sh`, `update.sh`: Shebang changed from `#!/opt/homebrew/bin/bash` to `#!/usr/bin/env bash` — fixes execution on Intel Macs where Homebrew installs to `/usr/local`
+- `install.sh`: Added Homebrew PATH setup for Intel Macs (was only handling Apple Silicon)
+- `ml_status.sh`: OS version now read from `ro.build.version.lumin` (ML2-specific property) instead of `ro.build.version.release`; update-check output redirected to stderr so it doesn't pollute `--json` mode
+
+---
+
+## [v0.5.7] — 2026-05-07 — Checklist updates
+
+### Changed
+- `docs/flash_checklist.html`: Removed manual write-in fields (device #, case #, operator, serial) — captured by the script now; updated step wording
+- `docs/headset_checklist.html`: Added Display Override step; added "Shut down device" step at end (hold Power, wait for fan to stop before casing)
+
+---
+
+## [v0.5.6] — 2026-05-07 — Chain deploy after provision
+
+### Added
+- `ml_deploy.sh`: `cmd_deploy_all` — non-interactive deploy that installs all APKs in `builds/`, sets kiosk as home app; triggered via `--all` flag
+- `ml_provision.sh`: Chains to `ml_deploy.sh --all` at end of provisioning when called from `ml_os_flash.sh` (via `ML_CHAINED=1` env var)
+- `apps_script/Code.gs`: `deploy_complete` action handler; updated column headers to match current tracking sheet layout; added Compute Pack Standby and Segmented Dimming columns
+
+### Changed
+- `ml_provision.sh`: Brightness target set to 12 (was 0)
+
+---
+
 ## [v0.5.5] — 2026-05-07 — SSD copy utility
 
 ### Added

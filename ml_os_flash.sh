@@ -399,8 +399,9 @@ rm -f "$FLASH_LOG"
 
 echo ""
 echo -e "${CYAN}Waiting for device to boot (first boot takes ~45s)...${RESET}"
+adb disconnect &>/dev/null || true  # clear any WiFi ADB sessions before waiting
 sleep 45
-adb wait-for-device
+adb -s "$SERIAL" wait-for-device
 sleep 8  # give system services time to start before pushing files
 
 # ---- Pre-authorize this laptop's ADB key ----------------------------
@@ -494,7 +495,7 @@ if [[ -f "$PROVISION_SCRIPT" ]]; then
   sleep 30
   echo -e "${CYAN}Running provisioning (settings, WiFi, permissions)...${RESET}"
   echo ""
-  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" OPERATOR_INITIALS="$OPERATOR_INITIALS" bash "$PROVISION_SCRIPT"
+  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" OPERATOR_INITIALS="$OPERATOR_INITIALS" bash "$PROVISION_SCRIPT" --deploy
 else
   echo ""
   echo -e "${YELLOW}ml_provision.sh not found — skipping auto-provisioning${RESET}"

@@ -114,12 +114,14 @@ REMOVE_DIRS=(
 # ============================================================
 
 MODE="full"
+CHAIN_DEPLOY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check)    MODE="check" ;;
     --discover) MODE="discover" ;;
+    --deploy)   CHAIN_DEPLOY=true ;;
     --help|-h)
-      echo "Usage: ./ml_provision.sh [--check|--discover]"
+      echo "Usage: ./ml_provision.sh [--check|--discover|--deploy]"
       exit 0 ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
@@ -213,6 +215,10 @@ mark_manual() {
   printf "  %b  %-52s ${YELLOW}→ manual${RESET}\n" "$MANUAL" "$1"
 }
 
+# These are always required — not settable or verifiable via ADB — registered silently
+MANUAL_STEPS+=("Connect controller to device via USB-C → allow firmware update")
+MANUAL_STEPS+=("Connect device to laptop — two dialogs will appear:\n        Allow USB debugging → check 'Always allow from this computer' → Allow\n        USB Device Detected → OK")
+
 apply() {
   local label="$1"; shift
   if [[ "$MODE" == "check" ]]; then return 0; fi
@@ -288,59 +294,49 @@ if [[ "$MODE" == "check" ]]; then
   else
     printf "  %b  %-52s ${RED}%s${RESET}\n" "$CROSS" "Stay awake while plugged in" "${cur_awake:-not set}"
   fi
-  printf "  %b  %-52s ${DIM}verify in Settings → Battery${RESET}\n" "$MANUAL" "Compute Pack Standby: Off"
 else
   apply "Battery Saver: Off"              put_global low_power 0
   apply "Stay awake while plugged in"     put_global stay_on_while_plugged_in 3
   apply "Screen timeout: never"           put_system screen_off_timeout 2147483647
   # Attempt ML power service call for Compute Pack Standby — no-op if not supported
   sh "service call power 31 i32 0" &>/dev/null || true
-  mark_manual "Settings → Battery → Compute Pack Standby → Off"
 fi
+# Not settable via ADB — always requires manual step in headset
+mark_manual "Battery → Compute Pack Standby → Off"
 
 # ====================================================================
 # 4. DISPLAY
 # ====================================================================
 section "Display"
-# Display Override: Off
-# Display Modes: none
-# Auto Brightness: Off
-# Brightness: minimum
-# Global Dimming: minimum
-# Segmented Dimming: Off
-# Maximum Dimming: 100%
+# Display Override: Off          — not settable via ADB
+# Auto Brightness: Off           — settable
+# Brightness: minimum            — settable
+# Global Dimming: just below max — not settable via ADB
+# Segmented Dimming: On          — not settable via ADB
+# Maximum Dimming: just below max — not settable via ADB
 
 if [[ "$MODE" == "check" ]]; then
   check_bool "Auto-brightness: Off" "$(get_system screen_brightness_mode)" "false"
   check_val  "Brightness (0 = min)" "$(get_system screen_brightness)" "0"
-  for label in \
-    "Display Override: Off" \
-    "Display Modes: none" \
-    "Global Dimming: minimum" \
-    "Segmented Dimming: Off" \
-    "Maximum Dimming: 100%"
-  do
-    printf "  %b  %-52s ${DIM}ML system service — verify in headset UI${RESET}\n" "$MANUAL" "$label"
-  done
 else
   # ── Standard Android ──────────────────────────────────────────
   apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
   apply "Brightness: minimum (0)"   put_system screen_brightness 0
 
   # ── ML2-specific display service calls ────────────────────────
-  # Confirmed working on OS 1.4.1 user build:
-  sh "service call MagicLeapDimmer 1 f 0.0" &>/dev/null || true  # Global Dimming → min
-  sh "service call MagicLeapDimmer 3 f 1.0" &>/dev/null || true  # Maximum Dimming → 100%
   # Display Modes → none is already default on fresh flash
-  printf "  %b  Global Dimming → min, Maximum Dimming → 100%%, Display Modes → none\n" "$TICK"
+  printf "  %b  Display Modes → none (default)\n" "$TICK"
 
-  # Confirmed NOT working via service calls on 1.4.1 user build — manual required:
+  # Confirmed NOT settable via ADB on 1.4.1 user build — manual required:
   sh "settings put secure ml_segmented_dimming_enabled 0" &>/dev/null || true  # best-effort
   sh "service call SurfaceFlinger 1008 i32 0" &>/dev/null || true              # best-effort
   sh "service call power 31 i32 0" &>/dev/null || true                         # best-effort
-  mark_manual "Settings → Display → Display Override → Off"
-  mark_manual "Settings → Display → Segmented Dimming → Off"
 fi
+# Not settable via ADB — always require manual steps in headset
+mark_manual "Display → Display Override → Off"
+mark_manual "Display → Global Dimming → just below max, even with h in 'light'"
+mark_manual "Display → Segmented Dimming → On"
+mark_manual "Display → Maximum Dimming → just below max, even with l in 'display'"
 
 # ====================================================================
 # 5. WIFI
@@ -384,15 +380,15 @@ section "OS Updater"
 if [[ "$MODE" == "check" ]]; then
   cur=$(get_global auto_update_enabled 2>/dev/null || echo "?")
   check_bool "Auto-update disabled" "${cur:-0}" "false"
-  printf "  %b  %-52s ${DIM}verify in headset UI${RESET}\n" "$MANUAL" "OS Updater: Check for updates → Never"
 else
   apply "Disable auto-update (global)" put_global auto_update_enabled 0
   if [[ "$BUILD_TYPE" == "userdebug" ]]; then
     sh "setprop persist.sys.ota.update.disable 1" &>/dev/null || true
     printf "  %b  OTA disabled via setprop\n" "$TICK"
   fi
-  mark_manual "Settings → System → Advanced → OS Updater → Check for updates → Never"
 fi
+# Not settable via ADB — always requires manual step in headset
+mark_manual "System → Advanced → OS Updater → Check for updates → Never"
 
 # ====================================================================
 # 7. APP PERMISSIONS
@@ -519,10 +515,6 @@ if [[ "$MODE" != "check" ]]; then
   apply "Transition animation scale: 0" put_global transition_animation_scale 0.0
   apply "Animator duration scale: 0"    put_global animator_duration_scale 0.0
   apply "Captive portal check: Off"     put_global captive_portal_detection_enabled 0
-  # Enable WiFi ADB so this device appears in wireless deploys
-  sh "setprop service.adb.tcp.port 5555" &>/dev/null || true
-  sh "stop adbd && start adbd" &>/dev/null || true
-  printf "  %b  WiFi ADB enabled on port 5555\n" "$TICK"
 fi
 
 # ====================================================================
@@ -565,6 +557,7 @@ sleep 3
 DEVICE_IP=$(sh "ip addr show wlan0 2>/dev/null | grep 'inet ' | awk '{print \$2}' | cut -d/ -f1" || echo "not connected")
 printf "  %b  %-52s ${CYAN}%s${RESET}\n" "$TICK" "Device IP" "$DEVICE_IP"
 
+
 # ====================================================================
 # DONE
 # ====================================================================
@@ -583,16 +576,17 @@ else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
 
-echo ""
-echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
-echo -e "  ${YELLOW}[ ]${RESET} Connect controller to device via USB-C → allow firmware update"
-echo -e "  ${YELLOW}[ ]${RESET} Connect device to laptop — two dialogs will appear:"
-echo -e "        ${BOLD}Allow USB debugging${RESET} → check 'Always allow from this computer' → Allow"
-echo -e "        ${BOLD}USB Device Detected${RESET} → OK"
 if [[ ${#MANUAL_STEPS[@]} -gt 0 ]]; then
+  echo ""
+  echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
   for step in "${MANUAL_STEPS[@]}"; do
     echo -e "  ${YELLOW}[ ]${RESET} $step"
   done
+  echo ""
+  if [[ "$CHAIN_DEPLOY" == true ]]; then
+    read -rp "  Press Enter when manual steps are complete to begin APK install..."
+    echo ""
+  fi
 fi
 
 echo ""
@@ -605,14 +599,30 @@ echo -e "  MAC Address:   ${CYAN}$MAC${RESET}"
 echo -e "  To add:        ${DIM}echo '$DEVICE_IP' >> devices.txt${RESET}"
 echo ""
 
-# Notify sheet that provisioning is complete
-if [[ "$MODE" == "full" ]]; then
-  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
-fi
-
 # Copy serial number to clipboard for easy entry into tracking spreadsheet
 if command -v pbcopy &>/dev/null; then
   echo -n "$DEVICE_SERIAL" | pbcopy
   echo -e "  ${GREEN}✓ Serial number copied to clipboard${RESET}"
 fi
 echo ""
+
+# ---- Auto-deploy over USB -----------------------------------------
+DEPLOY_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_deploy.sh"
+
+if [[ "$CHAIN_DEPLOY" == true ]]; then
+  if [[ -f "$DEPLOY_SCRIPT" ]]; then
+    echo ""
+    echo -e "${CYAN}Running initial deploy over USB...${RESET}"
+    echo ""
+    ANDROID_SERIAL="$SERIAL" bash "$DEPLOY_SCRIPT" --all
+    update_sheet "deploy_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "" "$OPERATOR_INITIALS"
+  else
+    echo -e "${YELLOW}ml_deploy.sh not found — skipping auto-deploy${RESET}"
+  fi
+fi
+
+# Enable WiFi ADB — last USB ADB command; USB connection drops after this
+if [[ "$MODE" != "check" ]]; then
+  adb -s "$SERIAL" tcpip 5555 &>/dev/null || true
+  printf "  %b  WiFi ADB enabled on port 5555 — device reachable at %s\n" "$TICK" "$DEVICE_IP"
+fi

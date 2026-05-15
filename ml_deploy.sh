@@ -379,9 +379,9 @@ cmd_deploy() {
   mapfile -t APKS < <(find "$BUILDS_DIR" -maxdepth 1 -name "*.apk" | sort)
 
   if [[ ${#APKS[@]} -eq 0 ]]; then
-    echo -e "${RED}No APK files found in $BUILDS_DIR${RESET}"
-    echo "Copy your APK(s) there and try again."
-    exit 1
+    echo -e "${YELLOW}No APKs in builds/ — skipping install.${RESET}"
+    echo -e "  To deploy later: ${DIM}./ml_deploy.sh deploy${RESET}"
+    return 0
   fi
 
   # ---- APK selection -------------------------------------------------
