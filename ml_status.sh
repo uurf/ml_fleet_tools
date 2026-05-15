@@ -58,20 +58,14 @@ EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip 
 EXPECTED_APK="${ML_EXPECTED_APK:-}"      # e.g. "2.1.0" — leave blank to skip check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
-WANT_STAY_AWAKE="1"        # 1 = stay awake while charging
-WANT_WIFI="1"              # must be connected
-WANT_BT="0"                # 0 = bluetooth off for show
 WANT_BRIGHTNESS="50"       # expected brightness level (0-255), blank to skip
-WANT_DEV_MODE="1"          # developer mode on
-WANT_USB_DEBUG="1"         # USB debugging on
-WANT_AUTO_UPDATE="0"       # auto-update off
 
 # ── Output mode ──────────────────────────────────────────────
 MODE="table"   # table | json | csv
 FAILURES_ONLY=false
 AUTO_FIX=false
 
-TICK="${GREEN}✓${RESET}"; CROSS="${RED}✗${RESET}"; WARN="${YELLOW}~${RESET}"
+TICK="${GREEN}✓${RESET}"; CROSS="${RED}✗${RESET}"
 
 # ── Arg parsing ──────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -304,6 +298,7 @@ print(
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
     c_bt=$(check "$bt_on" "false")          # want BT OFF
+    # shellcheck disable=SC2034  # c_bright used only in auto-fix path
     c_bright=$(check "$brightness" "$WANT_BRIGHTNESS")
     c_dev=$(check "$dev_on" "true")
     c_usb=$(check "$usb_on" "true")
@@ -325,18 +320,17 @@ print(
 
     # Format cells
     fmt_bool() {
-      local v="$1" chk="$2"
+      local chk="$2"
       if [[ "$chk" == "pass" ]]; then echo -e "$TICK"
       elif [[ "$chk" == "fail" ]]; then echo -e "$CROSS"
       else echo -e "${DIM}?${RESET}"
       fi
     }
 
-    local s_sleep s_wifi s_bt s_bright s_dev s_usb s_update s_ok
+    local s_sleep s_wifi s_bt s_dev s_usb s_update s_ok
     s_sleep=$(fmt_bool "$stay_awake" "$c_sleep")
     s_wifi=$(fmt_bool "$wifi_ok" "$c_wifi")
     s_bt=$(fmt_bool "$bt_on" "$c_bt")
-    s_bright=$(fmt_bool "$brightness" "$c_bright")
     s_dev=$(fmt_bool "$dev_on" "$c_dev")
     s_usb=$(fmt_bool "$usb_on" "$c_usb")
     s_update=$(fmt_bool "$auto_off" "$c_update")
@@ -425,7 +419,7 @@ while IFS= read -r serial; do
   PIDS+=($!)
   # Throttle
   while (( ${#PIDS[@]} >= MAX_PARALLEL )); do
-    PIDS=($(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done))
+    mapfile -t PIDS < <(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
     sleep 0.2
   done
 done <<< "$DEVICES"
