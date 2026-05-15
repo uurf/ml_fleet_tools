@@ -72,7 +72,7 @@ Or just run `./install.sh` — it handles this automatically.
 |---|---|
 | Target OS | 1.4.1 (B3E.230928.10-R.098) |
 | WiFi SSID | KAGAMI |
-| App package | com.tindrum.kagami |
+| App package | com.tindrum.kagamu |
 | ADB port | 5555 |
 
 ---
