@@ -16,6 +16,13 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.3] — 2026-05-15 — Hand navigation enforcement
+
+### Added
+- `ml_provision.sh`: Enforces hand navigation on (`enable_home_gesture_inputs = 1`) during provisioning; verified readable/writable via ADB on 1.4.1 user build
+
+---
+
 ## [v0.6.2] — 2026-05-15 — ml_scan.sh fix
 
 ### Fixed
