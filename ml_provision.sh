@@ -4,9 +4,12 @@
 # Target OS: 1.4.1 (B3E.230928.10-R.098)
 #
 # Runs automatically after ml_os_flash.sh, or standalone:
-#   ./ml_provision.sh              # full provision (USB device)
-#   ./ml_provision.sh --check      # read & report current state
-#   ./ml_provision.sh --discover   # just print serial + MAC
+#   ./ml_provision.sh                    # full provision (USB device)
+#   ./ml_provision.sh -d <ip>            # target a specific device by IP
+#   ./ml_provision.sh --check            # read & report current state (single device)
+#   ./ml_provision.sh --discover         # just print serial + MAC
+#   ./ml_provision.sh --fleet            # apply ADB-settable settings to all devices.txt devices
+#   ./ml_provision.sh --fleet --check    # check settings across entire fleet
 #
 # NOTE ON ML2-SPECIFIC SETTINGS:
 #   Global Dimming, Segmented Dimming, Display Override, Display Modes,
@@ -115,18 +118,109 @@ REMOVE_DIRS=(
 
 MODE="full"
 CHAIN_DEPLOY=false
+FLEET=false
+FLEET_WORKER=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --check)    MODE="check" ;;
-    --discover) MODE="discover" ;;
-    --deploy)   CHAIN_DEPLOY=true ;;
+    --check)        MODE="check" ;;
+    --discover)     MODE="discover" ;;
+    --deploy)       CHAIN_DEPLOY=true ;;
+    --fleet)        FLEET=true ;;
+    --fleet-worker) FLEET_WORKER=true ;;
+    -d)             ANDROID_SERIAL="${2}:5555"; shift ;;
     --help|-h)
-      echo "Usage: ./ml_provision.sh [--check|--discover|--deploy]"
+      echo "Usage: ./ml_provision.sh [-d <ip>] [--check|--discover|--deploy|--fleet [--check]]"
       exit 0 ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
   shift
 done
+
+# ---- Fleet dispatcher ----------------------------------------------
+# Reads devices.txt, connects all, spawns --fleet-worker per device in
+# parallel, buffers per-device output, prints sequentially + summary.
+
+if $FLEET; then
+  DEVICES_FILE="${SCRIPT_DIR}/devices.txt"
+  if [[ ! -f "$DEVICES_FILE" ]]; then
+    echo -e "${RED}devices.txt not found at ${DEVICES_FILE}${RESET}"
+    exit 1
+  fi
+
+  echo ""
+  echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+  if [[ "$MODE" == "check" ]]; then
+    echo -e "${BOLD}║   KAGAMI Fleet Check — Tin Drum              ║${RESET}"
+  else
+    echo -e "${BOLD}║   KAGAMI Fleet Settings — Tin Drum           ║${RESET}"
+  fi
+  echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+  echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
+  echo ""
+
+  FLEET_IPS=()
+  while IFS= read -r line; do
+    [[ "$line" =~ ^\s*# || -z "${line// /}" ]] && continue
+    FLEET_IPS+=("$line")
+  done < "$DEVICES_FILE"
+
+  echo -e "  Devices in devices.txt: ${CYAN}${#FLEET_IPS[@]}${RESET}"
+  echo ""
+
+  echo -e "${CYAN}Connecting...${RESET}"
+  CONNECTED=()
+  for ip in "${FLEET_IPS[@]}"; do
+    if adb connect "${ip}:5555" 2>&1 | grep -q "connected"; then
+      echo -e "  ${TICK} $ip"
+      CONNECTED+=("${ip}:5555")
+    else
+      echo -e "  ${CROSS} $ip (failed to connect)"
+    fi
+  done
+  echo ""
+
+  if [[ ${#CONNECTED[@]} -eq 0 ]]; then
+    echo -e "${RED}No devices connected.${RESET}"
+    exit 1
+  fi
+
+  WORKER_ARGS=(--fleet-worker)
+  [[ "$MODE" == "check" ]] && WORKER_ARGS+=(--check)
+
+  FLEET_TMP=$(mktemp -d)
+  trap 'rm -rf "$FLEET_TMP"' EXIT
+
+  PIDS=()
+  for serial in "${CONNECTED[@]}"; do
+    ip="${serial%%:*}"
+    out="${FLEET_TMP}/${ip}.out"
+    exit_f="${FLEET_TMP}/${ip}.exit"
+    ( ANDROID_SERIAL="$serial" bash "$0" "${WORKER_ARGS[@]}" >"$out" 2>&1; echo $? >"$exit_f" ) &
+    PIDS+=($!)
+  done
+
+  printf "  Running on %d device(s)" "${#CONNECTED[@]}"
+  for pid in "${PIDS[@]}"; do
+    wait "$pid" 2>/dev/null || true
+    printf "."
+  done
+  printf "\n\n"
+
+  SUCCESS=0; FAIL=0
+  for serial in "${CONNECTED[@]}"; do
+    ip="${serial%%:*}"
+    code=$(cat "${FLEET_TMP}/${ip}.exit" 2>/dev/null || echo "1")
+    echo -e "────── ${CYAN}${ip}${RESET} ─────────────────────────────────────────"
+    cat "${FLEET_TMP}/${ip}.out" 2>/dev/null || true
+    if [[ "$code" == "0" ]]; then SUCCESS=$(( SUCCESS + 1 )); else FAIL=$(( FAIL + 1 )); fi
+  done
+
+  echo ""
+  echo -e "════════════════════════════════════════════════════"
+  echo -e "Fleet result — ${GREEN}${SUCCESS}${RESET} succeeded  ${RED}${FAIL}${RESET} failed"
+  echo ""
+  exit $(( FAIL > 0 ? 1 : 0 ))
+fi
 
 # ---- Resolve device ------------------------------------------------
 
@@ -178,7 +272,7 @@ DEVICE_NUMBER="${DEVICE_NUMBER:-}"
 CASE_NUMBER="${CASE_NUMBER:-}"
 OPERATOR_INITIALS="${OPERATOR_INITIALS:-}"
 
-if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" ]]; then
+if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" && ! $FLEET_WORKER ]]; then
   echo ""
   echo -e "${BOLD}Device tracking${RESET}"
   read -rp "  Device number (or Enter to skip): " DEVICE_NUMBER
@@ -188,7 +282,7 @@ if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" ]]; then
 fi
 
 # Notify sheet that configuration has started
-if [[ "$MODE" == "full" ]]; then
+if [[ "$MODE" == "full" && ! $FLEET_WORKER ]]; then
   update_sheet "provision_start" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "false" "$OPERATOR_INITIALS"
 fi
 
@@ -345,7 +439,7 @@ mark_manual "Display → Maximum Dimming → just below max, even with l in 'dis
 WIFI_CONNECTED=false
 section "WiFi — SSID: $WIFI_SSID"
 
-if [[ "$MODE" == "check" ]]; then
+if [[ "$MODE" == "check" || $FLEET_WORKER ]]; then
   cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
   check_val "Connected SSID" "$cur_ssid" "$WIFI_SSID"
 else
@@ -539,6 +633,8 @@ fi
 # ====================================================================
 # ADB KEYS — push all authorized keys while we have confirmed ADB access
 # ====================================================================
+if ! $FLEET_WORKER; then
+
 section "ADB key authorization"
 
 ADB_KEY="$HOME/.android/adbkey.pub"
@@ -568,6 +664,8 @@ else
 fi
 rm -f "$ALL_KEYS_TMP"
 
+fi  # end ! FLEET_WORKER (ADB key authorization)
+
 section "Network"
 sleep 3
 DEVICE_IP=$(sh "ip addr show wlan0 2>/dev/null | grep 'inet ' | awk '{print \$2}' | cut -d/ -f1" || echo "not connected")
@@ -581,18 +679,21 @@ echo ""
 echo -e "${BOLD}═══════════════════════════════════════════════════${RESET}"
 
 if [[ "$MODE" != "check" ]]; then
-  # Append to provisioning log
-  LOG_FILE="$(dirname "${BASH_SOURCE[0]}")/provisioned_devices.csv"
-  [[ ! -f "$LOG_FILE" ]] && echo "timestamp,device_number,case_number,operator,serial,mac,ip,ml_os,build_id,build_type" > "$LOG_FILE"
-  echo "$(date +%Y-%m-%dT%H:%M:%S),$DEVICE_NUMBER,$CASE_NUMBER,$OPERATOR_INITIALS,$DEVICE_SERIAL,$MAC,$DEVICE_IP,${LUMIN_VERSION:-$BUILD_ID},$BUILD_ID,$BUILD_TYPE" >> "$LOG_FILE"
-  echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
-  # Notify sheet that provisioning is complete and set all auto-configured checkboxes
-  update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
+  if $FLEET_WORKER; then
+    echo -e "${GREEN}${BOLD}Settings applied.${RESET}"
+  else
+    # Append to provisioning log
+    LOG_FILE="$(dirname "${BASH_SOURCE[0]}")/provisioned_devices.csv"
+    [[ ! -f "$LOG_FILE" ]] && echo "timestamp,device_number,case_number,operator,serial,mac,ip,ml_os,build_id,build_type" > "$LOG_FILE"
+    echo "$(date +%Y-%m-%dT%H:%M:%S),$DEVICE_NUMBER,$CASE_NUMBER,$OPERATOR_INITIALS,$DEVICE_SERIAL,$MAC,$DEVICE_IP,${LUMIN_VERSION:-$BUILD_ID},$BUILD_ID,$BUILD_TYPE" >> "$LOG_FILE"
+    echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
+    update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
+  fi
 else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
 
-if [[ ${#MANUAL_STEPS[@]} -gt 0 ]]; then
+if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
   echo ""
   echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
   for step in "${MANUAL_STEPS[@]}"; do
@@ -606,39 +707,43 @@ if [[ ${#MANUAL_STEPS[@]} -gt 0 ]]; then
 fi
 
 echo ""
-[[ -n "$DEVICE_NUMBER" ]] && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
-[[ -n "$CASE_NUMBER"   ]] && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
-[[ -n "$OPERATOR_INITIALS" ]] && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
+[[ -n "$DEVICE_NUMBER" && ! $FLEET_WORKER ]] && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
+[[ -n "$CASE_NUMBER"   && ! $FLEET_WORKER ]] && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
+[[ -n "$OPERATOR_INITIALS" && ! $FLEET_WORKER ]] && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
 echo -e "  Device Serial: ${CYAN}$DEVICE_SERIAL${RESET}"
 echo -e "  Device IP:     ${CYAN}$DEVICE_IP${RESET}"
 echo -e "  MAC Address:   ${CYAN}$MAC${RESET}"
-echo -e "  To add:        ${DIM}echo '$DEVICE_IP' >> devices.txt${RESET}"
-echo ""
-
-# Copy serial number to clipboard for easy entry into tracking spreadsheet
-if command -v pbcopy &>/dev/null; then
-  echo -n "$DEVICE_SERIAL" | pbcopy
-  echo -e "  ${GREEN}✓ Serial number copied to clipboard${RESET}"
+if ! $FLEET_WORKER; then
+  echo -e "  To add:        ${DIM}echo '$DEVICE_IP' >> devices.txt${RESET}"
 fi
 echo ""
 
-# ---- Auto-deploy over USB -----------------------------------------
-DEPLOY_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_deploy.sh"
-
-if [[ "$CHAIN_DEPLOY" == true ]]; then
-  if [[ -f "$DEPLOY_SCRIPT" ]]; then
-    echo ""
-    echo -e "${CYAN}Running initial deploy over USB...${RESET}"
-    echo ""
-    ANDROID_SERIAL="$SERIAL" bash "$DEPLOY_SCRIPT" --all
-    update_sheet "deploy_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "" "$OPERATOR_INITIALS"
-  else
-    echo -e "${YELLOW}ml_deploy.sh not found — skipping auto-deploy${RESET}"
+if ! $FLEET_WORKER; then
+  # Copy serial number to clipboard for easy entry into tracking spreadsheet
+  if command -v pbcopy &>/dev/null; then
+    echo -n "$DEVICE_SERIAL" | pbcopy
+    echo -e "  ${GREEN}✓ Serial number copied to clipboard${RESET}"
   fi
-fi
+  echo ""
 
-# Enable WiFi ADB — last USB ADB command; USB connection drops after this
-if [[ "$MODE" != "check" ]]; then
-  adb -s "$SERIAL" tcpip 5555 &>/dev/null || true
-  printf "  %b  WiFi ADB enabled on port 5555 — device reachable at %s\n" "$TICK" "$DEVICE_IP"
+  # ---- Auto-deploy over USB -----------------------------------------
+  DEPLOY_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/ml_deploy.sh"
+
+  if [[ "$CHAIN_DEPLOY" == true ]]; then
+    if [[ -f "$DEPLOY_SCRIPT" ]]; then
+      echo ""
+      echo -e "${CYAN}Running initial deploy over USB...${RESET}"
+      echo ""
+      ANDROID_SERIAL="$SERIAL" bash "$DEPLOY_SCRIPT" --all
+      update_sheet "deploy_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "" "$OPERATOR_INITIALS"
+    else
+      echo -e "${YELLOW}ml_deploy.sh not found — skipping auto-deploy${RESET}"
+    fi
+  fi
+
+  # Enable WiFi ADB — last USB ADB command; USB connection drops after this
+  if [[ "$MODE" != "check" ]]; then
+    adb -s "$SERIAL" tcpip 5555 &>/dev/null || true
+    printf "  %b  WiFi ADB enabled on port 5555 — device reachable at %s\n" "$TICK" "$DEVICE_IP"
+  fi
 fi
