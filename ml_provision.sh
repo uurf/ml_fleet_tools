@@ -207,6 +207,7 @@ put_system() { sh "settings put system '$1' '$2'"; }
 put_secure() { sh "settings put secure '$1' '$2'"; }
 get_global() { sh "settings get global '$1'"; }
 get_system() { sh "settings get system '$1'"; }
+get_secure() { sh "settings get secure '$1'"; }
 
 MANUAL_STEPS=()
 
@@ -503,6 +504,21 @@ fi
 
 # ====================================================================
 # 9. SYSTEM / MISC
+# ====================================================================
+# ====================================================================
+# 9a. INPUT
+# ====================================================================
+section "Input"
+# Hand navigation must be on — controllers may not be paired on every device
+
+if [[ "$MODE" == "check" ]]; then
+  check_bool "Hand navigation: On" "$(get_secure enable_home_gesture_inputs)" "true"
+else
+  apply "Hand navigation: On" put_secure enable_home_gesture_inputs 1
+fi
+
+# ====================================================================
+# 10. SYSTEM / MISC
 # ====================================================================
 section "System / misc"
 
