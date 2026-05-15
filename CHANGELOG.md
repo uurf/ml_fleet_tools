@@ -16,6 +16,15 @@ _Work in progress on `dev` branch. Merge to `main` via pull request when ready t
 
 ---
 
+## [v0.6.4] — 2026-05-15 — Fleet settings mode
+
+### Added
+- `ml_provision.sh --fleet` — applies all ADB-settable settings to every device in `devices.txt` in parallel; buffers per-device output, prints sequentially with pass/fail summary
+- `ml_provision.sh --fleet --check` — read-only settings audit across entire fleet
+- `ml_provision.sh -d <ip>` — target a specific WiFi-connected device by IP
+
+---
+
 ## [v0.6.3] — 2026-05-15 — Hand navigation enforcement
 
 ### Added
