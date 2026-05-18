@@ -133,8 +133,50 @@ show_banner() {
   echo -e "  ${DIM}SSID ${SHOW_SSID} · pkg ${SHOW_PACKAGE} · devices ${dev_disp} (${n})${RESET}"
 }
 
-# Require typed confirmation before a show-affecting action.
-# No-ops when a parent in the chain already confirmed.
+# List the available show configs and let the operator switch.
+# Sets .active_show and aborts so the command is re-run cleanly:
+# callers snapshot SHOW_* before show_confirm, so swapping config
+# mid-run would leave stale values (unsafe for a destructive flash).
+_sc_pick_show() {
+  local shows=() f b i=1
+  for f in "$SHOWS_DIR"/*.conf; do
+    [[ -f "$f" ]] || continue
+    b="$(basename "$f" .conf)"
+    [[ "$b" == "EXAMPLE" ]] && continue
+    shows+=("$b")
+  done
+  if [[ ${#shows[@]} -eq 0 ]]; then
+    echo -e "  ${RED}No show configs in shows/ — run ./ml_show.sh init${RESET}" >&2
+    return 0
+  fi
+  echo ""
+  echo -e "  ${BOLD}Available show configurations:${RESET}"
+  for b in "${shows[@]}"; do
+    if [[ "$b" == "$ML_SHOW" ]]; then
+      echo -e "    [$i] ${b} ${DIM}(current)${RESET}"
+    else
+      echo -e "    [$i] ${b}"
+    fi
+    i=$((i+1))
+  done
+  local sel=""
+  read -rp "  Select [1-${#shows[@]}], or Enter to cancel: " sel </dev/tty
+  [[ -z "$sel" ]] && return 0
+  if [[ ! "$sel" =~ ^[0-9]+$ ]] || (( sel < 1 || sel > ${#shows[@]} )); then
+    echo -e "  ${YELLOW}Invalid selection.${RESET}"
+    return 0
+  fi
+  local chosen="${shows[$((sel-1))]}"
+  printf '%s\n' "$chosen" > "$ACTIVE_SHOW_FILE"
+  echo ""
+  echo -e "  ${GREEN}Active show set to ${BOLD}${chosen}${RESET}${GREEN}.${RESET}  ${CYAN}Re-run the command${RESET} to continue."
+  echo ""
+  exit 0
+}
+
+# Confirm the resolved show before a show-affecting action.
+# No-ops when a parent in the chain already confirmed. Enter
+# proceeds (low per-device overhead); S switches show config.
 show_confirm() {
   local action="${1:-this operation}"
   if [[ "${ML_SHOW_CONFIRMED:-}" == "1" ]]; then
@@ -143,16 +185,16 @@ show_confirm() {
   show_banner
   echo ""
   echo -e "  ${YELLOW}About to ${action} for the ${BOLD}${SHOW_NAME}${RESET}${YELLOW} fleet.${RESET}"
-  echo -e "  ${DIM}If that is the wrong show: Ctrl+C, then ./ml_show.sh use <id>${RESET}"
   echo ""
-  local typed=""
-  read -rp "  Type the show id ('${ML_SHOW}') to continue: " typed
-  if [[ "$typed" != "$ML_SHOW" ]]; then
-    echo -e "  ${RED}Show id did not match — aborting.${RESET}" >&2
-    exit 1
-  fi
-  export ML_SHOW_CONFIRMED=1
-  echo ""
+  local ans=""
+  while true; do
+    read -rp "  Press Enter to continue, or S for other available show configurations: " ans </dev/tty
+    case "$ans" in
+      ""|[Yy]) export ML_SHOW_CONFIRMED=1; echo ""; return 0 ;;
+      [Ss])    _sc_pick_show ;;
+      *)       echo -e "  ${DIM}Enter = continue · S = choose another show${RESET}" ;;
+    esac
+  done
 }
 
 _sc_init || exit 1
