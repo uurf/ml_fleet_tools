@@ -151,8 +151,13 @@ collect_device() {
   local stay_awake_on="false"
   [[ "$stay_awake" != "0" ]] && stay_awake_on="true"
 
-  local wifi_ssid
-  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '"' || echo "")
+  # Same pipefail trap as BT below: piping slow `adb dumpsys wifi`
+  # into head/grep makes the pipeline fail on SIGPIPE, and the old
+  # `|| echo ""` then blanked the SSID so connected devices read
+  # offline. Capture first, then parse the in-memory string.
+  local wifi_dump wifi_ssid=""
+  wifi_dump=$(adb_s "dumpsys wifi")
+  wifi_ssid=$(printf '%s\n' "$wifi_dump" | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '"' || true)
   local wifi_connected="false"
   [[ -n "$wifi_ssid" && "$wifi_ssid" != "<unknown ssid>" ]] && wifi_connected="true"
 
@@ -160,10 +165,15 @@ collect_device() {
   # that key, not the radio — on the 1.4.1 user build a device with BT
   # enabled via the headset UI / pairing still reads 0. dumpsys
   # bluetooth_manager tracks the real adapter state.
-  local bt_on="false"
-  if adb_s "dumpsys bluetooth_manager" | grep -qE 'curState=OnState|enabled: true'; then
-    bt_on="true"
-  fi
+  # NB: capture, then match — piping a large dumpsys into `grep -q`
+  # under `set -o pipefail` makes grep close the pipe on first match,
+  # adb dies with SIGPIPE, and the pipeline reports failure even on a
+  # match — which silently reports every device's BT as off.
+  local bt_dump bt_on="false"
+  bt_dump=$(adb_s "dumpsys bluetooth_manager")
+  case "$bt_dump" in
+    *curState=OnState*|*"enabled: true"*) bt_on="true" ;;
+  esac
 
   local brightness
   brightness=$(adb_s settings get system screen_brightness)
