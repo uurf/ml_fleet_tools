@@ -56,6 +56,10 @@ except Exception as e:
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
+  if [[ -n "${ML_DEV_TEST:-}" ]]; then
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}"
+    return 0
+  fi
   # Skip if called from ml_os_flash.sh — it already checked
   [[ -n "${ANDROID_SERIAL:-}" ]] && return 0
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then

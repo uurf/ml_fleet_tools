@@ -57,6 +57,10 @@ except Exception as e:
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
+  if [[ -n "${ML_DEV_TEST:-}" ]]; then
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}"
+    return 0
+  fi
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
     echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
     return 0
