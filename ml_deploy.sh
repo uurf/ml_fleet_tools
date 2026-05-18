@@ -22,7 +22,7 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
   if [[ -n "${ML_DEV_TEST:-}" ]]; then
-    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}"
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}" >&2
     return 0
   fi
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then

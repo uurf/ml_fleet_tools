@@ -57,7 +57,7 @@ except Exception as e:
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
   if [[ -n "${ML_DEV_TEST:-}" ]]; then
-    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}"
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}" >&2
     return 0
   fi
   # Skip if called from ml_os_flash.sh — it already checked
