@@ -15,7 +15,10 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEVICES_FILE="$SCRIPT_DIR/../devices.txt"
+
+# shellcheck source=../lib/show_config.sh
+source "$SCRIPT_DIR/../lib/show_config.sh"
+DEVICES_FILE="$SHOW_DEVICES_FILE"   # -f below can still override
 MAX_PARALLEL=8
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -168,6 +171,7 @@ echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}║   ML SSD Copy — Tin Drum                     ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+show_banner
 echo ""
 
 connect_devices

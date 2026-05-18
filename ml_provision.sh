@@ -87,11 +87,8 @@ check_for_updates
 
 TARGET_BUILD="B3E.230928.10-R.098"
 
-WIFI_SSID="KAGAMI"
-WIFI_PASSWORD="KAGAmius"
-WIFI_SECURITY="wpa2"
-
-APP_PACKAGE="com.tindrum.kagamu"
+# WIFI_* and APP_PACKAGE come from the active show config —
+# assigned just below, after arg parsing (see lib/show_config.sh).
 APP_PERMISSIONS=(
   "android.permission.CAMERA"
   "android.permission.RECORD_AUDIO"
@@ -136,12 +133,22 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# ---- Resolve active show -------------------------------------------
+# Sourced after arg parsing so FLEET_WORKER is known (suppresses the
+# legacy-devices notice on the 200 spawned workers).
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
+WIFI_SSID="$SHOW_SSID"
+WIFI_PASSWORD="$SHOW_WIFI_PASSWORD"
+WIFI_SECURITY="$SHOW_WIFI_SECURITY"
+APP_PACKAGE="$SHOW_PACKAGE"
+
 # ---- Fleet dispatcher ----------------------------------------------
-# Reads devices.txt, connects all, spawns --fleet-worker per device in
-# parallel, buffers per-device output, prints sequentially + summary.
+# Reads the per-show devices file, connects all, spawns --fleet-worker
+# per device in parallel, buffers per-device output, prints + summary.
 
 if $FLEET; then
-  DEVICES_FILE="${SCRIPT_DIR}/devices.txt"
+  DEVICES_FILE="$SHOW_DEVICES_FILE"
   if [[ ! -f "$DEVICES_FILE" ]]; then
     echo -e "${RED}devices.txt not found at ${DEVICES_FILE}${RESET}"
     exit 1
@@ -150,9 +157,9 @@ if $FLEET; then
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
   if [[ "$MODE" == "check" ]]; then
-    echo -e "${BOLD}║   KAGAMI Fleet Check — Tin Drum              ║${RESET}"
+    echo -e "${BOLD}║   ML2 Fleet Check — Tin Drum                 ║${RESET}"
   else
-    echo -e "${BOLD}║   KAGAMI Fleet Settings — Tin Drum           ║${RESET}"
+    echo -e "${BOLD}║   ML2 Fleet Settings — Tin Drum              ║${RESET}"
   fi
   echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
   echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
@@ -182,6 +189,12 @@ if $FLEET; then
   if [[ ${#CONNECTED[@]} -eq 0 ]]; then
     echo -e "${RED}No devices connected.${RESET}"
     exit 1
+  fi
+
+  if [[ "$MODE" == "check" ]]; then
+    show_banner
+  else
+    show_confirm "apply settings to ALL ${#CONNECTED[@]} connected"
   fi
 
   WORKER_ARGS=(--fleet-worker)
@@ -291,6 +304,15 @@ if [[ "$MODE" == "discover" ]]; then
   echo "MAC:    $MAC"
   echo "OS:     $CURRENT_OS ($CURRENT_BUILD)"
   exit 0
+fi
+
+# ---- Confirm show (no-op if inherited from the flash chain) --------
+if ! $FLEET_WORKER; then
+  if [[ "$MODE" == "check" ]]; then
+    show_banner
+  else
+    show_confirm "provision (apply settings + join $SHOW_SSID WiFi)"
+  fi
 fi
 
 

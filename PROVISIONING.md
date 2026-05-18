@@ -8,9 +8,13 @@ This guide covers the complete process for flashing and provisioning a single Ma
 ## Before you start
 
 - Toolkit must be installed (see **SETUP.md**)
-- KAGAMI WiFi network must be broadcasting nearby
-  - SSID: `KAGAMI`
-  - Password: `KAGAmius`
+- **Select the show this machine is provisioning** (one-time per machine):
+  ```
+  ./ml_show.sh            # see the active show
+  ./ml_show.sh use KAGAMI # set it (or another show id)
+  ```
+  Setting up a brand-new show on site: `./ml_show.sh init` (prompts for WiFi, package, etc.). Every flash/provision/deploy is bound to the active show.
+- The show's WiFi network must be broadcasting nearby (SSID/password come from the show config — `KAGAMI` / `KAGAmius` for the KAGAMI show)
 - You need the device number and case number from the tracking sheet
 - Have the controller for the device ready
 
@@ -77,14 +81,20 @@ ML2 OS Flash Helper
   From:    unknown
   To:      1.4.1
 
-Press Enter to continue or Ctrl+C to abort...
+  Show: KAGAMI (KAGAMI)
+  SSID KAGAMI · pkg com.tindrum.kagamu · devices devices.txt (7)
+
+  About to flash 1.4.1 + factory reset for the KAGAMI fleet.
+  Type the show id ('KAGAMI') to continue: _
 ```
+
+> **Confirm the show.** This is the safety gate that binds the flash (and the provision/deploy that follow) to the correct show — wrong show means wrong WiFi and wrong build. If the show shown is wrong: Ctrl+C, run `./ml_show.sh use <id>`, and start again.
 
 ---
 
 ## Step 5 — Enter device info and confirm
 
-Press **Enter** to continue, then enter the device tracking information:
+Type the **show id** shown (e.g. `KAGAMI`) to continue, then enter the device tracking information:
 
 ```
 Device tracking
@@ -274,6 +284,15 @@ Disconnect the device and repeat from Step 1 for the next device.
 
 # Check status of all devices in fleet
 ./ml_status.sh
+
+# Only show devices with problems
+./ml_status.sh --failures
+
+# Collect status and auto-fix bad settings
+./ml_status.sh --fix
+
+# Export JSON for the visual dashboard (fleet_dashboard.html)
+./ml_status.sh --json > status/latest.json
 ```
 
 ### ml_deploy.sh commands
@@ -299,3 +318,36 @@ Disconnect the device and repeat from Step 1 for the next device.
 | `-d <ip>` | Target a single device by IP instead of all devices in `devices.txt` |
 | `-f <file>` | Use an alternate devices file (default: `devices.txt`) |
 | `-j <n>` | Max parallel jobs (default: 20) |
+
+### ml_status.sh flags
+
+Run with no flags for a colored pass/fail table to the terminal. All output modes collect from every online device in parallel and also write per-device raw JSON to `status/<timestamp>/`.
+
+| Flag | Description |
+|---|---|
+| _(none)_ | Collapsed pass/fail table to terminal — OS, Kagami/Kiosk version, battery, settings, overall OK |
+| `--json` | Emit a single JSON array of all devices to stdout — pipe to a file to feed `fleet_dashboard.html` |
+| `--csv` | Emit CSV (one row per device) for spreadsheet import |
+| `--failures` | Table mode, but only print devices that have at least one failing check |
+| `--fix` | After collecting, auto-fix bad settings (stay-awake → on, Bluetooth → off, brightness → `50`) |
+| `--package <pkg>` | Override which app package to report/check (default `com.tindrum.kagamu`) |
+| `--expected-os <ver>` | Flag any device whose OS version ≠ `<ver>` as failing |
+| `--expected-apk <ver>` | Flag any device whose APK version ≠ `<ver>` as failing |
+| `-f <file>` | Use an alternate devices file (default: `devices.txt`) |
+
+### ml_status.sh environment variables
+
+Each is the env-var equivalent of a flag; the flag wins if both are set.
+
+| Variable | Equivalent to | Default |
+|---|---|---|
+| `ML_PACKAGE` | `--package` | `com.tindrum.kagamu` |
+| `ML_EXPECTED_OS` | `--expected-os` | unset — OS pass/fail check skipped |
+| `ML_EXPECTED_APK` | `--expected-apk` | unset — APK pass/fail check skipped |
+
+**Feeding the dashboard:** `fleet_dashboard.html` does not read files automatically — generate the JSON, then load it in the page:
+
+```bash
+./ml_status.sh --json > status/latest.json
+# then open fleet_dashboard.html and click "Load JSON" (or drag the file onto the page)
+```

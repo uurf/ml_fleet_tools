@@ -51,11 +51,18 @@ check_for_updates() {
 TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
-# ── Defaults (override via args or edit here) ────────────────
-TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagamu}"
+# ── Resolve active show (read-only — banner to stderr so
+#    --json/--csv stdout stays machine-readable) ──────────────
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
+DEVICES_FILE="$SHOW_DEVICES_FILE"
+show_banner >&2
+
+# ── Defaults (show config, overridable via env or args) ──────
+TARGET_PACKAGE="${ML_PACKAGE:-$SHOW_PACKAGE}"
 KIOSK_PACKAGE="com.tindrum.kiosk"
-EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip check
-EXPECTED_APK="${ML_EXPECTED_APK:-}"      # e.g. "2.1.0" — leave blank to skip check
+EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
+EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
 WANT_BRIGHTNESS="50"       # expected brightness level (0-255), blank to skip

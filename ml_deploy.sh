@@ -46,7 +46,7 @@ check_for_updates
 
 usage() {
   echo ""
-  echo -e "${BOLD}ML Fleet Deploy — KAGAMI${RESET}"
+  echo -e "${BOLD}ML Fleet Deploy — Tin Drum${RESET}"
   echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
   echo ""
   echo "  Commands:"
@@ -118,6 +118,7 @@ online_devices() {
 
 # ---- Status check ----
 cmd_status() {
+  show_banner
   local all_devices online_list
   all_devices=$(load_devices)
   online_list=$(online_devices)
@@ -347,10 +348,11 @@ run_push() {
 cmd_deploy() {
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
-  echo -e "${BOLD}║   KAGAMI Deploy — Tin Drum                   ║${RESET}"
+  echo -e "${BOLD}║   ML2 Deploy — Tin Drum                      ║${RESET}"
   echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
   echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
-  echo ""
+
+  show_confirm "install APK(s) to the fleet"
 
   # ---- Connect devices -----------------------------------------------
   # Always attempt connect first so provisioned devices are reachable.
@@ -458,9 +460,12 @@ cmd_deploy() {
 cmd_deploy_all() {
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
-  echo -e "${BOLD}║   KAGAMI Deploy — installing all APKs        ║${RESET}"
+  echo -e "${BOLD}║   ML2 Deploy — installing all APKs           ║${RESET}"
   echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
   echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
+
+  # No-op when chained from provisioning (already confirmed at flash)
+  show_confirm "install all builds/ APKs"
   echo ""
 
   # If called from ml_provision.sh, ANDROID_SERIAL is set — use it directly
@@ -529,6 +534,17 @@ shift || true
 if [[ -n "$SINGLE_DEVICE" ]]; then
   online_devices() { echo "$SINGLE_DEVICE"; }
 fi
+
+# Printing help shouldn't require a configured show
+if [[ "$COMMAND" == "help" || "$COMMAND" == "--help" || "$COMMAND" == "-h" ]]; then
+  usage
+fi
+
+# ---- Resolve active show -------------------------------------------
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
+# Respect an explicit -f; otherwise use the per-show fleet list
+[[ "$DEVICES_FILE" == "$SCRIPT_DIR/devices.txt" ]] && DEVICES_FILE="$SHOW_DEVICES_FILE"
 
 case "$COMMAND" in
   deploy)      cmd_deploy ;;

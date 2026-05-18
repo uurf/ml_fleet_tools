@@ -18,7 +18,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEVICES_FILE="$(dirname "$SCRIPT_DIR")/devices.txt"
+
+# shellcheck source=../lib/show_config.sh
+source "$SCRIPT_DIR/../lib/show_config.sh"
+# Scan writes the canonical per-show fleet list (not the legacy fallback)
+DEVICES_FILE="$SHOW_DEVICES_FILE_DEFAULT"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
@@ -182,6 +186,7 @@ adb_identify() {
 # ── Main ─────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}ML Fleet Scanner${RESET}"
+show_banner
 echo ""
 
 # Resolve subnet
@@ -279,7 +284,7 @@ echo ""
 
 # ── Confirmation ─────────────────────────────────────────────
 if ! $AUTO_YES && ! $DRY_RUN; then
-  echo -e "  Write these ${#FOUND_IPS[@]} IP(s) to ${CYAN}devices.txt${RESET}?"
+  echo -e "  Write these ${#FOUND_IPS[@]} IP(s) to ${CYAN}devices/$(basename "$DEVICES_FILE")${RESET}?"
   if $APPEND; then
     echo -e "  ${DIM}(mode: append — existing entries will be kept)${RESET}"
   else
@@ -306,8 +311,9 @@ if $DRY_RUN; then
   exit 0
 fi
 
-# ── Write devices.txt ─────────────────────────────────────────
+# ── Write devices file ────────────────────────────────────────
 DATESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+mkdir -p "$(dirname "$DEVICES_FILE")"
 
 if $APPEND && [[ -f "$DEVICES_FILE" ]]; then
   # Merge: read existing (non-comment, non-blank) IPs
