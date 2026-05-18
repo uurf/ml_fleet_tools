@@ -251,7 +251,10 @@ get_serial() {
 }
 
 SERIAL="${ANDROID_SERIAL:-$(get_serial)}"
-sh()  { command adb -s "$SERIAL" shell "$@" 2>/dev/null | tr -d '\r'; }
+# </dev/null: these are non-interactive one-shot commands; without it
+# `adb shell` consumes the script's stdin, which silently skips the
+# later "Press Enter" manual-steps gate in the flash→provision chain.
+sh()  { command adb -s "$SERIAL" shell "$@" </dev/null 2>/dev/null | tr -d '\r'; }
 
 DEVICE_SERIAL=$(sh getprop ro.serialno)
 MAC=$(sh "ip addr show wlan0 2>/dev/null | grep 'link/ether' | awk '{print \$2}'" || echo "unavailable")
@@ -467,11 +470,18 @@ if [[ "$MODE" == "check" || $FLEET_WORKER ]]; then
 else
   echo "  Connecting..."
   WIFI_CONNECTED=false
-  # Wait for WiFi service to be ready then connect
-  sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-  sh "cmd wifi connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-  # Wait up to 30s for connection
-  for i in $(seq 1 6); do
+  # A fresh flash/factory-reset can leave the WiFi radio OFF, so
+  # connect-network silently no-ops. Enable it first (best-effort).
+  sh "svc wifi enable" &>/dev/null || true
+  sh "cmd wifi set-wifi-enabled enabled" &>/dev/null || true
+  sleep 3
+  # Wait up to ~90s, re-issuing connect every ~20s: the first attempt
+  # right after boot often no-ops before the WiFi supplicant is ready.
+  for i in $(seq 1 18); do
+    if (( (i - 1) % 4 == 0 )); then
+      sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
+      sh "cmd wifi connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
+    fi
     sleep 5
     cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
     if [[ "$cur_ssid" == "$WIFI_SSID" ]]; then
@@ -723,7 +733,9 @@ if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
   done
   echo ""
   if [[ "$CHAIN_DEPLOY" == true ]]; then
-    read -rp "  Press Enter when manual steps are complete to begin APK install..."
+    # Read from the controlling terminal, not stdin — in the chained
+    # flow stdin may be drained/redirected, which would skip this gate.
+    read -rp "  Press Enter when manual steps are complete to begin APK install..." </dev/tty
     echo ""
   fi
 fi
