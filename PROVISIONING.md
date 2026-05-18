@@ -308,6 +308,7 @@ Disconnect the device and repeat from Step 1 for the next device.
 | `stop <package>` | Force-stop an app on all online devices |
 | `restart <package>` | Stop then relaunch an app on all online devices |
 | `reboot` | Reboot all online devices |
+| `shutdown` | Power off all online devices (nightly end-of-day) |
 | `shell <cmd>` | Run any `adb shell` command on all online devices |
 | `logs <package>` | Stream logcat for a package from all online devices |
 

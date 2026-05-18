@@ -63,6 +63,7 @@ usage() {
   echo "    stop <package>        Stop app on all devices"
   echo "    restart <package>     Stop then launch app on all devices"
   echo "    reboot                Reboot all devices"
+  echo "    shutdown              Power off all devices (nightly end-of-day)"
   echo "    shell <cmd>           Run any adb shell command on all devices"
   echo "    logs <package>        Stream logcat for a package from all devices"
   echo ""
@@ -226,10 +227,11 @@ do_restart() {
   adb -s "$s" shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1
 }
 do_reboot()  { local s="$1"; adb -s "$s" reboot; }
+do_shutdown(){ local s="$1"; adb -s "$s" shell reboot -p 2>/dev/null || adb -s "$s" shell svc power shutdown; }
 do_shell()   { local s="$1"; shift; adb -s "$s" shell "$@"; }
 
 # ---- Wrapper functions for export (needed for run_parallel subshell) ----
-export -f do_install do_push do_launch do_stop do_restart do_reboot do_shell 2>/dev/null || true
+export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell 2>/dev/null || true
 
 # ---- Push with live progress ----------------------------------------
 # Single device: streams adb push output directly to terminal.
@@ -604,6 +606,10 @@ case "$COMMAND" in
   reboot)
     echo -e "${YELLOW}Rebooting all devices...${RESET}"
     run_parallel do_reboot
+    ;;
+  shutdown)
+    echo -e "${YELLOW}Powering off all devices...${RESET}"
+    run_parallel do_shutdown
     ;;
   shell)
     [[ -z "${1:-}" ]] && { echo "Usage: shell <command>"; exit 1; }

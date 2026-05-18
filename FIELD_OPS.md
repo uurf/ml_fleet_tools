@@ -138,5 +138,6 @@ follow-up and is intentionally not handled here.
 | Auto-fix drift | `./ml_status.sh --fix` | Stay-awake/BT/brightness |
 | Feed dashboard | `./ml_status.sh --json > status/latest.json` | Then Load JSON |
 | Field APK update | `./ml_deploy.sh deploy` | Typed show-id confirm |
+| Nightly shutdown | `./ml_deploy.sh shutdown` | Powers off all online devices — run end-of-day |
 | Rebuild fleet list | `./utilities/ml_scan.sh` | Writes `devices/<show>.txt` |
 | Full status flags | see PROVISIONING.md | Single source of truth |
