@@ -453,8 +453,15 @@ cmd_deploy() {
   export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
 
+  # ---- Reboot (issue #36) --------------------------------------------
+  # The show/kiosk SSD asset-transfer scripts are not enabled until the
+  # device reboots after an APK install.
   echo ""
-  echo -e "${GREEN}${BOLD}Deploy complete.${RESET}"
+  echo -e "${BOLD}── Rebooting devices ──────────────────────────────${RESET}"
+  run_parallel do_reboot
+
+  echo ""
+  echo -e "${GREEN}${BOLD}Deploy complete.${RESET} ${DIM}Devices are rebooting.${RESET}"
   echo ""
 }
 
@@ -512,6 +519,19 @@ cmd_deploy_all() {
   do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
   export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
+
+  # ---- Reboot (issue #36) --------------------------------------------
+  # Asset-transfer scripts aren't enabled until a post-install reboot.
+  # Chained from provisioning over USB: wait for the device back so the
+  # caller's `adb tcpip 5555` (WiFi ADB enable) still lands.
+  echo ""
+  echo -e "${BOLD}── Rebooting (enables asset-transfer scripts) ────${RESET}"
+  run_parallel do_reboot
+  if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+    echo -e "${DIM}  Waiting for device to come back up...${RESET}"
+    adb -s "$ANDROID_SERIAL" wait-for-device 2>/dev/null || true
+    sleep 20
+  fi
 
   echo ""
   echo -e "${GREEN}${BOLD}APK install complete.${RESET}"
