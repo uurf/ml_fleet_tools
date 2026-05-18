@@ -156,11 +156,14 @@ collect_device() {
   local wifi_connected="false"
   [[ -n "$wifi_ssid" && "$wifi_ssid" != "<unknown ssid>" ]] && wifi_connected="true"
 
-  local bt_enabled
-  bt_enabled=$(adb_s settings get global bluetooth_on)
-  [[ "$bt_enabled" == "null" || "$bt_enabled" == "" ]] && bt_enabled="0"
+  # `settings global bluetooth_on` only reflects what was written to
+  # that key, not the radio — on the 1.4.1 user build a device with BT
+  # enabled via the headset UI / pairing still reads 0. dumpsys
+  # bluetooth_manager tracks the real adapter state.
   local bt_on="false"
-  [[ "$bt_enabled" == "1" ]] && bt_on="true"
+  if adb_s "dumpsys bluetooth_manager" | grep -qE 'curState=OnState|enabled: true'; then
+    bt_on="true"
+  fi
 
   local brightness
   brightness=$(adb_s settings get system screen_brightness)
