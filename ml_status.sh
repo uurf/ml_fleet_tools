@@ -69,7 +69,7 @@ EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
 EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
-WANT_BRIGHTNESS="50"       # expected brightness level (0-255), blank to skip
+WANT_BRIGHTNESS="0"        # show wants 0; --fix still enforces it, just not shown in the table
 
 # ── Output mode ──────────────────────────────────────────────
 MODE="table"   # table | json | csv
@@ -285,10 +285,10 @@ render_table() {
 
   # Header
   printf "\n"
-  printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
-    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT" "Bright" "Dev" "USB" "NoUpd" "OK?"
-  printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
-    "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
+  printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
+    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT" "Dev" "USB" "NoUpd" "OK?"
+  printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s\n" \
+    "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "─────" "─────" "─────" "───"
 
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
@@ -377,9 +377,9 @@ print(
       ((fail_count++)) || true
     fi
 
-    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
+    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %b    %b    %b    %b\n" \
       "$ip" "$os_disp" "$apk_disp" "$kiosk_disp" "$battery" \
-      "$s_sleep" "$s_wifi" "$s_bt" "$brightness" \
+      "$s_sleep" "$s_wifi" "$s_bt" \
       "$s_dev" "$s_usb" "$s_update" "$s_ok"
   done
 
