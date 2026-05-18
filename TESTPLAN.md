@@ -37,6 +37,7 @@ production run so the gate re-arms.
 | A1 | `./ml_show.sh use KAGAMI` then `cat .active_show` | file contains `KAGAMI` |
 | A2 | `ML_DEV_TEST=1 ./ml_status.sh` (no device) | passes gate, prints `Show: KAGAMI` banner, then "No devices online" — does NOT stop at the update gate |
 | A3 | `./ml_show.sh init` with a throwaway id, then `./ml_show.sh use KAGAMI` | `shows/<id>.conf` written by prompts; switching back to KAGAMI works |
+| A4 | Open `docs/setup_checklist.html` and `docs/flash_checklist.html` | Both reference the "Select the show" / "Active show is set" step and the **type the show id** confirm — and that wording matches what the scripts actually do in A2 and B1. |
 
 ---
 
@@ -80,6 +81,7 @@ Run `ML_DEV_TEST=1 ./ml_os_flash.sh` and verify, in order:
 
 ## After the test
 
+- Confirm the printed checklists match reality: `docs/flash_checklist.html` (typed show-id confirm + active-show precondition) and `docs/setup_checklist.html` (one-time `./ml_show.sh use KAGAMI`). `docs/headset_checklist.html` is unaffected — no change expected.
 - All sections pass → the `dev` → `main` PR is justified.
 - Record any device-specific command corrections (esp. B3/D) before merging.
 - Ensure `ML_DEV_TEST` is unset on production/operator machines so the

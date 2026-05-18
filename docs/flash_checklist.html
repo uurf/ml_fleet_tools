@@ -166,6 +166,14 @@
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
+    <div class="step-label">Active show is set on this laptop</div>
+    <div class="step-detail">Run <code>./ml_show.sh</code> — it should report <em>Active show: KAGAMI</em>. If not set: <code>./ml_show.sh use KAGAMI</code> (or ask your team lead which show this laptop is for).</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
     <div class="step-label">Device number and case number for Google tracking sheet</div>
   </div>
 </div>
@@ -218,8 +226,9 @@
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Press Enter to confirm, then enter device info</div>
-    <div class="step-detail">Device number · case number · operator initials</div>
+    <div class="step-label">Type the show id to confirm, then enter device info</div>
+    <div class="step-detail">The script prints the show (e.g. <em>Show: KAGAMI</em>) and asks you to type the show id — type <em>KAGAMI</em> and press Enter. (Wrong id, or the wrong show: Ctrl+C and tell your team lead.)</div>
+    <div class="step-detail" style="margin-top:3px;">Then: device number · case number · operator initials</div>
     <div class="step-detail" style="margin-top:3px;">Script runs unattended for ~10 min after this — you can walk away</div>
   </div>
 </div>
