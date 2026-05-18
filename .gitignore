@@ -3,6 +3,9 @@ os_images/
 
 # Show-specific files — not committed, configured per deployment
 devices.txt
+devices/*
+!devices/.gitkeep
+.active_show
 builds/
 assets/
 

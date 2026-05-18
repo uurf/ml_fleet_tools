@@ -92,6 +92,10 @@ Handled by `ml_status.sh` — confirms fleet is show-ready.
 ./ml_status.sh
 ```
 
+> For the full flag set (`--json`, `--csv`, `--failures`, `--fix`, `--expected-os/apk`, `--package`) and the dashboard JSON-export pattern, see **PROVISIONING.md → ml_status.sh flags**.
+
+> **Running the show day-to-day** (recurring health sweeps, the dashboard, field APK updates, two concurrent shows) is its own runbook: see **FIELD_OPS.md**.
+
 ---
 
 ## Summary

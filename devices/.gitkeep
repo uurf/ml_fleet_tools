@@ -1,0 +1,3 @@
+# Keeps the devices/ directory in fresh clones.
+# Per-show fleet lists (devices/<SHOW_ID>.txt) are written here by
+# ml_scan.sh / ml_show.sh and are gitignored (operator-managed).

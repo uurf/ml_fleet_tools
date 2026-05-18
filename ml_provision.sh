@@ -56,6 +56,10 @@ except Exception as e:
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
+  if [[ -n "${ML_DEV_TEST:-}" ]]; then
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}" >&2
+    return 0
+  fi
   # Skip if called from ml_os_flash.sh — it already checked
   [[ -n "${ANDROID_SERIAL:-}" ]] && return 0
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
@@ -87,11 +91,8 @@ check_for_updates
 
 TARGET_BUILD="B3E.230928.10-R.098"
 
-WIFI_SSID="KAGAMI"
-WIFI_PASSWORD="KAGAmius"
-WIFI_SECURITY="wpa2"
-
-APP_PACKAGE="com.tindrum.kagamu"
+# WIFI_* and APP_PACKAGE come from the active show config —
+# assigned just below, after arg parsing (see lib/show_config.sh).
 APP_PERMISSIONS=(
   "android.permission.CAMERA"
   "android.permission.RECORD_AUDIO"
@@ -136,12 +137,22 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# ---- Resolve active show -------------------------------------------
+# Sourced after arg parsing so FLEET_WORKER is known (suppresses the
+# legacy-devices notice on the 200 spawned workers).
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
+WIFI_SSID="$SHOW_SSID"
+WIFI_PASSWORD="$SHOW_WIFI_PASSWORD"
+WIFI_SECURITY="$SHOW_WIFI_SECURITY"
+APP_PACKAGE="$SHOW_PACKAGE"
+
 # ---- Fleet dispatcher ----------------------------------------------
-# Reads devices.txt, connects all, spawns --fleet-worker per device in
-# parallel, buffers per-device output, prints sequentially + summary.
+# Reads the per-show devices file, connects all, spawns --fleet-worker
+# per device in parallel, buffers per-device output, prints + summary.
 
 if $FLEET; then
-  DEVICES_FILE="${SCRIPT_DIR}/devices.txt"
+  DEVICES_FILE="$SHOW_DEVICES_FILE"
   if [[ ! -f "$DEVICES_FILE" ]]; then
     echo -e "${RED}devices.txt not found at ${DEVICES_FILE}${RESET}"
     exit 1
@@ -150,9 +161,9 @@ if $FLEET; then
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
   if [[ "$MODE" == "check" ]]; then
-    echo -e "${BOLD}║   KAGAMI Fleet Check — Tin Drum              ║${RESET}"
+    echo -e "${BOLD}║   ML2 Fleet Check — Tin Drum                 ║${RESET}"
   else
-    echo -e "${BOLD}║   KAGAMI Fleet Settings — Tin Drum           ║${RESET}"
+    echo -e "${BOLD}║   ML2 Fleet Settings — Tin Drum              ║${RESET}"
   fi
   echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
   echo -e "${DIM}  $TOOLKIT_VERSION${RESET}"
@@ -182,6 +193,12 @@ if $FLEET; then
   if [[ ${#CONNECTED[@]} -eq 0 ]]; then
     echo -e "${RED}No devices connected.${RESET}"
     exit 1
+  fi
+
+  if [[ "$MODE" == "check" ]]; then
+    show_banner
+  else
+    show_confirm "apply settings to ALL ${#CONNECTED[@]} connected"
   fi
 
   WORKER_ARGS=(--fleet-worker)
@@ -238,7 +255,10 @@ get_serial() {
 }
 
 SERIAL="${ANDROID_SERIAL:-$(get_serial)}"
-sh()  { command adb -s "$SERIAL" shell "$@" 2>/dev/null | tr -d '\r'; }
+# </dev/null: these are non-interactive one-shot commands; without it
+# `adb shell` consumes the script's stdin, which silently skips the
+# later "Press Enter" manual-steps gate in the flash→provision chain.
+sh()  { command adb -s "$SERIAL" shell "$@" </dev/null 2>/dev/null | tr -d '\r'; }
 
 DEVICE_SERIAL=$(sh getprop ro.serialno)
 MAC=$(sh "ip addr show wlan0 2>/dev/null | grep 'link/ether' | awk '{print \$2}'" || echo "unavailable")
@@ -272,7 +292,7 @@ DEVICE_NUMBER="${DEVICE_NUMBER:-}"
 CASE_NUMBER="${CASE_NUMBER:-}"
 OPERATOR_INITIALS="${OPERATOR_INITIALS:-}"
 
-if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" && ! $FLEET_WORKER ]]; then
+if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" ]] && ! $FLEET_WORKER; then
   echo ""
   echo -e "${BOLD}Device tracking${RESET}"
   read -rp "  Device number (or Enter to skip): " DEVICE_NUMBER
@@ -282,7 +302,7 @@ if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" && ! $FLEET_
 fi
 
 # Notify sheet that configuration has started
-if [[ "$MODE" == "full" && ! $FLEET_WORKER ]]; then
+if [[ "$MODE" == "full" ]] && ! $FLEET_WORKER; then
   update_sheet "provision_start" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "false" "$OPERATOR_INITIALS"
 fi
 
@@ -291,6 +311,15 @@ if [[ "$MODE" == "discover" ]]; then
   echo "MAC:    $MAC"
   echo "OS:     $CURRENT_OS ($CURRENT_BUILD)"
   exit 0
+fi
+
+# ---- Confirm show (no-op if inherited from the flash chain) --------
+if ! $FLEET_WORKER; then
+  if [[ "$MODE" == "check" ]]; then
+    show_banner
+  else
+    show_confirm "provision (apply settings + join $SHOW_SSID WiFi)"
+  fi
 fi
 
 
@@ -439,24 +468,29 @@ mark_manual "Display → Maximum Dimming → just below max, even with l in 'dis
 WIFI_CONNECTED=false
 section "WiFi — SSID: $WIFI_SSID"
 
-if [[ "$MODE" == "check" || $FLEET_WORKER ]]; then
+if [[ "$MODE" == "check" ]] || $FLEET_WORKER; then
   cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
   check_val "Connected SSID" "$cur_ssid" "$WIFI_SSID"
 else
   echo "  Connecting..."
   WIFI_CONNECTED=false
-  # Wait for WiFi service to be ready then connect
-  sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-  sh "cmd wifi connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-  # Wait up to 30s for connection
-  for i in $(seq 1 6); do
-    sleep 5
+  # `cmd wifi` is root-only on the 1.4.1 user build (denied for the
+  # adb shell user, uid 2000). wifi-ml is Magic Leap's own CLI, works
+  # as the shell user, and is the only path that actually connects on
+  # this build. A fresh flash can also leave the radio off.
+  sh "wifi-ml set-wifi-enabled enabled" &>/dev/null || true
+  sleep 3
+  # connect-network blocks up to -t seconds waiting for association;
+  # retry a few times since right after a fresh flash the supplicant
+  # may not be ready on the first attempt.
+  for i in $(seq 1 3); do
+    sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\" -t 30" &>/dev/null || true
     cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
     if [[ "$cur_ssid" == "$WIFI_SSID" ]]; then
       WIFI_CONNECTED=true
       break
     fi
-    echo "  Waiting for connection... ($((i * 5))s)"
+    echo "  Waiting for WiFi association... (attempt $i/3)"
   done
   if $WIFI_CONNECTED; then
     printf "  %b  Connected to %s\n" "$TICK" "$WIFI_SSID"
@@ -617,7 +651,7 @@ fi
 section "System / misc"
 
 if [[ "$MODE" != "check" ]]; then
-  apply "Bluetooth: Off"                 sh "settings put global bluetooth_on 0"
+  apply "Bluetooth: On"                  sh "settings put global bluetooth_on 1"
   apply "Disable notification sounds"    put_system notification_sound ""
   apply "Sound effects: Off"            put_system sound_effects_enabled 0
   apply "Haptic feedback: Off"          put_system haptic_feedback_enabled 0
@@ -693,7 +727,7 @@ else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
 
-if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
+if [[ ${#MANUAL_STEPS[@]} -gt 0 ]] && ! $FLEET_WORKER; then
   echo ""
   echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
   for step in "${MANUAL_STEPS[@]}"; do
@@ -701,15 +735,17 @@ if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
   done
   echo ""
   if [[ "$CHAIN_DEPLOY" == true ]]; then
-    read -rp "  Press Enter when manual steps are complete to begin APK install..."
+    # Read from the controlling terminal, not stdin — in the chained
+    # flow stdin may be drained/redirected, which would skip this gate.
+    read -rp "  Press Enter when manual steps are complete to begin APK install..." </dev/tty
     echo ""
   fi
 fi
 
 echo ""
-[[ -n "$DEVICE_NUMBER" && ! $FLEET_WORKER ]] && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
-[[ -n "$CASE_NUMBER"   && ! $FLEET_WORKER ]] && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
-[[ -n "$OPERATOR_INITIALS" && ! $FLEET_WORKER ]] && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
+{ [[ -n "$DEVICE_NUMBER" ]]     && ! $FLEET_WORKER; } && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
+{ [[ -n "$CASE_NUMBER" ]]       && ! $FLEET_WORKER; } && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
+{ [[ -n "$OPERATOR_INITIALS" ]] && ! $FLEET_WORKER; } && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
 echo -e "  Device Serial: ${CYAN}$DEVICE_SERIAL${RESET}"
 echo -e "  Device IP:     ${CYAN}$DEVICE_IP${RESET}"
 echo -e "  MAC Address:   ${CYAN}$MAC${RESET}"

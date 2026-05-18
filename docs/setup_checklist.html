@@ -229,6 +229,19 @@
   </div>
 </div>
 
+<!-- SELECT SHOW -->
+<div class="section-label">Select the show</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Set the active show for this laptop</div>
+    <div class="step-detail">One-time per machine. Your team lead tells you which show — for the main show:</div>
+    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</code></div>
+    <div class="step-detail" style="margin-top:4px;">Confirm with <code>./ml_show.sh</code> — should report <em>Active show: KAGAMI</em>. Until this is set, every flash/provision/deploy command stops with a "no show configured" error.</div>
+  </div>
+</div>
+
 <!-- VERIFY -->
 <div class="section-label">Verify</div>
 
@@ -237,7 +250,7 @@
   <div class="step-content">
     <div class="step-label">Run flash script to confirm setup</div>
     <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</code></div>
-    <div class="step-detail" style="margin-top:4px;">Should show OS auto-selection or version menu — not an error</div>
+    <div class="step-detail" style="margin-top:4px;">With the show set and no device connected, it prints the show banner then stops at <em>No device found over USB</em> — that's success, not an error. A "no show configured" or "out of date" message means the step above (or the toolkit) still needs attention.</div>
   </div>
 </div>
 

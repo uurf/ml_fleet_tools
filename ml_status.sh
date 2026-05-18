@@ -28,6 +28,10 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
+  if [[ -n "${ML_DEV_TEST:-}" ]]; then
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}" >&2
+    return 0
+  fi
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
     echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
     return 0
@@ -51,14 +55,21 @@ check_for_updates() {
 TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
 
-# ── Defaults (override via args or edit here) ────────────────
-TARGET_PACKAGE="${ML_PACKAGE:-com.tindrum.kagamu}"
+# ── Resolve active show (read-only — banner to stderr so
+#    --json/--csv stdout stays machine-readable) ──────────────
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
+DEVICES_FILE="$SHOW_DEVICES_FILE"
+show_banner >&2
+
+# ── Defaults (show config, overridable via env or args) ──────
+TARGET_PACKAGE="${ML_PACKAGE:-$SHOW_PACKAGE}"
 KIOSK_PACKAGE="com.tindrum.kiosk"
-EXPECTED_OS="${ML_EXPECTED_OS:-}"        # e.g. "1.3.2" — leave blank to skip check
-EXPECTED_APK="${ML_EXPECTED_APK:-}"      # e.g. "2.1.0" — leave blank to skip check
+EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
+EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
-WANT_BRIGHTNESS="50"       # expected brightness level (0-255), blank to skip
+WANT_BRIGHTNESS="0"        # show wants 0; --fix still enforces it, just not shown in the table
 
 # ── Output mode ──────────────────────────────────────────────
 MODE="table"   # table | json | csv
@@ -140,16 +151,29 @@ collect_device() {
   local stay_awake_on="false"
   [[ "$stay_awake" != "0" ]] && stay_awake_on="true"
 
-  local wifi_ssid
-  wifi_ssid=$(adb_s "dumpsys wifi" | grep "mWifiInfo" | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '"' || echo "")
+  # Same pipefail trap as BT below: piping slow `adb dumpsys wifi`
+  # into head/grep makes the pipeline fail on SIGPIPE, and the old
+  # `|| echo ""` then blanked the SSID so connected devices read
+  # offline. Capture first, then parse the in-memory string.
+  local wifi_dump wifi_ssid=""
+  wifi_dump=$(adb_s "dumpsys wifi")
+  wifi_ssid=$(printf '%s\n' "$wifi_dump" | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '"' || true)
   local wifi_connected="false"
   [[ -n "$wifi_ssid" && "$wifi_ssid" != "<unknown ssid>" ]] && wifi_connected="true"
 
-  local bt_enabled
-  bt_enabled=$(adb_s settings get global bluetooth_on)
-  [[ "$bt_enabled" == "null" || "$bt_enabled" == "" ]] && bt_enabled="0"
-  local bt_on="false"
-  [[ "$bt_enabled" == "1" ]] && bt_on="true"
+  # `settings global bluetooth_on` only reflects what was written to
+  # that key, not the radio — on the 1.4.1 user build a device with BT
+  # enabled via the headset UI / pairing still reads 0. dumpsys
+  # bluetooth_manager tracks the real adapter state.
+  # NB: capture, then match — piping a large dumpsys into `grep -q`
+  # under `set -o pipefail` makes grep close the pipe on first match,
+  # adb dies with SIGPIPE, and the pipeline reports failure even on a
+  # match — which silently reports every device's BT as off.
+  local bt_dump bt_on="false"
+  bt_dump=$(adb_s "dumpsys bluetooth_manager")
+  case "$bt_dump" in
+    *curState=OnState*|*"enabled: true"*) bt_on="true" ;;
+  esac
 
   local brightness
   brightness=$(adb_s settings get system screen_brightness)
@@ -231,7 +255,7 @@ fix_device() {
 
   local bt_on
   bt_on=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['bluetooth_on'])" 2>/dev/null)
-  [[ "$bt_on" == "true" ]] && adb -s "$serial" shell service call bluetooth_manager 8 2>/dev/null || true
+  [[ "$bt_on" == "false" ]] && adb -s "$serial" shell svc bluetooth enable 2>/dev/null || true
 
   # Brightness
   local brightness
@@ -261,10 +285,10 @@ render_table() {
 
   # Header
   printf "\n"
-  printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
-    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
-  printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
-    "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
+  printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
+    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT" "Dev" "USB" "NoUpd" "OK?"
+  printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s\n" \
+    "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "─────" "─────" "─────" "───"
 
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
@@ -297,7 +321,7 @@ print(
     local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
-    c_bt=$(check "$bt_on" "false")          # want BT OFF
+    c_bt=$(check "$bt_on" "true")           # want BT ON — controllers need it
     # shellcheck disable=SC2034  # c_bright used only in auto-fix path
     c_bright=$(check "$brightness" "$WANT_BRIGHTNESS")
     c_dev=$(check "$dev_on" "true")
@@ -353,9 +377,9 @@ print(
       ((fail_count++)) || true
     fi
 
-    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %-6s  %b    %b    %b    %b\n" \
+    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %b    %b    %b    %b\n" \
       "$ip" "$os_disp" "$apk_disp" "$kiosk_disp" "$battery" \
-      "$s_sleep" "$s_wifi" "$s_bt" "$brightness" \
+      "$s_sleep" "$s_wifi" "$s_bt" \
       "$s_dev" "$s_usb" "$s_update" "$s_ok"
   done
 

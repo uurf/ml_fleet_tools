@@ -57,6 +57,10 @@ except Exception as e:
 # Requires network — silently skips if offline.
 # Hard stops if local repo is behind origin/main.
 check_for_updates() {
+  if [[ -n "${ML_DEV_TEST:-}" ]]; then
+    echo -e "${YELLOW}⚠ ML_DEV_TEST set — update gate bypassed (dev testing only).${RESET}" >&2
+    return 0
+  fi
   if ! git -C "$SCRIPT_DIR" fetch origin --quiet 2>/dev/null; then
     echo -e "${YELLOW}⚠ No network — skipping update check.${RESET}"
     return 0
@@ -79,6 +83,13 @@ check_for_updates() {
 }
 TOOLKIT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null || echo "unversioned")
 check_for_updates
+
+# ---- Resolve active show -------------------------------------------
+# A device flashed for the wrong show joins the wrong WiFi and gets
+# the wrong build — so the show is confirmed before the flash below,
+# then handed down the provision → deploy chain.
+# shellcheck source=lib/show_config.sh
+source "$SCRIPT_DIR/lib/show_config.sh"
 
 TARGET_VERSION="${1:-}"
 OS_IMAGES_DIR="${2:-}"
@@ -254,8 +265,9 @@ echo -e "  From:    ${CYAN}$CURRENT_OS${RESET}"
 echo -e "  To:      ${CYAN}$TARGET_OS${RESET}"
 echo -e "  Script:  $FLASH_SCRIPT"
 echo ""
-echo -e "${YELLOW}Press Enter to continue or Ctrl+C to abort...${RESET}"
-read -rp "" _
+# Typed show-id confirmation doubles as the "proceed" gate, and binds
+# this destructive flash to the correct show for the rest of the chain.
+show_confirm "flash $TARGET_OS + factory reset $SERIAL"
 
 # Collect device tracking info upfront so operator can walk away during flash
 echo ""
@@ -496,7 +508,7 @@ if [[ -f "$PROVISION_SCRIPT" ]]; then
   sleep 30
   echo -e "${CYAN}Running provisioning (settings, WiFi, permissions)...${RESET}"
   echo ""
-  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" OPERATOR_INITIALS="$OPERATOR_INITIALS" bash "$PROVISION_SCRIPT" --deploy
+  ANDROID_SERIAL="$SERIAL" DEVICE_NUMBER="$DEVICE_NUMBER" CASE_NUMBER="$CASE_NUMBER" OPERATOR_INITIALS="$OPERATOR_INITIALS" ML_SHOW="$ML_SHOW" ML_SHOW_CONFIRMED="${ML_SHOW_CONFIRMED:-}" bash "$PROVISION_SCRIPT" --deploy
 else
   echo ""
   echo -e "${YELLOW}ml_provision.sh not found — skipping auto-provisioning${RESET}"
