@@ -474,25 +474,23 @@ if [[ "$MODE" == "check" || $FLEET_WORKER ]]; then
 else
   echo "  Connecting..."
   WIFI_CONNECTED=false
-  # A fresh flash/factory-reset can leave the WiFi radio OFF, so
-  # connect-network silently no-ops. Enable it first (best-effort).
-  sh "svc wifi enable" &>/dev/null || true
-  sh "cmd wifi set-wifi-enabled enabled" &>/dev/null || true
+  # `cmd wifi` is root-only on the 1.4.1 user build (denied for the
+  # adb shell user, uid 2000). wifi-ml is Magic Leap's own CLI, works
+  # as the shell user, and is the only path that actually connects on
+  # this build. A fresh flash can also leave the radio off.
+  sh "wifi-ml set-wifi-enabled enabled" &>/dev/null || true
   sleep 3
-  # Wait up to ~90s, re-issuing connect every ~20s: the first attempt
-  # right after boot often no-ops before the WiFi supplicant is ready.
-  for i in $(seq 1 18); do
-    if (( (i - 1) % 4 == 0 )); then
-      sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-      sh "cmd wifi connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\"" &>/dev/null || true
-    fi
-    sleep 5
+  # connect-network blocks up to -t seconds waiting for association;
+  # retry a few times since right after a fresh flash the supplicant
+  # may not be ready on the first attempt.
+  for i in $(seq 1 3); do
+    sh "wifi-ml connect-network \"$WIFI_SSID\" $WIFI_SECURITY \"$WIFI_PASSWORD\" -t 30" &>/dev/null || true
     cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
     if [[ "$cur_ssid" == "$WIFI_SSID" ]]; then
       WIFI_CONNECTED=true
       break
     fi
-    echo "  Waiting for connection... ($((i * 5))s)"
+    echo "  Waiting for WiFi association... (attempt $i/3)"
   done
   if $WIFI_CONNECTED; then
     printf "  %b  Connected to %s\n" "$TICK" "$WIFI_SSID"
