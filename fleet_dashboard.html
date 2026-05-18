@@ -208,7 +208,7 @@
       <option value="all">All settings</option>
       <option value="sleep">Sleep issue</option>
       <option value="wifi">WiFi issue</option>
-      <option value="bt">Bluetooth on</option>
+      <option value="bt">Bluetooth off</option>
       <option value="dev">Dev mode off</option>
       <option value="usb">USB debug off</option>
       <option value="apk">APK mismatch</option>
@@ -308,7 +308,7 @@ function loadDemo() {
       stay_awake: i !== 3,
       wifi_connected: i !== 7,
       wifi_ssid: i === 7 ? '' : 'KAGAMI-SHOW-5G',
-      bluetooth_on: i === 5,
+      bluetooth_on: i !== 5,
       screen_brightness: i === 2 ? 128 : 50,
       developer_mode: true,
       usb_debugging: i !== 9,
@@ -326,7 +326,7 @@ function deviceIssues(d) {
   const issues = [];
   if (!s.stay_awake) issues.push('sleep');
   if (!s.wifi_connected) issues.push('wifi');
-  if (s.bluetooth_on) issues.push('bt');
+  if (!s.bluetooth_on) issues.push('bt');
   if (!s.developer_mode) issues.push('dev');
   if (!s.usb_debugging) issues.push('usb');
   if (s.auto_update_off === 'false') issues.push('update');
@@ -429,7 +429,7 @@ function renderTable() {
     ${th('battery','Battery')}
     <th title="Stay awake while plugged in">Sleep</th>
     <th title="WiFi connected">WiFi</th>
-    <th title="Bluetooth OFF = ✓">BT off</th>
+    <th title="Bluetooth ON = ✓">BT on</th>
     <th title="Screen brightness">Bright</th>
     <th title="Developer mode">Dev</th>
     <th title="USB debugging">USB</th>
@@ -445,7 +445,7 @@ function renderTable() {
 
     const c_sleep  = s.stay_awake ? 'pass' : 'fail';
     const c_wifi   = s.wifi_connected ? 'pass' : 'fail';
-    const c_bt     = !s.bluetooth_on ? 'pass' : 'fail';
+    const c_bt     = s.bluetooth_on ? 'pass' : 'fail';
     const c_dev    = s.developer_mode ? 'pass' : 'fail';
     const c_usb    = s.usb_debugging ? 'pass' : 'fail';
     const c_update = s.auto_update_off === 'true' ? 'pass' : s.auto_update_off === 'unknown' ? 'unknown' : 'fail';

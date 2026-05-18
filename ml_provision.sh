@@ -639,7 +639,7 @@ fi
 section "System / misc"
 
 if [[ "$MODE" != "check" ]]; then
-  apply "Bluetooth: Off"                 sh "settings put global bluetooth_on 0"
+  apply "Bluetooth: On"                  sh "settings put global bluetooth_on 1"
   apply "Disable notification sounds"    put_system notification_sound ""
   apply "Sound effects: Off"            put_system sound_effects_enabled 0
   apply "Haptic feedback: Off"          put_system haptic_feedback_enabled 0

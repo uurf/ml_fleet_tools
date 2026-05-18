@@ -238,7 +238,7 @@ fix_device() {
 
   local bt_on
   bt_on=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['bluetooth_on'])" 2>/dev/null)
-  [[ "$bt_on" == "true" ]] && adb -s "$serial" shell service call bluetooth_manager 8 2>/dev/null || true
+  [[ "$bt_on" == "false" ]] && adb -s "$serial" shell svc bluetooth enable 2>/dev/null || true
 
   # Brightness
   local brightness
@@ -269,7 +269,7 @@ render_table() {
   # Header
   printf "\n"
   printf "${BOLD}%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s${RESET}\n" \
-    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT✗" "Bright" "Dev" "USB" "NoUpd" "OK?"
+    "IP" "OS" "Kagami" "Kiosk" "Batt%" "Sleep" "WiFi" "BT" "Bright" "Dev" "USB" "NoUpd" "OK?"
   printf "%-18s %-8s %-10s %-10s %-8s  %s  %s  %s  %s  %s  %s  %s  %s\n" \
     "──────────────────" "────────" "──────────" "──────────" "───────" "─────" "─────" "─────" "──────" "─────" "─────" "─────" "───"
 
@@ -304,7 +304,7 @@ print(
     local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
-    c_bt=$(check "$bt_on" "false")          # want BT OFF
+    c_bt=$(check "$bt_on" "true")           # want BT ON — controllers need it
     # shellcheck disable=SC2034  # c_bright used only in auto-fix path
     c_bright=$(check "$brightness" "$WANT_BRIGHTNESS")
     c_dev=$(check "$dev_on" "true")
