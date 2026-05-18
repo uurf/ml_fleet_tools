@@ -32,11 +32,15 @@ production run so the gate re-arms.
 
 ## A — Multi-show resolution (no device required)
 
+> **Reading this table:** type only the text inside the `code` box in the
+> Command column, exactly, then Enter. The Pass-criteria column is what
+> you should *see* — never type it.
+
 | Step | Command | Pass criteria |
 |---|---|---|
-| A1 | `./ml_show.sh use KAGAMI` then `cat .active_show` | file contains `KAGAMI` |
-| A2 | `ML_DEV_TEST=1 ./ml_status.sh` (no device) | passes gate, prints `Show: KAGAMI` banner, then "No devices online" — does NOT stop at the update gate |
-| A3 | `./ml_show.sh init` with a throwaway id, then `./ml_show.sh use KAGAMI` | `shows/<id>.conf` written by prompts; switching back to KAGAMI works |
+| A1 | `./ml_show.sh` | Reports `Active show: KAGAMI` (set in Setup above). |
+| A2 | `ML_DEV_TEST=1 ./ml_status.sh` | (no device attached) passes gate, prints `Show: KAGAMI` banner, then `No devices online` — does NOT stop at the update gate |
+| A3 | `./ml_show.sh init` | Answer the prompts with a throwaway id; it writes `shows/<id>.conf`. Then run `./ml_show.sh use KAGAMI` to switch back. |
 | A4 | Open `docs/setup_checklist.html` and `docs/flash_checklist.html` | Both reference the "Select the show" / "Active show is set" step and the **type the show id** confirm — and that wording matches what the scripts actually do in A2 and B1. |
 
 ---
