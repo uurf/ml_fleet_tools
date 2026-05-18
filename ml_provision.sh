@@ -292,7 +292,7 @@ DEVICE_NUMBER="${DEVICE_NUMBER:-}"
 CASE_NUMBER="${CASE_NUMBER:-}"
 OPERATOR_INITIALS="${OPERATOR_INITIALS:-}"
 
-if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" && ! $FLEET_WORKER ]]; then
+if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" ]] && ! $FLEET_WORKER; then
   echo ""
   echo -e "${BOLD}Device tracking${RESET}"
   read -rp "  Device number (or Enter to skip): " DEVICE_NUMBER
@@ -302,7 +302,7 @@ if [[ "$MODE" == "full" && -z "$DEVICE_NUMBER" && -z "$CASE_NUMBER" && ! $FLEET_
 fi
 
 # Notify sheet that configuration has started
-if [[ "$MODE" == "full" && ! $FLEET_WORKER ]]; then
+if [[ "$MODE" == "full" ]] && ! $FLEET_WORKER; then
   update_sheet "provision_start" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "false" "$OPERATOR_INITIALS"
 fi
 
@@ -468,7 +468,7 @@ mark_manual "Display → Maximum Dimming → just below max, even with l in 'dis
 WIFI_CONNECTED=false
 section "WiFi — SSID: $WIFI_SSID"
 
-if [[ "$MODE" == "check" || $FLEET_WORKER ]]; then
+if [[ "$MODE" == "check" ]] || $FLEET_WORKER; then
   cur_ssid=$(sh "dumpsys wifi 2>/dev/null | grep -m1 'mWifiInfo' | grep -o 'SSID: [^,]*' | head -1 | sed 's/SSID: //' | tr -d '\"'" || echo "")
   check_val "Connected SSID" "$cur_ssid" "$WIFI_SSID"
 else
@@ -727,7 +727,7 @@ else
   echo -e "${BOLD}Check complete.${RESET}"
 fi
 
-if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
+if [[ ${#MANUAL_STEPS[@]} -gt 0 ]] && ! $FLEET_WORKER; then
   echo ""
   echo -e "${YELLOW}${BOLD}Manual steps — put on headset and complete:${RESET}"
   for step in "${MANUAL_STEPS[@]}"; do
@@ -743,9 +743,9 @@ if [[ ${#MANUAL_STEPS[@]} -gt 0 && ! $FLEET_WORKER ]]; then
 fi
 
 echo ""
-[[ -n "$DEVICE_NUMBER" && ! $FLEET_WORKER ]] && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
-[[ -n "$CASE_NUMBER"   && ! $FLEET_WORKER ]] && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
-[[ -n "$OPERATOR_INITIALS" && ! $FLEET_WORKER ]] && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
+{ [[ -n "$DEVICE_NUMBER" ]]     && ! $FLEET_WORKER; } && echo -e "  Device #:      ${CYAN}$DEVICE_NUMBER${RESET}"
+{ [[ -n "$CASE_NUMBER" ]]       && ! $FLEET_WORKER; } && echo -e "  Case #:        ${CYAN}$CASE_NUMBER${RESET}"
+{ [[ -n "$OPERATOR_INITIALS" ]] && ! $FLEET_WORKER; } && echo -e "  Operator:      ${CYAN}$OPERATOR_INITIALS${RESET}"
 echo -e "  Device Serial: ${CYAN}$DEVICE_SERIAL${RESET}"
 echo -e "  Device IP:     ${CYAN}$DEVICE_IP${RESET}"
 echo -e "  MAC Address:   ${CYAN}$MAC${RESET}"
