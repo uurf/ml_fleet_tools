@@ -63,6 +63,7 @@ usage() {
   echo "    stop <package>        Stop app on all devices"
   echo "    restart <package>     Stop then launch app on all devices"
   echo "    reboot                Reboot all devices"
+  echo "    shutdown              Power off all devices (nightly end-of-day)"
   echo "    shell <cmd>           Run any adb shell command on all devices"
   echo "    logs <package>        Stream logcat for a package from all devices"
   echo ""
@@ -226,10 +227,11 @@ do_restart() {
   adb -s "$s" shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1
 }
 do_reboot()  { local s="$1"; adb -s "$s" reboot; }
+do_shutdown(){ local s="$1"; adb -s "$s" shell reboot -p 2>/dev/null || adb -s "$s" shell svc power shutdown; }
 do_shell()   { local s="$1"; shift; adb -s "$s" shell "$@"; }
 
 # ---- Wrapper functions for export (needed for run_parallel subshell) ----
-export -f do_install do_push do_launch do_stop do_restart do_reboot do_shell 2>/dev/null || true
+export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell 2>/dev/null || true
 
 # ---- Push with live progress ----------------------------------------
 # Single device: streams adb push output directly to terminal.
@@ -453,8 +455,15 @@ cmd_deploy() {
   export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
 
+  # ---- Reboot (issue #36) --------------------------------------------
+  # The show/kiosk SSD asset-transfer scripts are not enabled until the
+  # device reboots after an APK install.
   echo ""
-  echo -e "${GREEN}${BOLD}Deploy complete.${RESET}"
+  echo -e "${BOLD}── Rebooting devices ──────────────────────────────${RESET}"
+  run_parallel do_reboot
+
+  echo ""
+  echo -e "${GREEN}${BOLD}Deploy complete.${RESET} ${DIM}Devices are rebooting.${RESET}"
   echo ""
 }
 
@@ -512,6 +521,19 @@ cmd_deploy_all() {
   do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
   export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
+
+  # ---- Reboot (issue #36) --------------------------------------------
+  # Asset-transfer scripts aren't enabled until a post-install reboot.
+  # Chained from provisioning over USB: wait for the device back so the
+  # caller's `adb tcpip 5555` (WiFi ADB enable) still lands.
+  echo ""
+  echo -e "${BOLD}── Rebooting (enables asset-transfer scripts) ────${RESET}"
+  run_parallel do_reboot
+  if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+    echo -e "${DIM}  Waiting for device to come back up...${RESET}"
+    adb -s "$ANDROID_SERIAL" wait-for-device 2>/dev/null || true
+    sleep 20
+  fi
 
   echo ""
   echo -e "${GREEN}${BOLD}APK install complete.${RESET}"
@@ -584,6 +606,10 @@ case "$COMMAND" in
   reboot)
     echo -e "${YELLOW}Rebooting all devices...${RESET}"
     run_parallel do_reboot
+    ;;
+  shutdown)
+    echo -e "${YELLOW}Powering off all devices...${RESET}"
+    run_parallel do_shutdown
     ;;
   shell)
     [[ -z "${1:-}" ]] && { echo "Usage: shell <command>"; exit 1; }
