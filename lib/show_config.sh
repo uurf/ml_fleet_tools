@@ -66,7 +66,47 @@ _sc_init() {
     show_id="$(tr -d ' \t\r\n' < "$ACTIVE_SHOW_FILE")"
   fi
   if [[ -z "$show_id" ]]; then
-    _sc_die "No active show set (\$ML_SHOW unset and no .active_show file)."
+    # No $ML_SHOW and no .active_show. Don't force a separate
+    # `./ml_show.sh use` — resolve here instead:
+    #   0 shows      → die (must create one)
+    #   exactly 1    → use it (unambiguous; safe even for --json)
+    #   >=2 + a TTY  → numbered menu, then continue this run
+    #   >=2 + no TTY → die (keeps --json / fleet workers non-blocking;
+    #                  read prompt goes to stderr, picker exits rather
+    #                  than emitting partial machine-readable output)
+    local _shows=() _f _b
+    for _f in "$SHOWS_DIR"/*.conf; do
+      [[ -f "$_f" ]] || continue
+      _b="$(basename "$_f" .conf)"
+      [[ "$_b" == "EXAMPLE" ]] && continue
+      _shows+=("$_b")
+    done
+
+    if [[ ${#_shows[@]} -eq 0 ]]; then
+      _sc_die "No show configured."
+    elif [[ ${#_shows[@]} -eq 1 ]]; then
+      show_id="${_shows[0]}"
+      echo -e "${DIM}  Only one show configured (${show_id}) — using it.${RESET}" >&2
+    elif [[ -t 0 && -t 1 ]]; then
+      echo "" >&2
+      echo -e "  ${BOLD}Select a show:${RESET}" >&2
+      local _i=1
+      for _b in "${_shows[@]}"; do
+        echo -e "    [$_i] ${_b}" >&2
+        _i=$((_i+1))
+      done
+      local _sel=""
+      read -rp "  Select [1-${#_shows[@]}]: " _sel </dev/tty
+      if [[ ! "$_sel" =~ ^[0-9]+$ ]] || (( _sel < 1 || _sel > ${#_shows[@]} )); then
+        _sc_die "Invalid selection."
+      fi
+      show_id="${_shows[$((_sel-1))]}"
+      printf '%s\n' "$show_id" > "$ACTIVE_SHOW_FILE"
+      echo -e "  ${GREEN}Using ${BOLD}${show_id}${RESET}${GREEN} — saved as the active show on this machine.${RESET}" >&2
+      echo "" >&2
+    else
+      _sc_die "No active show set, and multiple shows exist (non-interactive)."
+    fi
   fi
 
   # 2. Reject anything that could escape the shows/ directory

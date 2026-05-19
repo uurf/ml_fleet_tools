@@ -10,9 +10,11 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
-## [Unreleased]
+## [v0.7.2] — 2026-05-19 — Kiosk-as-home reboot fix and show-selection UX
 
-_Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
+### Fixed
+- `ml_deploy.sh`: kiosk-as-home was silently lost after the post-install reboot (#36). `do_set_home` now (a) fails loudly if `com.tindrum.kiosk` isn't installed, (b) verifies the kiosk actually resolves as the HOME activity (ML2 has three competing HOME activities), retrying until PackageManager applies it, and (c) returns a real ✗ instead of a false ✓ — `adb shell` does not propagate the inner exit code on ML2. Deploy now settles ~10s after setting home so PackageManager flushes the preference to disk before the reboot races it.
+- `lib/show_config.sh`: no longer dead-ends with "no show configured" when the choice is unambiguous. One configured show is auto-selected; with multiple, an interactive run shows a numbered picker and continues in-process (no separate `./ml_show.sh use` step). Non-interactive callers (`--json`, fleet workers) still hard-stop, keeping machine-readable output safe.
 
 ---
 
