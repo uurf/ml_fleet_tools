@@ -34,6 +34,32 @@ There is no build system. All scripts are standalone bash and run directly:
 
 **Linting/testing**: There is no test suite. Manual testing is done against real devices. Use `shellcheck` if available for static analysis of shell scripts.
 
+## CLI Conventions
+
+Argument grammar follows a git-style rule. It is consistent but was previously
+undocumented (so each script can look like its own dialect — it isn't):
+
+- **Verb-dispatch scripts take a bare subcommand** as the first positional, then
+  `case`-dispatch it. Use when the script selects between *distinct actions*:
+  - `ml_deploy.sh connect | deploy | deploy-all | status | shutdown`
+  - `ml_show.sh use | init | status`
+  - The action is a bare word, **not** a flag: `ml_deploy.sh connect`, never `--connect`.
+- **Single-purpose scripts take `--flags`** that tune one implicit job (the verb
+  *is* the script, so there is no subcommand):
+  - `ml_provision.sh --fleet --check --deploy` (verb is always "provision";
+    `--deploy` is a modifier = "also chain into deploy", not an action)
+  - `ml_status.sh --json --csv --failures --fix`
+  - `utilities/ml_scan.sh --subnet --append`
+- **Short `-x` options are always value/param options**, never the action:
+  `-d <ip>`, `-f <file>`, `-j <n>`.
+- **`ml_os_flash.sh` is pure positional** (`[version] [path]`) — one job, no modes.
+- `ml_deploy.sh` deliberately **mixes both**: a bare subcommand (*which* action)
+  plus modifier flags `--all` / `-d` / `-f` / `-j` (*how* to run it). This is the
+  most confusable surface — the subcommand is still a bare word.
+
+New scripts should follow this: bare subcommands only for true verb dispatch,
+`--flags` for behavior modifiers, `-x` for value options.
+
 ## Architecture
 
 ### Script Pipeline (in order)
