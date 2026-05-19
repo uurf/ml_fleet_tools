@@ -60,6 +60,26 @@ undocumented (so each script can look like its own dialect — it isn't):
 New scripts should follow this: bare subcommands only for true verb dispatch,
 `--flags` for behavior modifiers, `-x` for value options.
 
+### Default scope (single device vs. whole fleet)
+
+Whether a script acts on one device or the whole fleet by default is also a
+rule, not arbitrary: **the default is the script's *primary* operating context;
+the other scope is an explicit flag.**
+
+- **Fleet-by-default** — jobs that only make sense fleet-wide over WiFi:
+  `ml_status.sh`, `ml_deploy.sh`, `utilities/ml_scan.sh`. Narrow to one device
+  with `-d <ip>` where supported.
+- **Single-device-by-default, `--fleet` opt-in** — scripts whose primary job is
+  the bench/USB per-device flow: `ml_provision.sh` (one USB device, or `-d <ip>`;
+  `--fleet` is the add-on for fleet drift remediation).
+- **Single-device only** — `ml_os_flash.sh`: USB, one device at a time, no fleet
+  concept at all.
+
+`ml_provision.sh` is the one that straddles both contexts (bench provisioning
+*and* fleet drift remediation), which is why its scope needs the explicit
+`--fleet` flag — and why behavior that's fine in the flash→provision→deploy
+chain (e.g. removing apps) is wrong for a standalone fleet remediation pass.
+
 ## Architecture
 
 ### Script Pipeline (in order)
