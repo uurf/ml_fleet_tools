@@ -230,8 +230,39 @@ do_reboot()  { local s="$1"; adb -s "$s" reboot; }
 do_shutdown(){ local s="$1"; adb -s "$s" shell reboot -p 2>/dev/null || adb -s "$s" shell svc power shutdown; }
 do_shell()   { local s="$1"; shift; adb -s "$s" shell "$@"; }
 
+# Set the kiosk as the launcher/home. ML2 ships THREE HOME-category
+# activities (com.magicleap.homemenu, the kiosk, settings/.FallbackHome);
+# set-home-activity only picks the *preferred* one. Two traps:
+#   1. `adb shell` does not propagate the inner exit code on ML2, so a
+#      failed set-home-activity still looks like success.
+#   2. PackageManager persists the preference on a delayed writer — the
+#      post-install reboot (#36) can interrupt before it sticks.
+# So we verify it actually resolves before returning success; the caller
+# then settles before rebooting. Returns non-zero (real ✗) if it didn't.
+do_set_home() {
+  local s="$1" comp="com.tindrum.kiosk/.MainActivity" out resolved i
+  if [[ -z "$(adb -s "$s" shell pm path com.tindrum.kiosk 2>/dev/null | tr -d '\r')" ]]; then
+    echo "com.tindrum.kiosk not installed — cannot set home"
+    return 1
+  fi
+  out=$(adb -s "$s" shell cmd package set-home-activity "$comp" 2>&1 | tr -d '\r')
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    resolved=$(adb -s "$s" shell cmd package resolve-activity --brief \
+                 -a android.intent.action.MAIN \
+                 -c android.intent.category.HOME 2>/dev/null \
+                 | tr -d '\r' | tail -1)
+    if [[ "$resolved" == com.tindrum.kiosk/* ]]; then
+      adb -s "$s" shell sync 2>/dev/null || true
+      return 0
+    fi
+    sleep 1
+  done
+  echo "home still resolves to '${resolved:-?}' (set-home said: ${out:-no output})"
+  return 1
+}
+
 # ---- Wrapper functions for export (needed for run_parallel subshell) ----
-export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell 2>/dev/null || true
+export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell do_set_home 2>/dev/null || true
 
 # ---- Push with live progress ----------------------------------------
 # Single device: streams adb push output directly to terminal.
@@ -451,14 +482,16 @@ cmd_deploy() {
   # ---- Set home app --------------------------------------------------
   echo ""
   echo -e "${BOLD}── Setting home app ──────────────────────────────${RESET}"
-  do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
-  export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
 
   # ---- Reboot (issue #36) --------------------------------------------
   # The show/kiosk SSD asset-transfer scripts are not enabled until the
-  # device reboots after an APK install.
+  # device reboots after an APK install. Let PackageManager flush the
+  # home preference to disk first — a bare reboot here races its delayed
+  # writer and the device boots to the ML2 home menu instead of the kiosk.
   echo ""
+  echo -e "${DIM}  Letting home preference persist before reboot...${RESET}"
+  sleep 10
   echo -e "${BOLD}── Rebooting devices ──────────────────────────────${RESET}"
   run_parallel do_reboot
 
@@ -518,15 +551,18 @@ cmd_deploy_all() {
 
   # ---- Set home app --------------------------------------------------
   echo -e "${BOLD}── Setting home app ──────────────────────────────${RESET}"
-  do_set_home() { local s="$1"; adb -s "$s" shell cmd package set-home-activity com.tindrum.kiosk/.MainActivity; }
-  export -f do_set_home 2>/dev/null || true
   run_parallel do_set_home
 
   # ---- Reboot (issue #36) --------------------------------------------
   # Asset-transfer scripts aren't enabled until a post-install reboot.
+  # Let PackageManager flush the home preference to disk first — a bare
+  # reboot here races its delayed writer and the device boots to the ML2
+  # home menu instead of the kiosk (the "home not set" regression).
   # Chained from provisioning over USB: wait for the device back so the
   # caller's `adb tcpip 5555` (WiFi ADB enable) still lands.
   echo ""
+  echo -e "${DIM}  Letting home preference persist before reboot...${RESET}"
+  sleep 10
   echo -e "${BOLD}── Rebooting (enables asset-transfer scripts) ────${RESET}"
   run_parallel do_reboot
   if [[ -n "${ANDROID_SERIAL:-}" ]]; then
