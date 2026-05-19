@@ -34,6 +34,52 @@ There is no build system. All scripts are standalone bash and run directly:
 
 **Linting/testing**: There is no test suite. Manual testing is done against real devices. Use `shellcheck` if available for static analysis of shell scripts.
 
+## CLI Conventions
+
+Argument grammar follows a git-style rule. It is consistent but was previously
+undocumented (so each script can look like its own dialect — it isn't):
+
+- **Verb-dispatch scripts take a bare subcommand** as the first positional, then
+  `case`-dispatch it. Use when the script selects between *distinct actions*:
+  - `ml_deploy.sh connect | deploy | deploy-all | status | shutdown`
+  - `ml_show.sh use | init | status`
+  - The action is a bare word, **not** a flag: `ml_deploy.sh connect`, never `--connect`.
+- **Single-purpose scripts take `--flags`** that tune one implicit job (the verb
+  *is* the script, so there is no subcommand):
+  - `ml_provision.sh --fleet --check --deploy` (verb is always "provision";
+    `--deploy` is a modifier = "also chain into deploy", not an action)
+  - `ml_status.sh --json --csv --failures --fix`
+  - `utilities/ml_scan.sh --subnet --append`
+- **Short `-x` options are always value/param options**, never the action:
+  `-d <ip>`, `-f <file>`, `-j <n>`.
+- **`ml_os_flash.sh` is pure positional** (`[version] [path]`) — one job, no modes.
+- `ml_deploy.sh` deliberately **mixes both**: a bare subcommand (*which* action)
+  plus modifier flags `--all` / `-d` / `-f` / `-j` (*how* to run it). This is the
+  most confusable surface — the subcommand is still a bare word.
+
+New scripts should follow this: bare subcommands only for true verb dispatch,
+`--flags` for behavior modifiers, `-x` for value options.
+
+### Default scope (single device vs. whole fleet)
+
+Whether a script acts on one device or the whole fleet by default is also a
+rule, not arbitrary: **the default is the script's *primary* operating context;
+the other scope is an explicit flag.**
+
+- **Fleet-by-default** — jobs that only make sense fleet-wide over WiFi:
+  `ml_status.sh`, `ml_deploy.sh`, `utilities/ml_scan.sh`. Narrow to one device
+  with `-d <ip>` where supported.
+- **Single-device-by-default, `--fleet` opt-in** — scripts whose primary job is
+  the bench/USB per-device flow: `ml_provision.sh` (one USB device, or `-d <ip>`;
+  `--fleet` is the add-on for fleet drift remediation).
+- **Single-device only** — `ml_os_flash.sh`: USB, one device at a time, no fleet
+  concept at all.
+
+`ml_provision.sh` is the one that straddles both contexts (bench provisioning
+*and* fleet drift remediation), which is why its scope needs the explicit
+`--fleet` flag — and why behavior that's fine in the flash→provision→deploy
+chain (e.g. removing apps) is wrong for a standalone fleet remediation pass.
+
 ## Architecture
 
 ### Script Pipeline (in order)

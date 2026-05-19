@@ -102,17 +102,25 @@ APP_PERMISSIONS=(
   "android.permission.ACCESS_COARSE_LOCATION"
 )
 
-# Apps to remove — exact package names
-REMOVE_PACKAGES=(
-  "com.tindrum.kiosk"
-)
+# Apps to remove — exact package names.
+# Deliberately empty. com.tindrum.kiosk is the toolkit's OWN
+# home/launcher app — installed by ml_deploy.sh and set as HOME, not
+# a stale foreign-show app. Listing it here uninstalled the kiosk on
+# every non---check provision, including standalone fleet drift
+# remediation (which has no deploy after it to reinstall it). In the
+# flash→provision→deploy chain the device is freshly wiped so there
+# is nothing to remove anyway, and deploy installs the kiosk after.
+# Foreign show apps are still scrubbed via REMOVE_FRIENDLY_NAMES.
+# Do NOT re-add the kiosk here.
+REMOVE_PACKAGES=()
 # Also removed by fuzzy name match
 REMOVE_FRIENDLY_NAMES=("An Ark" "The Life" "Medusa")
 
-# Directories to delete from device storage
+# Directories to delete from device storage. Foreign-show data only —
+# NOT com.tindrum.kiosk's data dir, for the same reason as above: a
+# settings pass must not wipe an intentionally-deployed kiosk's state.
 REMOVE_DIRS=(
   "/sdcard/AnArk"
-  "/sdcard/Android/data/com.tindrum.kiosk"
 )
 
 # ============================================================

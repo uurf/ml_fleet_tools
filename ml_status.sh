@@ -257,7 +257,13 @@ fix_device() {
   bt_on=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['bluetooth_on'])" 2>/dev/null)
   [[ "$bt_on" == "false" ]] && adb -s "$serial" shell svc bluetooth enable 2>/dev/null || true
 
-  # Brightness
+  # Brightness. Force adaptive/auto-brightness OFF first — otherwise
+  # ML2 recomputes screen_brightness from ambient light and the written
+  # value never sticks (field: devices drifted back to ~50%). Mirrors
+  # what ml_provision.sh sets. screen_brightness_mode is not a status
+  # table column; --fix enforces it anyway — drift is corrected even
+  # when it isn't displayed. Unconditional + idempotent.
+  adb_set system screen_brightness_mode 0
   local brightness
   brightness=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['screen_brightness'])" 2>/dev/null)
   [[ -n "$WANT_BRIGHTNESS" && "$brightness" != "$WANT_BRIGHTNESS" ]] && \

@@ -10,6 +10,20 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [Unreleased]
+
+_Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
+
+### Fixed
+- `ml_provision.sh`: no longer uninstalls the kiosk. `com.tindrum.kiosk` is the toolkit's own home/launcher app (installed + set as HOME by `ml_deploy.sh`), but it was listed in `REMOVE_PACKAGES` and so was uninstalled on **every** non-`--check` provision — including standalone fleet drift remediation, which has no deploy after it to reinstall it. `REMOVE_PACKAGES` is now empty and the kiosk data dir is dropped from `REMOVE_DIRS`; foreign-show scrub (`An Ark`/`The Life`/`Medusa` + `/sdcard/AnArk`) is unchanged.
+- `ml_status.sh --fix`: brightness fix now also forces adaptive/auto-brightness off (`screen_brightness_mode 0`) before writing `screen_brightness`. Previously it wrote the value only, so with auto-brightness on ML2 recomputed it from ambient light and the device drifted back (field: 3 devices stuck at ~50% that `--fix` wouldn't correct). `--fix` now corrects this drift even though `screen_brightness_mode` isn't a displayed status column.
+
+### Documentation
+- `CLAUDE.md`: documented the CLI argument conventions (verb-dispatch vs single-purpose) and the default-scope rule (fleet-by-default vs single-device + `--fleet` opt-in).
+- `asset_serial_list.csv`: synced from the Google tracking sheet (canonical on-site device#→serial inventory; ~half the fleet, rest in Osaka).
+
+---
+
 ## [v0.7.2] — 2026-05-19 — Kiosk-as-home reboot fix and show-selection UX
 
 ### Fixed
