@@ -69,7 +69,9 @@ EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
 EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
-WANT_BRIGHTNESS="0"        # show wants 0; --fix still enforces it, just not shown in the table
+# Brightness comes from the active show's shows/<id>.conf
+# (SHOW_BRIGHTNESS). Override via env for one-off runs only.
+WANT_BRIGHTNESS="${ML_BRIGHTNESS:-$SHOW_BRIGHTNESS}"
 
 # ── Output mode ──────────────────────────────────────────────
 MODE="table"   # table | json | csv

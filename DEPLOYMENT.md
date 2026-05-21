@@ -8,7 +8,7 @@
 Handled by `ml_os_flash.sh` → `ml_provision.sh` automatically.
 
 - Flash OS 1.4.1
-- Inject ADB keys (no USB debugging dialog on subsequent connections)
+- Inject ADB keys (suppresses the dialog on userdebug builds only — on the production ML2 1.4.1 user build the operator still taps "Allow USB debugging" once per (laptop, device) pair; the shared fleet key then covers all other operator laptops)
 - Skip OOBE / setup wizard
 - Apply all device settings (brightness, WiFi, battery, display, animations, etc.)
 - Connect to KAGAMI WiFi

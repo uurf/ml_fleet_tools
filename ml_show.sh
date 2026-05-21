@@ -132,7 +132,7 @@ cmd_init() {
     break
   done
 
-  local name ssid pass sec pkg eapk eos
+  local name ssid pass sec pkg bright eapk eos
   name="$(prompt_default "Display name" "$id")"
   ssid="$(prompt_default "WiFi SSID" "$id")"
   while true; do
@@ -142,6 +142,7 @@ cmd_init() {
   done
   sec="$(prompt_default "WiFi security" "wpa2")"
   pkg="$(prompt_default "Show app package" "com.tindrum.kagamu")"
+  bright="$(prompt_default "Screen brightness (raw settings value)" "12")"
   eapk="$(prompt_default "Expected APK version (blank to skip check)" "")"
   eos="$(prompt_default "Expected OS version (blank to skip check)" "")"
 
@@ -159,6 +160,8 @@ SHOW_WIFI_PASSWORD="$pass"
 SHOW_WIFI_SECURITY="$sec"
 
 SHOW_PACKAGE="$pkg"
+
+SHOW_BRIGHTNESS="$bright"
 
 SHOW_EXPECTED_APK="$eapk"
 SHOW_EXPECTED_OS="$eos"

@@ -110,11 +110,18 @@ It sources `shows/<id>.conf` (committed; defines `SHOW_SSID`, `SHOW_WIFI_PASSWOR
 
 **On-site setup for a new show**: `./ml_show.sh init` prompts for the values, writes `shows/<id>.conf`, and offers to make it active — no hand-editing of bash on site.
 
+**On-site runbook (Osaka, VS Umeda)**: see [`docs/onsite_osaka.md`](docs/onsite_osaka.md) for the KAGAMI / KAGAMI_BLUE two-fleet on-site procedure (Pittsburgh 202 land-and-verify; Osaka 180 bench-op for BLUE).
+
 ### ADB Pre-Authorization
 
-On first boot after flash, `ml_os_flash.sh` injects all known public keys from `authorized_keys/` into `/data/misc/adb/adb_keys` on the device, then restarts `adbd`. This permanently suppresses the "Allow USB debugging?" dialog for all authorized machines.
+On first boot after flash, `ml_os_flash.sh` attempts to inject all known public keys from `authorized_keys/` into `/data/misc/adb/adb_keys` on the device and restart `adbd`. **On secure/user builds of MLOS — including the production ML2 1.4.1 build — this injection does not actually suppress the "Allow USB debugging?" dialog.** The OS does not honor pre-seeded `adb_keys` on this build. The injection step is left in place because it would work on a non-secure build, but in production operators **must** tap "Allow USB debugging" → "Always allow from this computer" on the headset the first time any laptop connects to a given device.
 
-**Fleet key**: `authorized_keys/adbkey_kagami_fleet` is the shared private ADB key (gitignored, distributed separately). Every operator machine installs this to `~/.android/adbkey` via `install.sh`. `update.sh` backs it up before `git reset --hard` and restores it after.
+What actually keeps the fleet usable across many operators is the **shared fleet key**, not the injection: `authorized_keys/adbkey_kagami_fleet` is the shared private ADB key (gitignored, distributed separately). Every operator machine installs this to `~/.android/adbkey` via `install.sh`, so every laptop presents the same identity to the device. One operator tapping "Allow" on a device authorizes the fleet key, and from then on **any** operator laptop can connect without re-prompting. `update.sh` backs the fleet key up before `git reset --hard` and restores it after.
+
+Practical consequences:
+- A single "Allow" tap is required per device, performed by the first operator to USB-connect after a flash or factory reset. After that tap, all operator laptops are good against that device.
+- Flows that assume the pre-flash injection makes the bench fully unattended between flash and deploy are wrong — `ml_provision.sh`'s manual-checklist gate is also where the operator gets the "Allow" tap done before `--deploy` proceeds.
+- This applies equally to the Osaka 180 bench-op flow (no flash, but same Allow-tap requirement on first connect) — see [`docs/onsite_osaka.md`](docs/onsite_osaka.md).
 
 ### Parallel Execution Pattern
 
@@ -155,7 +162,7 @@ Key non-obvious settings and their ADB keys:
 - **Hand navigation** (pinch-to-interact): `settings put system enable_pinch_gesture_inputs 1`  
   — NOT `enable_home_gesture_inputs` (that is the fist-to-home gesture only)
 - **Auto-brightness off**: `settings put system screen_brightness_mode 0`
-- **Brightness**: `settings put system screen_brightness 0`
+- **Brightness**: `settings put system screen_brightness $SHOW_BRIGHTNESS` — value comes from `shows/<id>.conf` (`SHOW_BRIGHTNESS`, required; resolver hard-stops if missing). KAGAMI default is `12`. Both `ml_provision.sh` (apply + check) and `ml_status.sh` (status display + `--fix`) read from the same `SHOW_BRIGHTNESS`, so changing the conf and running `--fix` propagates the new value to the fleet.
 - **Screen timeout never**: `settings put system screen_off_timeout 2147483647`
 
 ## Key Files

@@ -128,6 +128,7 @@ _sc_init() {
   [[ -z "${SHOW_WIFI_PASSWORD:-}" ]] && missing+=("SHOW_WIFI_PASSWORD")
   [[ -z "${SHOW_WIFI_SECURITY:-}" ]] && missing+=("SHOW_WIFI_SECURITY")
   [[ -z "${SHOW_PACKAGE:-}" ]]       && missing+=("SHOW_PACKAGE")
+  [[ -z "${SHOW_BRIGHTNESS:-}" ]]    && missing+=("SHOW_BRIGHTNESS")
   if [[ ${#missing[@]} -gt 0 ]]; then
     _sc_die "shows/$show_id.conf is missing required field(s): ${missing[*]}"
   fi
@@ -159,6 +160,7 @@ _sc_init() {
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS \
+         SHOW_BRIGHTNESS \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT
 }
 
