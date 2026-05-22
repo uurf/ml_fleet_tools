@@ -54,6 +54,10 @@ When prompted, supply:
 - `SHOW_WIFI_SECURITY`: typically `wpa2`
 - `SHOW_PACKAGE`: BLUE show APK package name
 - `SHOW_BRIGHTNESS`: raw `screen_brightness` value (KAGAMI uses `12`; accept the default unless BLUE has a different setpoint from the show)
+- `SHOW_DATA_DIR`: top-level dir under `/sdcard/` the BLUE APK reads from (KAGAMI uses `Kagami`; confirm BLUE's path before answering)
+- `SHOW_DATA_REQUIRED`: entries under `/sdcard/$SHOW_DATA_DIR/` that MUST be present (typically the asset dir copied from the SSD). Default: `data`. Missing any of these is a dashboard red flag.
+- `SHOW_DATA_OPTIONAL`: entries the show APK creates at runtime (logs, textures, registered apriltag config). Default: `applogs textures config.json marker-space-config.json`. Absence is fine — a bench-fresh device that hasn't run the show won't have these yet. Anything found under the data dir that's in neither REQUIRED nor OPTIONAL is flagged as extraneous.
+- `SHOW_DISK_WARN_PCT`: dashboard red-flag threshold for `/sdcard` usage (KAGAMI uses `60`)
 - `SHOW_EXPECTED_APK` / `SHOW_EXPECTED_OS`: optional but recommended for `--check` drift detection
 
 Accept the offer to make `KAGAMI_BLUE` the active show. Commit `shows/KAGAMI_BLUE.conf` on `dev` and push so other operators inherit it via `./update.sh`.
@@ -173,7 +177,14 @@ Per show, on the laptop joined to that show's SSID:
 ./ml_status.sh --fix            # remediate drift in-place (use sparingly)
 ```
 
-The fleet dashboard (`fleet_dashboard.html`) reads `--json` output and is the primary at-a-glance view during showtime.
+The fleet dashboard (`fleet_dashboard.html`) reads `--json` output and is the primary at-a-glance view during showtime. **Its job is trouble identification, not drift mitigation.** A device shows red on the dashboard when something will affect the show: wrong OS or APK version, expected show data missing, extraneous content under the show data dir (e.g. recursive `data/data`), extraneous `com.tindrum.*` packages installed, `/sdcard` usage above `SHOW_DISK_WARN_PCT`, or hand-navigation off. Drift/compliance (Sleep, Dev mode, USB debugging, brightness, BT) is **not** on the dashboard — that's `ml_provision.sh --check` / `ml_status.sh --fix` territory.
+
+Load the dashboard:
+
+```bash
+./ml_status.sh --json > status/latest.json
+# then open fleet_dashboard.html in a browser and drag status/latest.json onto it
+```
 
 ---
 

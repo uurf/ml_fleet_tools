@@ -67,6 +67,7 @@ TARGET_PACKAGE="${ML_PACKAGE:-$SHOW_PACKAGE}"
 KIOSK_PACKAGE="com.tindrum.kiosk"
 EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
 EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
+EXPECTED_KIOSK="${ML_KIOSK_VERSION:-$SHOW_KIOSK_VERSION}"  # blank skips check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
 # Brightness comes from the active show's shows/<id>.conf
@@ -103,7 +104,7 @@ mkdir -p "$RUN_DIR"
 
 # ── Load devices ─────────────────────────────────────────────
 load_devices() {
-  grep -v '^\s*#' "$DEVICES_FILE" | grep -v '^\s*$' || true
+  grep -vE '^[[:space:]]*(#|$)' "$DEVICES_FILE" 2>/dev/null || true
 }
 
 online_devices() {
@@ -181,6 +182,10 @@ collect_device() {
   brightness=$(adb_s settings get system screen_brightness)
   [[ "$brightness" == "null" || "$brightness" == "" ]] && brightness="0"
 
+  local hand_nav_val hand_nav_on="false"
+  hand_nav_val=$(adb_s settings get system enable_pinch_gesture_inputs)
+  [[ "$hand_nav_val" == "1" ]] && hand_nav_on="true"
+
   local dev_mode
   dev_mode=$(adb_s settings get global development_settings_enabled)
   [[ "$dev_mode" == "null" || "$dev_mode" == "" ]] && dev_mode="0"
@@ -202,8 +207,134 @@ collect_device() {
   # Fallback: if property not set, mark as unknown
   [[ -z "$auto_update" || "$auto_update" == "null" ]] && auto_update="unknown" && auto_update_off="unknown"
 
-  local battery
-  battery=$(adb_s "dumpsys battery" | grep level | awk '{print $2}')
+  # ── Battery + charging (one dumpsys, two values) ─────────
+  local battery_dump charging="false" battery="0"
+  battery_dump=$(adb_s "dumpsys battery")
+  battery=$(printf '%s\n' "$battery_dump" | grep -m1 '  level:' | awk '{print $2}')
+  [[ -z "$battery" ]] && battery="0"
+  case "$battery_dump" in
+    *"AC powered: true"*|*"USB powered: true"*|*"Wireless powered: true"*) charging="true" ;;
+  esac
+
+  # ── /sdcard disk usage ───────────────────────────────────
+  # busybox df: Filesystem 1K-blocks Used Available Use% Mounted-on
+  local df_line disk_total_kb=0 disk_used_kb=0 disk_avail_kb=0 disk_used_pct=0
+  df_line=$(adb_s "df /sdcard" | tail -1)
+  if [[ -n "$df_line" ]]; then
+    disk_total_kb=$(echo "$df_line" | awk '{print $2}')
+    disk_used_kb=$(echo "$df_line" | awk '{print $3}')
+    disk_avail_kb=$(echo "$df_line" | awk '{print $4}')
+    disk_used_pct=$(echo "$df_line" | awk '{print $5}' | tr -d '%')
+    [[ -z "$disk_total_kb" || ! "$disk_total_kb" =~ ^[0-9]+$ ]] && disk_total_kb=0
+    [[ -z "$disk_used_kb"  || ! "$disk_used_kb"  =~ ^[0-9]+$ ]] && disk_used_kb=0
+    [[ -z "$disk_avail_kb" || ! "$disk_avail_kb" =~ ^[0-9]+$ ]] && disk_avail_kb=0
+    [[ -z "$disk_used_pct" || ! "$disk_used_pct" =~ ^[0-9]+$ ]] && disk_used_pct=0
+  fi
+
+  # ── Show data dir contents ───────────────────────────────
+  # /sdcard/$SHOW_DATA_DIR/ may contain:
+  #  - required entries (SHOW_DATA_REQUIRED) — missing any of these
+  #    is dashboard trouble. Typically just "data" (the assets the
+  #    SSD-copy step lands).
+  #  - optional entries (SHOW_DATA_OPTIONAL) — files/dirs the show
+  #    APK creates at runtime (logs, textures, apriltag config).
+  #    Absence is fine; a bench-fresh device just hasn't run yet.
+  #  - extraneous: anything not in either set, including the
+  #    pathological /sdcard/$SHOW_DATA_DIR/data/data recursion.
+  local data_root="/sdcard/$SHOW_DATA_DIR"
+  local data_root_exists="false"
+  local -a data_present=() data_missing=() data_extra=()
+  local -a req_arr=() opt_arr=()
+  read -ra req_arr <<< "$SHOW_DATA_REQUIRED"
+  read -ra opt_arr <<< "$SHOW_DATA_OPTIONAL"
+  # Matching is case-INSENSITIVE: ML2 /sdcard resolves paths
+  # case-insensitively (data == Data == DATA → same dir, confirmed on
+  # 1.4.1), so a dir stored as `Data` satisfies a required `data` and
+  # must NOT be flagged extraneous — the device reads it fine either
+  # way. Hence `grep -qix` for presence and lowercased `==` for the
+  # extraneous classification below.
+  if [[ "$(adb_s "[ -d $data_root ] && echo yes")" == "yes" ]]; then
+    data_root_exists="true"
+    local listing
+    listing=$(adb_s "ls -1 $data_root")
+    local entry e found
+    # Missing: required entries that are absent OR exist as
+    # empty directories. An empty `data/` is effectively missing
+    # — the SSD copy hasn't landed, even though the dir is there.
+    # `ls -A` lists hidden + non-hidden; empty output means empty.
+    for e in "${req_arr[@]}"; do
+      if printf '%s\n' "$listing" | grep -qix "$e"; then
+        if [[ "$(adb_s "[ -d $data_root/$e ] && echo dir")" == "dir" ]]; then
+          local inner; inner=$(adb_s "ls -A $data_root/$e")
+          if [[ -n "$inner" ]]; then
+            data_present+=("$e")
+          else
+            data_missing+=("$e (empty)")
+          fi
+        else
+          # Required entry exists as a file (e.g. config.json if a
+          # show ever puts a file in required) — just having it
+          # counts as present.
+          data_present+=("$e")
+        fi
+      else
+        data_missing+=("$e")
+      fi
+    done
+    # Also record any optional entries that ARE present (for visibility)
+    for e in "${opt_arr[@]}"; do
+      printf '%s\n' "$listing" | grep -qix "$e" && data_present+=("$e")
+    done
+    # Extraneous: actual entries not in (required ∪ optional)
+    while IFS= read -r entry; do
+      [[ -z "$entry" ]] && continue
+      found=false
+      for e in "${req_arr[@]}"; do
+        [[ "${entry,,}" == "${e,,}" ]] && found=true && break
+      done
+      if ! $found; then
+        for e in "${opt_arr[@]}"; do
+          [[ "${entry,,}" == "${e,,}" ]] && found=true && break
+        done
+      fi
+      $found || data_extra+=("$entry")
+    done <<< "$listing"
+    if [[ "$(adb_s "[ -d $data_root/data/data ] && echo yes")" == "yes" ]]; then
+      data_extra+=("data/data")
+    fi
+  else
+    data_missing=("${req_arr[@]+"${req_arr[@]}"}")
+  fi
+
+  # ── com.tindrum.* packages ───────────────────────────────
+  local tindrum_raw
+  tindrum_raw=$(adb_s "pm list packages com.tindrum" | sed 's/^package://' | sort)
+  local -a tindrum_all=() tindrum_extra=()
+  local p
+  while IFS= read -r p; do
+    [[ -z "$p" ]] && continue
+    tindrum_all+=("$p")
+    if [[ "$p" != "$TARGET_PACKAGE" && "$p" != "$KIOSK_PACKAGE" ]]; then
+      tindrum_extra+=("$p")
+    fi
+  done <<< "$tindrum_raw"
+
+  # ── JSON helpers ─────────────────────────────────────────
+  _json_strarr() {
+    if [[ $# -eq 0 ]]; then
+      printf '[]'
+    else
+      python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "$@"
+    fi
+  }
+  local present_json missing_json extra_json required_json optional_json all_pkg_json extra_pkg_json
+  present_json=$(_json_strarr   "${data_present[@]+"${data_present[@]}"}")
+  missing_json=$(_json_strarr   "${data_missing[@]+"${data_missing[@]}"}")
+  extra_json=$(_json_strarr     "${data_extra[@]+"${data_extra[@]}"}")
+  required_json=$(_json_strarr  "${req_arr[@]+"${req_arr[@]}"}")
+  optional_json=$(_json_strarr  "${opt_arr[@]+"${opt_arr[@]}"}")
+  all_pkg_json=$(_json_strarr   "${tindrum_all[@]+"${tindrum_all[@]}"}")
+  extra_pkg_json=$(_json_strarr "${tindrum_extra[@]+"${tindrum_extra[@]}"}")
 
   # ── Write JSON ───────────────────────────────────────────
   cat > "$out" <<EOF
@@ -211,20 +342,46 @@ collect_device() {
   "serial": "$serial",
   "hw_serial": "$hw_serial",
   "ip": "${serial%%:*}",
+  "online": true,
   "timestamp": "$TIMESTAMP",
   "os_version": "$os_version",
+  "expected_os": "$EXPECTED_OS",
   "build_id": "$build_id",
   "battery": "$battery",
+  "charging": $charging,
   "apk": {
     "package": "$TARGET_PACKAGE",
     "installed": $apk_installed,
     "version": "$apk_version",
-    "version_code": "$apk_code"
+    "version_code": "$apk_code",
+    "expected_version": "$EXPECTED_APK"
   },
   "kiosk": {
     "package": "$KIOSK_PACKAGE",
     "installed": $kiosk_installed,
-    "version": "$kiosk_version"
+    "version": "$kiosk_version",
+    "expected_version": "$EXPECTED_KIOSK"
+  },
+  "disk": {
+    "mount": "/sdcard",
+    "total_kb": $disk_total_kb,
+    "used_kb": $disk_used_kb,
+    "available_kb": $disk_avail_kb,
+    "used_pct": $disk_used_pct,
+    "warn_pct": $SHOW_DISK_WARN_PCT
+  },
+  "data": {
+    "root": "$data_root",
+    "root_exists": $data_root_exists,
+    "required": $required_json,
+    "optional": $optional_json,
+    "present": $present_json,
+    "missing": $missing_json,
+    "extraneous": $extra_json
+  },
+  "packages": {
+    "tindrum_all": $all_pkg_json,
+    "extraneous_tindrum": $extra_pkg_json
   },
   "settings": {
     "stay_awake": $stay_awake_on,
@@ -233,6 +390,7 @@ collect_device() {
     "wifi_ssid": "$wifi_ssid",
     "bluetooth_on": $bt_on,
     "screen_brightness": $brightness,
+    "hand_nav_on": $hand_nav_on,
     "developer_mode": $dev_on,
     "usb_debugging": $usb_on,
     "auto_update_off": "$auto_update_off"
@@ -275,6 +433,38 @@ fix_device() {
 }
 export -f fix_device 2>/dev/null || true
 
+# ── Emit a stub record for an EXPECTED-but-OFFLINE device ─────
+# A device in the show's device list that isn't reachable over adb
+# never gets collected — historically it just vanished from the
+# dashboard, which is the worst trouble to hide. Write a minimal
+# record (online:false) so it surfaces as OFFLINE. We only know its
+# IP; the dashboard backfills device #/serial from its last-seen cache.
+emit_offline() {
+  local ip="$1"
+  local serial="${ip}:5555"
+  local out="$RUN_DIR/${serial//:/_}.json"
+  cat > "$out" <<EOF
+{
+  "serial": "$serial",
+  "hw_serial": "",
+  "ip": "$ip",
+  "online": false,
+  "timestamp": "$TIMESTAMP",
+  "os_version": "",
+  "expected_os": "$EXPECTED_OS",
+  "build_id": "",
+  "battery": "0",
+  "charging": false,
+  "apk": { "package": "$TARGET_PACKAGE", "installed": false, "version": "", "version_code": "", "expected_version": "$EXPECTED_APK" },
+  "kiosk": { "package": "$KIOSK_PACKAGE", "installed": false, "version": "", "expected_version": "$EXPECTED_KIOSK" },
+  "disk": { "mount": "/sdcard", "total_kb": 0, "used_kb": 0, "available_kb": 0, "used_pct": 0, "warn_pct": $SHOW_DISK_WARN_PCT },
+  "data": { "root": "/sdcard/$SHOW_DATA_DIR", "root_exists": null, "required": [], "optional": [], "present": [], "missing": [], "extraneous": [] },
+  "packages": { "tindrum_all": [], "extraneous_tindrum": [] },
+  "settings": { "stay_awake": false, "stay_awake_raw": "", "wifi_connected": false, "wifi_ssid": "", "bluetooth_on": false, "screen_brightness": 0, "hand_nav_on": null, "developer_mode": false, "usb_debugging": false, "auto_update_off": "unknown" }
+}
+EOF
+}
+
 # ── Check a value pass/fail ───────────────────────────────────
 check() {
   local val="$1" want="$2"
@@ -289,7 +479,7 @@ check() {
 # ── Render table ─────────────────────────────────────────────
 render_table() {
   local files=("$RUN_DIR"/*.json)
-  local total=0 pass_all=0 fail_count=0
+  local total=0 pass_all=0 fail_count=0 offline_count=0
 
   # Header
   printf "\n"
@@ -301,6 +491,15 @@ render_table() {
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     ((total++)) || true
+
+    # Offline stub (online:false) — short-circuit before the heavy
+    # per-field parse and print a clear OFFLINE row.
+    if [[ "$(python3 -c "import json;print(json.load(open('$f')).get('online',True))" 2>/dev/null)" == "False" ]]; then
+      ((offline_count++)) || true
+      local oip; oip=$(python3 -c "import json;print(json.load(open('$f'))['ip'])" 2>/dev/null)
+      printf "%-18s ${RED}%s${RESET}\n" "$oip" "OFFLINE — in device list but unreachable"
+      continue
+    fi
 
     # Parse JSON with python3 (available on macOS)
     read -r ip os_ver apk_ver kiosk_ver battery stay_awake wifi_ok wifi_ssid bt_on brightness dev_on usb_on auto_off <<< \
@@ -326,7 +525,7 @@ print(
 " 2>/dev/null || echo "error")"
 
     # Pass/fail per setting
-    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk
+    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk c_kiosk
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
     c_bt=$(check "$bt_on" "true")           # want BT ON — controllers need it
@@ -337,6 +536,7 @@ print(
     c_update=$(check "$auto_off" "true")
     c_os=$(check "$os_ver" "$EXPECTED_OS")
     c_apk=$(check "$apk_ver" "$EXPECTED_APK")
+    c_kiosk=$(check "$kiosk_ver" "$EXPECTED_KIOSK")
 
     # Overall pass?
     local all_ok=true
@@ -347,6 +547,7 @@ print(
     [[ "$kiosk_ver" == "MISSING" ]] && all_ok=false
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && all_ok=false
     [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && all_ok=false
+    [[ -n "$EXPECTED_KIOSK" && "$kiosk_ver" != "MISSING" && "$c_kiosk" == "fail" ]] && all_ok=false
 
     $FAILURES_ONLY && $all_ok && continue
 
@@ -372,6 +573,7 @@ print(
     [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && apk_disp="${YELLOW}$apk_ver${RESET}"
 
     local kiosk_disp="$kiosk_ver"
+    [[ -n "$EXPECTED_KIOSK" && "$kiosk_ver" != "MISSING" && "$c_kiosk" == "fail" ]] && kiosk_disp="${YELLOW}$kiosk_ver${RESET}"
     [[ "$kiosk_ver" == "MISSING" ]] && kiosk_disp="${RED}MISSING${RESET}"
 
     local os_disp="$os_ver"
@@ -392,14 +594,14 @@ print(
   done
 
   printf "\n"
-  printf "${BOLD}Total: $total   ${GREEN}All-OK: $pass_all${RESET}${BOLD}   ${RED}Issues: $fail_count${RESET}\n"
+  printf "${BOLD}Total: $total   ${GREEN}All-OK: $pass_all${RESET}${BOLD}   ${RED}Issues: $fail_count   Offline: $offline_count${RESET}\n"
   printf "Raw data: $RUN_DIR/\n\n"
 }
 
 # ── Render CSV ───────────────────────────────────────────────
 render_csv() {
   local files=("$RUN_DIR"/*.json)
-  echo "ip,os_version,build_id,apk_version,apk_installed,battery,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,developer_mode,usb_debugging,auto_update_off"
+  echo "ip,online,os_version,build_id,apk_version,apk_installed,battery,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,developer_mode,usb_debugging,auto_update_off"
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     python3 -c "
@@ -408,7 +610,7 @@ d = json.load(open('$f'))
 s = d['settings']
 a = d['apk']
 print(','.join(str(x) for x in [
-  d['ip'], d['os_version'], d['build_id'],
+  d['ip'], d.get('online', True), d['os_version'], d['build_id'],
   a['version'], a['installed'], d['battery'],
   s['stay_awake'], s['wifi_connected'], s['wifi_ssid'],
   s['bluetooth_on'], s['screen_brightness'],
@@ -456,6 +658,22 @@ while IFS= read -r serial; do
   done
 done <<< "$DEVICES"
 wait "${PIDS[@]}" 2>/dev/null || true
+
+# Emit stubs for expected-but-offline devices (present in the show
+# device list but not reachable over adb). Strip :5555 from online
+# serials to compare by IP; USB serials simply won't match an IP.
+ONLINE_IPS=$(printf '%s\n' "$DEVICES" | sed 's/:5555$//')
+OFFLINE_COUNT=0
+while IFS= read -r exp_ip; do
+  exp_ip="${exp_ip//[$' \t\r']/}"
+  [[ -z "$exp_ip" ]] && continue
+  if ! grep -qxF "$exp_ip" <<< "$ONLINE_IPS"; then
+    emit_offline "$exp_ip"
+    OFFLINE_COUNT=$((OFFLINE_COUNT+1))
+  fi
+done < <(load_devices)
+[[ "$OFFLINE_COUNT" -gt 0 ]] && \
+  echo -e "${YELLOW}⚠ $OFFLINE_COUNT expected device(s) offline — shown as OFFLINE.${RESET}" >&2
 
 # Auto-fix if requested (runs after collection)
 if $AUTO_FIX; then

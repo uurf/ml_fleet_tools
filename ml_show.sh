@@ -132,7 +132,7 @@ cmd_init() {
     break
   done
 
-  local name ssid pass sec pkg bright eapk eos
+  local name ssid pass sec pkg bright data_dir data_req data_opt disk_pct eapk eos
   name="$(prompt_default "Display name" "$id")"
   ssid="$(prompt_default "WiFi SSID" "$id")"
   while true; do
@@ -143,6 +143,10 @@ cmd_init() {
   sec="$(prompt_default "WiFi security" "wpa2")"
   pkg="$(prompt_default "Show app package" "com.tindrum.kagamu")"
   bright="$(prompt_default "Screen brightness (raw settings value)" "12")"
+  data_dir="$(prompt_default "Show data dir under /sdcard/" "Kagami")"
+  data_req="$(prompt_default "Required entries under data dir (space-sep)" "data")"
+  data_opt="$(prompt_default "Optional entries (runtime-created, space-sep)" "applogs textures config.json marker-space-config.json")"
+  disk_pct="$(prompt_default "Disk-usage warn threshold (%)" "60")"
   eapk="$(prompt_default "Expected APK version (blank to skip check)" "")"
   eos="$(prompt_default "Expected OS version (blank to skip check)" "")"
 
@@ -162,6 +166,11 @@ SHOW_WIFI_SECURITY="$sec"
 SHOW_PACKAGE="$pkg"
 
 SHOW_BRIGHTNESS="$bright"
+
+SHOW_DATA_DIR="$data_dir"
+SHOW_DATA_REQUIRED="$data_req"
+SHOW_DATA_OPTIONAL="$data_opt"
+SHOW_DISK_WARN_PCT="$disk_pct"
 
 SHOW_EXPECTED_APK="$eapk"
 SHOW_EXPECTED_OS="$eos"
