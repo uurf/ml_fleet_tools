@@ -406,7 +406,7 @@ else
     sh "setprop persist.adb.auth 0" &>/dev/null || true
     printf "  %b  Pre-authorized ADB (userdebug build)\n" "$TICK"
   else
-    printf "  %b  ADB keys pre-injected during flash — no dialog expected\n" "$TICK"
+    printf "  %b  ADB keys written ${DIM}(user build: 'Allow USB debugging' still required on first connect from each laptop)${RESET}\n" "$TICK"
   fi
 fi
 
@@ -448,12 +448,12 @@ section "Display"
 # Maximum Dimming: just below max — not settable via ADB
 
 if [[ "$MODE" == "check" ]]; then
-  check_bool "Auto-brightness: Off" "$(get_system screen_brightness_mode)" "false"
-  check_val  "Brightness (0 = min)" "$(get_system screen_brightness)" "0"
+  check_bool "Auto-brightness: Off"                              "$(get_system screen_brightness_mode)" "false"
+  check_val  "Brightness ($SHOW_BRIGHTNESS, from shows/$ML_SHOW.conf)" "$(get_system screen_brightness)" "$SHOW_BRIGHTNESS"
 else
   # ── Standard Android ──────────────────────────────────────────
-  apply "Auto-brightness: Off"      put_system screen_brightness_mode 0
-  apply "Brightness: minimum (0)"   put_system screen_brightness 0
+  apply "Auto-brightness: Off"                       put_system screen_brightness_mode 0
+  apply "Brightness: $SHOW_BRIGHTNESS (per show conf)" put_system screen_brightness "$SHOW_BRIGHTNESS"
 
   # ── ML2-specific display service calls ────────────────────────
   # Display Modes → none is already default on fresh flash

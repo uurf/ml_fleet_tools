@@ -102,7 +102,7 @@ The toolkit runs multiple shows (e.g. two concurrent ~200-device fleets) from on
 2. `.active_show` file (gitignored; set once per machine via `./ml_show.sh use <id>`) →
 3. hard-stop with instructions if neither is set.
 
-It sources `shows/<id>.conf` (committed; defines `SHOW_SSID`, `SHOW_WIFI_PASSWORD`, `SHOW_WIFI_SECURITY`, `SHOW_PACKAGE`, optional `SHOW_EXPECTED_APK`/`SHOW_EXPECTED_OS`/`SHOW_NAME`), validates required fields, and exports `SHOW_*` plus `SHOW_DEVICES_FILE`. Scripts assign their previously-hardcoded vars from `SHOW_*` (e.g. `ml_provision.sh`'s `WIFI_SSID="$SHOW_SSID"`). `shows/KAGAMI.conf` reproduces the original hardcoded values byte-for-byte, so the KAGAMI show's behavior is unchanged.
+It sources `shows/<id>.conf` (committed). Required fields (resolver hard-stops if any is missing): `SHOW_SSID`, `SHOW_WIFI_PASSWORD`, `SHOW_WIFI_SECURITY`, `SHOW_PACKAGE`, `SHOW_BRIGHTNESS`, `SHOW_DATA_DIR` (top-level dir under `/sdcard/` the show APK reads from, e.g. `Kagami`), `SHOW_DISK_WARN_PCT` (dashboard red-flag threshold for `/sdcard` usage). Optional: `SHOW_EXPECTED_APK`/`SHOW_EXPECTED_OS`/`SHOW_NAME`; `SHOW_DATA_REQUIRED` (space-separated entries under `/sdcard/$SHOW_DATA_DIR/` that **must** be present — missing any = dashboard trouble; defaults to `data`); `SHOW_DATA_OPTIONAL` (entries the show APK creates at runtime — absence is fine; defaults to `applogs textures config.json marker-space-config.json`). Anything found under the data dir that is in neither list counts as extraneous. The resolver validates, then exports `SHOW_*` plus `SHOW_DEVICES_FILE`. Scripts assign their previously-hardcoded vars from `SHOW_*` (e.g. `ml_provision.sh`'s `WIFI_SSID="$SHOW_SSID"`). `shows/KAGAMI.conf` reproduces the original hardcoded values plus the show-spec brightness (`12`) and data dir (`Kagami`).
 
 **Per-show devices file**: `devices/<id>.txt` (gitignored) is the canonical fleet list (`ml_scan.sh`/`ml_show.sh` write it). Reads fall back to legacy `devices.txt` if the per-show file doesn't exist yet, so the live fleet keeps working pre-migration. An explicit `-f <file>` still overrides.
 
@@ -110,11 +110,18 @@ It sources `shows/<id>.conf` (committed; defines `SHOW_SSID`, `SHOW_WIFI_PASSWOR
 
 **On-site setup for a new show**: `./ml_show.sh init` prompts for the values, writes `shows/<id>.conf`, and offers to make it active — no hand-editing of bash on site.
 
+**On-site runbook (Osaka, VS Umeda)**: see [`docs/onsite_osaka.md`](docs/onsite_osaka.md) for the KAGAMI / KAGAMI_BLUE two-fleet on-site procedure (Pittsburgh 202 land-and-verify; Osaka 180 bench-op for BLUE).
+
 ### ADB Pre-Authorization
 
-On first boot after flash, `ml_os_flash.sh` injects all known public keys from `authorized_keys/` into `/data/misc/adb/adb_keys` on the device, then restarts `adbd`. This permanently suppresses the "Allow USB debugging?" dialog for all authorized machines.
+On first boot after flash, `ml_os_flash.sh` attempts to inject all known public keys from `authorized_keys/` into `/data/misc/adb/adb_keys` on the device and restart `adbd`. **On secure/user builds of MLOS — including the production ML2 1.4.1 build — this injection does not actually suppress the "Allow USB debugging?" dialog.** The OS does not honor pre-seeded `adb_keys` on this build. The injection step is left in place because it would work on a non-secure build, but in production operators **must** tap "Allow USB debugging" → "Always allow from this computer" on the headset the first time any laptop connects to a given device.
 
-**Fleet key**: `authorized_keys/adbkey_kagami_fleet` is the shared private ADB key (gitignored, distributed separately). Every operator machine installs this to `~/.android/adbkey` via `install.sh`. `update.sh` backs it up before `git reset --hard` and restores it after.
+What actually keeps the fleet usable across many operators is the **shared fleet key**, not the injection: `authorized_keys/adbkey_kagami_fleet` is the shared private ADB key (gitignored, distributed separately). Every operator machine installs this to `~/.android/adbkey` via `install.sh`, so every laptop presents the same identity to the device. One operator tapping "Allow" on a device authorizes the fleet key, and from then on **any** operator laptop can connect without re-prompting. `update.sh` backs the fleet key up before `git reset --hard` and restores it after.
+
+Practical consequences:
+- A single "Allow" tap is required per device, performed by the first operator to USB-connect after a flash or factory reset. After that tap, all operator laptops are good against that device.
+- Flows that assume the pre-flash injection makes the bench fully unattended between flash and deploy are wrong — `ml_provision.sh`'s manual-checklist gate is also where the operator gets the "Allow" tap done before `--deploy` proceeds.
+- This applies equally to the Osaka 180 bench-op flow (no flash, but same Allow-tap requirement on first connect) — see [`docs/onsite_osaka.md`](docs/onsite_osaka.md).
 
 ### Parallel Execution Pattern
 
@@ -153,9 +160,9 @@ Some ML2 settings cannot be configured via ADB on the user build and require man
 
 Key non-obvious settings and their ADB keys:
 - **Hand navigation** (pinch-to-interact): `settings put system enable_pinch_gesture_inputs 1`  
-  — NOT `enable_home_gesture_inputs` (that is the fist-to-home gesture only)
+  — NOT `enable_home_gesture_inputs` (that is the fist-to-home gesture only). Read by `ml_status.sh` (exposed as `settings.hand_nav_on` in the JSON) and surfaced on `fleet_dashboard.html`; the show APK won't work without it.
 - **Auto-brightness off**: `settings put system screen_brightness_mode 0`
-- **Brightness**: `settings put system screen_brightness 0`
+- **Brightness**: `settings put system screen_brightness $SHOW_BRIGHTNESS` — value comes from `shows/<id>.conf` (`SHOW_BRIGHTNESS`, required; resolver hard-stops if missing). KAGAMI default is `12`. Both `ml_provision.sh` (apply + check) and `ml_status.sh` (status display + `--fix`) read from the same `SHOW_BRIGHTNESS`, so changing the conf and running `--fix` propagates the new value to the fleet.
 - **Screen timeout never**: `settings put system screen_off_timeout 2147483647`
 
 ## Key Files
@@ -173,7 +180,7 @@ Key non-obvious settings and their ADB keys:
 | `authorized_keys/adbkey_kagami_fleet` | Shared fleet private key (gitignored) |
 | `os_images/1.4.1/` | OS partition images from ML Hub (gitignored) |
 | `builds/` | APKs and show assets (gitignored) |
-| `fleet_dashboard.html` | Visual dashboard, fed by `ml_status.sh --json` |
+| `fleet_dashboard.html` | Show-day health dashboard, fed by `ml_status.sh --json`. Surfaces trouble (wrong OS/APK, data dir missing/extraneous, extra `com.tindrum.*` APKs, `/sdcard` over `SHOW_DISK_WARN_PCT`, hand nav off). Drift/compliance lives in `ml_provision.sh --check` — not here. |
 | `apps_script/Code.gs` | Google Apps Script for Sheets integration |
 | `logs/` | Per-device deploy logs (gitignored) |
 | `status/` | Per-run status JSON from `ml_status.sh` (gitignored) |

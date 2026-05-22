@@ -420,19 +420,26 @@ sleep 8  # give system services time to start before pushing files
 # ---- Pre-authorize this laptop's ADB key ----------------------------
 #
 # When a user taps "Always allow" on the USB debugging dialog, Android
-# simply appends the laptop's public key to /data/misc/adb/adb_keys.
-# We do the same thing programmatically right after first boot, while
-# we still have adb access from the flash session.
+# appends the laptop's public key to /data/misc/adb/adb_keys. We do
+# the same thing programmatically here, while we still have adb access
+# from the flash session.
 #
-# After this, the dialog will NEVER appear again on this device for
-# this laptop — and any other laptops whose keys are in EXTRA_ADB_KEYS.
+# Caveat: on the production ML2 1.4.1 user build, the OS does NOT honor
+# pre-seeded /data/misc/adb/adb_keys — the injection runs without error
+# but the dialog still appears on first USB connect from any new
+# laptop. The step IS effective on userdebug / non-secure builds, so
+# the code stays. On the user build, what actually keeps the fleet
+# usable is the shared fleet key: every operator laptop ships with the
+# same ~/.android/adbkey via install.sh, so the first operator's
+# "Allow" tap authorizes the fleet key on that device, and from then
+# on every operator laptop is trusted without re-prompting.
 #
-# To add keys from other machines (e.g. other laptops in your fleet
-# provisioning setup), put their adbkey.pub contents in:
+# To add keys from other machines (e.g. laptops not on the fleet key),
+# put their adbkey.pub contents in:
 #   ./authorized_keys/  (one .pub file per machine)
 
 echo ""
-echo -e "${CYAN}Pre-authorizing ADB keys (bypass 'Allow USB debugging' dialog)...${RESET}"
+echo -e "${CYAN}Pre-authorizing ADB keys (effective on userdebug builds; user builds still prompt once per device)...${RESET}"
 
 ADB_KEY="$HOME/.android/adbkey.pub"
 EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
@@ -467,7 +474,7 @@ if [[ -s "$ALL_KEYS_TMP" ]]; then
   # Restart adbd so it picks up the new key immediately
   adb -s "$SERIAL" shell "setprop ctl.restart adbd" 2>/dev/null || true
   sleep 2
-  echo -e "  ${GREEN}✓ ADB keys injected — dialog will not appear on this device${RESET}"
+  echo -e "  ${GREEN}✓ ADB keys written${RESET} ${DIM}(suppresses dialog on userdebug; on user build, one Allow tap still required per device)${RESET}"
 
 # ---- Skip OOBE / setup wizard ---------------------------------------
 # Mark device as provisioned so the first-time setup wizard is skipped.
@@ -484,7 +491,7 @@ adb -s "$SERIAL" shell "am force-stop com.magicleap.oobe" 2>/dev/null || true
 adb -s "$SERIAL" shell "pm disable-user --user 0 com.magicleap.oobe" 2>/dev/null || true
 echo -e "  ${GREEN}✓ Setup wizard bypassed${RESET}"
 else
-  echo -e "  ${YELLOW}No keys found to inject — USB debugging dialog will still appear${RESET}"
+  echo -e "  ${YELLOW}No keys found — operator will need to tap 'Allow USB debugging' on every new device${RESET}"
 fi
 
 rm -f "$ALL_KEYS_TMP"

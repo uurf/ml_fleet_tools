@@ -124,10 +124,13 @@ _sc_init() {
 
   # 4. Validate required fields
   local missing=()
-  [[ -z "${SHOW_SSID:-}" ]]          && missing+=("SHOW_SSID")
-  [[ -z "${SHOW_WIFI_PASSWORD:-}" ]] && missing+=("SHOW_WIFI_PASSWORD")
-  [[ -z "${SHOW_WIFI_SECURITY:-}" ]] && missing+=("SHOW_WIFI_SECURITY")
-  [[ -z "${SHOW_PACKAGE:-}" ]]       && missing+=("SHOW_PACKAGE")
+  [[ -z "${SHOW_SSID:-}" ]]            && missing+=("SHOW_SSID")
+  [[ -z "${SHOW_WIFI_PASSWORD:-}" ]]   && missing+=("SHOW_WIFI_PASSWORD")
+  [[ -z "${SHOW_WIFI_SECURITY:-}" ]]   && missing+=("SHOW_WIFI_SECURITY")
+  [[ -z "${SHOW_PACKAGE:-}" ]]         && missing+=("SHOW_PACKAGE")
+  [[ -z "${SHOW_BRIGHTNESS:-}" ]]      && missing+=("SHOW_BRIGHTNESS")
+  [[ -z "${SHOW_DATA_DIR:-}" ]]        && missing+=("SHOW_DATA_DIR")
+  [[ -z "${SHOW_DISK_WARN_PCT:-}" ]]   && missing+=("SHOW_DISK_WARN_PCT")
   if [[ ${#missing[@]} -gt 0 ]]; then
     _sc_die "shows/$show_id.conf is missing required field(s): ${missing[*]}"
   fi
@@ -136,6 +139,20 @@ _sc_init() {
   : "${SHOW_NAME:=$show_id}"
   : "${SHOW_EXPECTED_APK:=}"
   : "${SHOW_EXPECTED_OS:=}"
+  # Expected kiosk (com.tindrum.kiosk) versionName. The kiosk package is
+  # shared across shows but built per show with a distinct versionName
+  # (e.g. 1.0b / 1.0r) so a mis-loaded kiosk is caught. Blank skips it.
+  : "${SHOW_KIOSK_VERSION:=}"
+  # Names (files or dirs) under /sdcard/$SHOW_DATA_DIR/ that must
+  # be present. Their absence is dashboard trouble.
+  : "${SHOW_DATA_REQUIRED:=data}"
+  # Names (files or dirs) under /sdcard/$SHOW_DATA_DIR/ that the
+  # show APK creates at runtime (logs, runtime caches, registered
+  # apriltag config). Their absence is fine — a bench-provisioned
+  # device that has not yet run the show won't have them yet.
+  # Anything found under the data dir that is NOT in
+  # SHOW_DATA_REQUIRED ∪ SHOW_DATA_OPTIONAL is extraneous.
+  : "${SHOW_DATA_OPTIONAL:=applogs textures config.json marker-space-config.json}"
 
   # 6. Devices file.
   #  - SHOW_DEVICES_FILE_DEFAULT: canonical per-show path; what
@@ -158,7 +175,9 @@ _sc_init() {
 
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
-         SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS \
+         SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
+         SHOW_BRIGHTNESS \
+         SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT
 }
 

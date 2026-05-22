@@ -87,6 +87,7 @@
     font-family: inherit; font-size: 12px; outline: none; width: 200px;
   }
   input[type="text"]:focus { border-color: var(--accent); }
+  #search { width: 280px; }
   select {
     background: var(--surface2); border: 1px solid var(--border2);
     color: var(--text); padding: 6px 10px; border-radius: 6px;
@@ -138,6 +139,8 @@
   .ver-badge.mismatch { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
   .ver-badge.missing { background: var(--fail-bg); border-color: var(--fail); color: var(--fail); }
   .ver-badge.ok { background: var(--pass-bg); border-color: var(--pass); color: var(--pass); }
+  .offline-row td { opacity: 0.9; }
+  .offline-row .offline-msg { color: var(--muted); font-style: italic; }
 
   .ssid { font-size: 11px; color: var(--blue); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 
@@ -167,9 +170,11 @@
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--surface); border-top: 1px solid var(--border);
     padding: 8px 24px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; row-gap: 6px;
     font-size: 11px; color: var(--muted);
   }
-  .footer-bar span { display: flex; gap: 16px; }
+  .footer-bar > span:first-child { display: flex; gap: 16px; flex-wrap: wrap; }
+  .footer-bar > span:last-child { min-width: 0; }
   .legend-item { display: flex; align-items: center; gap: 5px; }
 </style>
 </head>
@@ -205,13 +210,16 @@
       <option value="ok">OK only</option>
     </select>
     <select id="filter-setting" onchange="renderTable()">
-      <option value="all">All settings</option>
-      <option value="sleep">Sleep issue</option>
-      <option value="wifi">WiFi issue</option>
-      <option value="bt">Bluetooth off</option>
-      <option value="dev">Dev mode off</option>
-      <option value="usb">USB debug off</option>
-      <option value="apk">APK mismatch</option>
+      <option value="all">All issues</option>
+      <option value="offline">Offline</option>
+      <option value="os">OS version</option>
+      <option value="apk">APK version / missing</option>
+      <option value="kiosk">Kiosk missing / wrong app</option>
+      <option value="data_missing">Data files missing</option>
+      <option value="data_extra">Extraneous data</option>
+      <option value="apk_extra">Extraneous APKs</option>
+      <option value="disk">Disk usage high</option>
+      <option value="hand_nav">Hand nav off</option>
     </select>
     <button onclick="exportCSV()">Export CSV ↓</button>
   </div>
@@ -237,7 +245,7 @@
     <span class="legend-item"><span class="check fail">✗</span> Fail</span>
     <span class="legend-item"><span class="check unknown">?</span> Unknown</span>
   </span>
-  <span style="margin-left:auto">BT column = ✓ means OFF (desired for show)</span>
+  <span style="margin-left:auto">Trouble = wrong OS/APK · data files missing or extraneous · extra com.tindrum.* · disk &gt; show threshold · hand nav off. Drift / compliance checks live in <code>ml_provision.sh --check</code>.</span>
 </div>
 
 <script>
@@ -245,11 +253,6 @@ let allDevices = [];
 let deviceMap = {};  // hw_serial -> device_number
 let sortCol = 'device_number';
 let sortAsc = true;
-
-const EXPECTED = {
-  os: '',
-  apk: '',
-};
 
 function loadCSV(e) {
   const file = e.target.files[0];
@@ -267,8 +270,23 @@ function loadCSV(e) {
   r.readAsText(file);
 }
 
+// Remember ip -> hw_serial whenever a device is seen online, so an
+// offline device (which can't report its serial) can still be
+// identified by NUMBER — on the floor you find a unit by its number,
+// so IP-only would be as good as no alert. Persisted across reloads.
+let lastSeen = {};
+try { lastSeen = JSON.parse(localStorage.getItem('ml_last_seen') || '{}'); } catch (e) { lastSeen = {}; }
+function rememberSeen(d) {
+  if (d.online !== false && d.ip && d.hw_serial && lastSeen[d.ip] !== d.hw_serial) {
+    lastSeen[d.ip] = d.hw_serial;
+    try { localStorage.setItem('ml_last_seen', JSON.stringify(lastSeen)); } catch (e) {}
+  }
+}
+function resolveSerial(d) {
+  return d.hw_serial || lastSeen[d.ip] || '';
+}
 function getDeviceNumber(d) {
-  return deviceMap[d.hw_serial] || '—';
+  return deviceMap[resolveSerial(d)] || '—';
 }
 
 function loadFile(e) {
@@ -290,50 +308,132 @@ function loadFile(e) {
 
 function loadDemo() {
   const ips = Array.from({length: 12}, (_, i) => `192.168.1.${101 + i}`);
-  const versions = ['2.1.0','2.1.0','2.0.9','2.1.0','2.1.0','2.1.0','2.0.8','2.1.0','2.1.0','2.1.0','2.1.0','2.1.0'];
+  const versions = ['1.24','1.24','1.23','1.24','1.24','1.24','1.22','1.24','1.24','1.24','1.24','1.24'];
   const os_vers = ['1.4.1','1.4.1','1.4.1','1.3.2','1.4.1','1.4.1','1.4.1','1.4.1','1.4.1','1.3.2','1.4.1','1.4.1'];
+  // Each row hits a different trouble criterion so the dashboard is
+  // visibly exercised: i=2 wrong APK, i=3 wrong OS, i=4 missing APK,
+  // i=5 missing data subdir, i=6 data/data recursion, i=7 extraneous
+  // tindrum APK, i=8 disk >60%, i=9 hand-nav off, i=10 multiple at once.
   allDevices = ips.map((ip, i) => ({
     serial: ip + ':5555', hw_serial: 'G572XT10018' + i.toString(16).toUpperCase(), ip,
     timestamp: new Date().toISOString(),
     os_version: os_vers[i],
+    expected_os: '1.4.1',
     build_id: 'B3E.220721.' + (100+i),
     battery: String(60 + Math.floor(Math.random()*40)),
+    charging: i % 2 === 0,
     apk: {
       package: 'com.tindrum.kagamu',
       installed: i !== 4,
       version: i === 4 ? '' : versions[i],
-      version_code: String(210 + i)
+      version_code: String(210 + i),
+      expected_version: '1.24'
+    },
+    kiosk: {
+      package: 'com.tindrum.kiosk',
+      installed: true,
+      version: '0.9.3'
+    },
+    disk: {
+      mount: '/sdcard',
+      total_kb: 200 * 1024 * 1024,
+      used_kb: (i === 8 || i === 10 ? 130 : 80) * 1024 * 1024,
+      available_kb: (i === 8 || i === 10 ? 70 : 120) * 1024 * 1024,
+      used_pct: (i === 8 || i === 10) ? 65 : 40,
+      warn_pct: 60
+    },
+    data: {
+      root: '/sdcard/Kagami',
+      root_exists: true,
+      required: ['data'],
+      optional: ['applogs','textures','config.json','marker-space-config.json'],
+      // i=5 is missing the required `data` dir (bench device that never got SSD-copied)
+      present: i === 5 ? ['applogs','textures'] : ['data','applogs','textures'],
+      missing: i === 5 ? ['data'] : [],
+      extraneous: i === 6 ? ['data/data'] : (i === 10 ? ['OldShow_data','data/data'] : [])
+    },
+    packages: {
+      tindrum_all: i === 7 || i === 10
+        ? ['com.tindrum.kagamu','com.tindrum.kiosk','com.tindrum.legacy']
+        : ['com.tindrum.kagamu','com.tindrum.kiosk'],
+      extraneous_tindrum: (i === 7 || i === 10) ? ['com.tindrum.legacy'] : []
     },
     settings: {
-      stay_awake: i !== 3,
-      wifi_connected: i !== 7,
-      wifi_ssid: i === 7 ? '' : 'KAGAMI-SHOW-5G',
-      bluetooth_on: i !== 5,
-      screen_brightness: i === 2 ? 128 : 50,
+      hand_nav_on: i !== 9 && i !== 10,
+      // legacy fields kept so the file still parses if older ml_status.sh
+      // JSON is loaded; not displayed.
+      stay_awake: true,
+      wifi_connected: true,
+      wifi_ssid: 'KAGAMI',
+      bluetooth_on: true,
+      screen_brightness: 12,
       developer_mode: true,
-      usb_debugging: i !== 9,
-      auto_update_off: i % 3 !== 0 ? 'true' : 'unknown'
+      usb_debugging: true,
+      auto_update_off: 'true'
     }
   }));
-  EXPECTED.os = '1.4.1';
-  EXPECTED.apk = '2.1.0';
+  // One device that's in the fleet list but offline/unreachable — the
+  // worst trouble. Its serial is unknown (can't query it), but the
+  // last-seen cache recovers the device number so it's findable.
+  deviceMap['G572XT100099'] = '199';
+  lastSeen['192.168.1.113'] = 'G572XT100099';
+  allDevices.push({ serial: '192.168.1.113:5555', ip: '192.168.1.113', hw_serial: '', online: false, os_version: '', apk: { installed: false, version: '' }, timestamp: new Date().toISOString() });
   document.getElementById('ts').textContent = 'Demo data — ' + new Date().toLocaleTimeString();
   renderTable();
 }
 
+// Dashboard role: identification, not mitigation. Each entry below
+// is a "this device is in trouble right now" signal that an operator
+// should investigate. Compliance/drift checks (sleep, dev mode, USB
+// debugging, brightness, etc.) belong to ml_provision.sh --check, not
+// here.
 function deviceIssues(d) {
-  const s = d.settings;
+  const s = d.settings || {};
+  const data = d.data || {};
+  const packages = d.packages || {};
+  const disk = d.disk || {};
   const issues = [];
-  if (!s.stay_awake) issues.push('sleep');
-  if (!s.wifi_connected) issues.push('wifi');
-  if (!s.bluetooth_on) issues.push('bt');
-  if (!s.developer_mode) issues.push('dev');
-  if (!s.usb_debugging) issues.push('usb');
-  if (s.auto_update_off === 'false') issues.push('update');
-  if (!d.apk.installed) issues.push('apk');
-  if (d.kiosk && !d.kiosk.installed) issues.push('kiosk');
-  if (EXPECTED.apk && d.apk.version && d.apk.version !== EXPECTED.apk) issues.push('apk');
-  if (EXPECTED.os && d.os_version && d.os_version !== EXPECTED.os) issues.push('os');
+
+  // Offline (in the fleet list but unreachable) is the dominant
+  // trouble — short-circuit so we don't also report empty data/settings.
+  if (d.online === false) { issues.push('offline'); return issues; }
+
+  // Wrong OS version. Expected rides in the JSON (expected_os, from
+  // SHOW_EXPECTED_OS) so real loads enforce it, not just the demo. Blank skips.
+  if (d.expected_os && d.os_version && d.os_version !== d.expected_os) issues.push('os');
+
+  // Wrong / missing show APK (apk.expected_version from SHOW_EXPECTED_APK).
+  if (!d.apk || !d.apk.installed) issues.push('apk');
+  else if (d.apk.expected_version && d.apk.version && d.apk.version !== d.apk.expected_version) issues.push('apk');
+
+  // Kiosk: missing is trouble; a present kiosk with the wrong per-show
+  // versionName is also trouble. The shared com.tindrum.kiosk package is
+  // built per show with a distinct versionName (e.g. 1.0r / 1.0b) to tell
+  // shows apart; the expected value rides in the JSON as
+  // kiosk.expected_version (from SHOW_KIOSK_VERSION). Blank skips the check.
+  const kiosk = d.kiosk || {};
+  if (!kiosk.installed) issues.push('kiosk');
+  else if (kiosk.expected_version && kiosk.version && kiosk.version !== kiosk.expected_version) issues.push('kiosk');
+
+  // Data files missing (root absent OR any expected subdir missing)
+  if (data.root_exists === false) issues.push('data_missing');
+  else if ((data.missing || []).length > 0) issues.push('data_missing');
+
+  // Extraneous content under the show root (e.g. data/data recursion,
+  // leftover dirs from a different show)
+  if ((data.extraneous || []).length > 0) issues.push('data_extra');
+
+  // Extraneous com.tindrum.* packages beyond the show app + kiosk
+  if ((packages.extraneous_tindrum || []).length > 0) issues.push('apk_extra');
+
+  // Disk usage over the show-config threshold (catch-all for runaway
+  // logs, duplicated assets, etc.)
+  const warnPct = disk.warn_pct ?? 60;
+  if ((disk.used_pct ?? 0) > warnPct) issues.push('disk');
+
+  // Hand-nav (pinch gesture) off — show APK depends on it
+  if (s.hand_nav_on === false) issues.push('hand_nav');
+
   return issues;
 }
 
@@ -342,12 +442,15 @@ function sortDevices(devs) {
     let va, vb;
     switch(sortCol) {
       case 'device_number': va = +getDeviceNumber(a)||9999; vb = +getDeviceNumber(b)||9999; break;
-      case 'serial': va = a.hw_serial||''; vb = b.hw_serial||''; break;
+      case 'serial':  va = a.hw_serial||''; vb = b.hw_serial||''; break;
       case 'ip':      va = a.ip; vb = b.ip; break;
       case 'os':      va = a.os_version; vb = b.os_version; break;
       case 'apk':     va = a.apk.version; vb = b.apk.version; break;
       case 'kiosk':   va = (a.kiosk||{}).version||''; vb = (b.kiosk||{}).version||''; break;
       case 'battery': va = +a.battery; vb = +b.battery; break;
+      case 'disk':    va = (a.disk||{}).used_pct ?? -1; vb = (b.disk||{}).used_pct ?? -1; break;
+      case 'data_extra': va = ((a.data||{}).extraneous||[]).length; vb = ((b.data||{}).extraneous||[]).length; break;
+      case 'apk_extra':  va = ((a.packages||{}).extraneous_tindrum||[]).length; vb = ((b.packages||{}).extraneous_tindrum||[]).length; break;
       case 'status':  va = deviceIssues(a).length; vb = deviceIssues(b).length; break;
       default:        va = a.ip; vb = b.ip;
     }
@@ -374,13 +477,63 @@ function checkIcon(cls) {
   return `<span class="check ${cls}">${sym}</span>`;
 }
 
-function battBar(pct) {
+function battBar(pct, charging) {
   const n = Math.min(100, Math.max(0, +pct));
   const col = n > 50 ? '#3ecf8e' : n > 20 ? '#fbbf24' : '#f87171';
+  const bolt = charging
+    ? `<span title="Charging" style="color:#fbbf24;margin-left:4px">⚡</span>`
+    : '';
   return `<div class="batt">
     <div class="batt-bar"><div class="batt-fill" style="width:${n}%;background:${col}"></div></div>
-    <span style="color:var(--muted)">${n}%</span>
+    <span style="color:var(--muted)">${n}%</span>${bolt}
   </div>`;
+}
+
+// Disk usage cell. Red bar + red text when over the show-config
+// warn threshold (default 60% in shows/<id>.conf). Tooltip shows
+// raw KB so an operator can see how close to the threshold a
+// device is without re-running anything.
+function diskBar(disk) {
+  if (!disk || disk.used_pct == null) return `<span style="color:var(--muted)">—</span>`;
+  const n = Math.min(100, Math.max(0, +disk.used_pct));
+  const warn = +disk.warn_pct || 60;
+  const over = n > warn;
+  const col = over ? '#f87171' : n > (warn * 0.75) ? '#fbbf24' : '#3ecf8e';
+  const totGb = ((disk.total_kb||0)/1024/1024).toFixed(1);
+  const avlGb = ((disk.available_kb||0)/1024/1024).toFixed(1);
+  const title = `${avlGb} GB free of ${totGb} GB — threshold ${warn}%`;
+  return `<div class="batt" title="${title}">
+    <div class="batt-bar"><div class="batt-fill" style="width:${n}%;background:${col}"></div></div>
+    <span style="color:${over ? 'var(--fail)' : 'var(--muted)'}">${n}%</span>
+  </div>`;
+}
+
+// Data cell. ✓ if root_exists AND all expected subdirs present.
+// Does NOT consider extraneous content — that's the Extra Data
+// column's job, and conflating the two makes a clean device look
+// broken just because the show APK left a stray file behind.
+function dataCell(d) {
+  const data = d.data || {};
+  if (data.root_exists == null) return `<span class="check unknown">?</span>`;
+  const missing = data.missing || [];
+  const ok = data.root_exists && missing.length === 0;
+  if (ok) return `<span class="check pass" title="${data.root||''} OK">✓</span>`;
+  const reasons = [];
+  if (!data.root_exists) reasons.push(`${data.root||'show data dir'} missing`);
+  if (missing.length) reasons.push(`missing: ${missing.join(', ')}`);
+  return `<span class="check fail" title="${reasons.join(' — ')}">✗</span>`;
+}
+
+// Generic "count of bad items" cell. 0 → green ✓. >0 → red number
+// with a tooltip listing the items so the operator can hover and
+// see exactly what's there without leaving the dashboard. Missing
+// data (older JSON without this field) → ?, not ✓ — we don't want
+// "unknown" to look the same as "verified clean".
+function countCell(items) {
+  if (items == null) return `<span class="check unknown">?</span>`;
+  const n = items.length;
+  if (n === 0) return `<span class="check pass">✓</span>`;
+  return `<span class="check fail" title="${items.join('\n')}">${n}</span>`;
 }
 
 function verBadge(ver, expected) {
@@ -391,6 +544,7 @@ function verBadge(ver, expected) {
 }
 
 function renderTable() {
+  allDevices.forEach(rememberSeen);   // refresh ip->serial cache from this load
   const search = document.getElementById('search').value.toLowerCase();
   const filterStatus = document.getElementById('filter-status').value;
   const filterSetting = document.getElementById('filter-setting').value;
@@ -406,14 +560,16 @@ function renderTable() {
 
   devs = sortDevices(devs);
 
-  // Summary cards
+  // Summary cards. Offline is its own bucket: Total = OK + Issues + Offline.
   const total = allDevices.length;
-  const okCount = allDevices.filter(d => deviceIssues(d).length === 0).length;
-  const issueCount = total - okCount;
+  const offlineCount = allDevices.filter(d => d.online === false).length;
+  const onlineDevs = allDevices.filter(d => d.online !== false);
+  const okCount = onlineDevs.filter(d => deviceIssues(d).length === 0).length;
+  const issueCount = onlineDevs.length - okCount;
   document.getElementById('s-total').textContent = total;
   document.getElementById('s-ok').textContent = okCount;
   document.getElementById('s-issues').textContent = issueCount;
-  document.getElementById('s-offline').textContent = '—';
+  document.getElementById('s-offline').textContent = offlineCount;
 
   const arrow = (col) => `<span class="sort-arrow">${sortCol===col ? (sortAsc?'▲':'▼') : '↕'}</span>`;
   const th = (col, label) => `<th class="${sortCol===col?'sorted':''}" onclick="setSort('${col}')">${label}${arrow(col)}</th>`;
@@ -424,55 +580,54 @@ function renderTable() {
     ${th('serial','Serial')}
     ${th('ip','IP')}
     ${th('os','OS Ver')}
-    ${th('apk','Kagami')}
+    ${th('apk','Show APK')}
     ${th('kiosk','Kiosk')}
     ${th('battery','Battery')}
-    <th title="Stay awake while plugged in">Sleep</th>
-    <th title="WiFi connected">WiFi</th>
-    <th title="Bluetooth ON = ✓">BT on</th>
-    <th title="Screen brightness">Bright</th>
-    <th title="Developer mode">Dev</th>
-    <th title="USB debugging">USB</th>
-    <th title="Auto-update disabled">NoUpd</th>
+    ${th('disk','Disk %')}
+    <th title="Show data dir present and complete?">Data</th>
+    ${th('data_extra','Extra Data')}
+    ${th('apk_extra','Extra APKs')}
+    <th title="Pinch / hand navigation enabled (required by show APK)">Hand Nav</th>
     ${th('status','Status')}
   </tr></thead>
   <tbody>`;
 
   devs.forEach(d => {
-    const s = d.settings;
+    if (d.online === false) {
+      html += `<tr class="has-issues offline-row">
+      <td><span class="ip">${getDeviceNumber(d)}</span></td>
+      <td><span class="mono">${resolveSerial(d) || '—'}</span></td>
+      <td><span class="mono">${d.ip || '—'}</span></td>
+      <td colspan="9" class="offline-msg">— device in fleet list but unreachable —</td>
+      <td><span class="row-status issues" title="Offline / unreachable">OFFLINE</span></td>
+    </tr>`;
+      return;
+    }
+    const s = d.settings || {};
+    const data = d.data || {};
+    const packages = d.packages || {};
     const issues = deviceIssues(d);
     const hasIssues = issues.length > 0;
 
-    const c_sleep  = s.stay_awake ? 'pass' : 'fail';
-    const c_wifi   = s.wifi_connected ? 'pass' : 'fail';
-    const c_bt     = s.bluetooth_on ? 'pass' : 'fail';
-    const c_dev    = s.developer_mode ? 'pass' : 'fail';
-    const c_usb    = s.usb_debugging ? 'pass' : 'fail';
-    const c_update = s.auto_update_off === 'true' ? 'pass' : s.auto_update_off === 'unknown' ? 'unknown' : 'fail';
-
-    const ssidHtml = s.wifi_connected
-      ? `<div class="ssid" title="${s.wifi_ssid}">${s.wifi_ssid}</div>`
-      : `<span style="color:var(--fail);font-size:11px">disconnected</span>`;
+    const c_handnav = s.hand_nav_on == null ? 'unknown' : (s.hand_nav_on ? 'pass' : 'fail');
 
     const statusHtml = hasIssues
-      ? `<span class="row-status issues">${issues.length} issue${issues.length>1?'s':''}</span>`
+      ? `<span class="row-status issues" title="${issues.join(', ')}">${issues.length} issue${issues.length>1?'s':''}</span>`
       : `<span class="row-status ok">OK</span>`;
 
     html += `<tr class="${hasIssues?'has-issues':''}">
       <td><span class="ip">${getDeviceNumber(d)}</span></td>
       <td><span class="mono">${d.hw_serial||'—'}</span></td>
       <td><span class="mono">${d.ip}</span></td>
-      <td>${verBadge(d.os_version, EXPECTED.os)}</td>
-      <td>${verBadge(d.apk.installed ? d.apk.version : '', EXPECTED.apk)}</td>
-      <td>${verBadge(d.kiosk && d.kiosk.installed ? d.kiosk.version : '', '')}</td>
-      <td>${battBar(d.battery)}</td>
-      <td>${checkIcon(c_sleep)}</td>
-      <td><div style="display:flex;flex-direction:column;gap:2px">${checkIcon(c_wifi)}${ssidHtml}</div></td>
-      <td>${checkIcon(c_bt)}</td>
-      <td><span class="mono">${s.screen_brightness}</span></td>
-      <td>${checkIcon(c_dev)}</td>
-      <td>${checkIcon(c_usb)}</td>
-      <td>${checkIcon(c_update)}</td>
+      <td>${verBadge(d.os_version, d.expected_os || '')}</td>
+      <td>${verBadge(d.apk && d.apk.installed ? d.apk.version : '', (d.apk||{}).expected_version || '')}</td>
+      <td>${verBadge(d.kiosk && d.kiosk.installed ? d.kiosk.version : '', (d.kiosk||{}).expected_version || '')}</td>
+      <td>${battBar(d.battery, d.charging)}</td>
+      <td>${diskBar(d.disk)}</td>
+      <td>${dataCell(d)}</td>
+      <td>${countCell(data.extraneous)}</td>
+      <td>${countCell(packages.extraneous_tindrum)}</td>
+      <td>${checkIcon(c_handnav)}</td>
       <td>${statusHtml}</td>
     </tr>`;
   });
@@ -483,23 +638,48 @@ function renderTable() {
 
 function exportCSV() {
   if (!allDevices.length) return;
-  const cols = ['device_number','hw_serial','ip','os_version','apk_version','apk_installed','kiosk_version','kiosk_installed','battery','stay_awake','wifi_connected','wifi_ssid','bluetooth_on','screen_brightness','developer_mode','usb_debugging','auto_update_off','issues'];
+  const cols = [
+    'device_number','hw_serial','ip',
+    'os_version','apk_version','apk_installed','kiosk_version','kiosk_installed',
+    'battery','charging',
+    'disk_used_pct','disk_warn_pct','disk_total_gb','disk_available_gb',
+    'data_root_exists','data_missing','data_extraneous',
+    'extraneous_tindrum',
+    'hand_nav_on',
+    'issues'
+  ];
   const rows = [cols.join(',')];
+  const csvCell = (v) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
   allDevices.forEach(d => {
-    const s = d.settings;
+    const data = d.data || {};
+    const packages = d.packages || {};
+    const disk = d.disk || {};
+    const s = d.settings || {};
     rows.push([
-      getDeviceNumber(d), d.hw_serial||'', d.ip, d.os_version, d.apk.version||'', d.apk.installed,
+      getDeviceNumber(d), d.hw_serial||'', d.ip,
+      d.os_version, d.apk?.version||'', d.apk?.installed??false,
       (d.kiosk||{}).version||'', (d.kiosk||{}).installed||false,
-      d.battery,
-      s.stay_awake, s.wifi_connected, s.wifi_ssid, s.bluetooth_on,
-      s.screen_brightness, s.developer_mode, s.usb_debugging, s.auto_update_off,
+      d.battery, d.charging??false,
+      disk.used_pct??'', disk.warn_pct??'',
+      ((disk.total_kb||0)/1024/1024).toFixed(1),
+      ((disk.available_kb||0)/1024/1024).toFixed(1),
+      data.root_exists??'',
+      (data.missing||[]).join(';'),
+      (data.extraneous||[]).join(';'),
+      (packages.extraneous_tindrum||[]).join(';'),
+      s.hand_nav_on??'',
       deviceIssues(d).join(';')
-    ].join(','));
+    ].map(csvCell).join(','));
   });
   const blob = new Blob([rows.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `kagami_fleet_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `fleet_health_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
 
