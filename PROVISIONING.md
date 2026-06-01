@@ -82,19 +82,19 @@ ML2 OS Flash Helper
   To:      1.4.1
 
   Show: KAGAMI (KAGAMI)
-  SSID KAGAMI · pkg com.tindrum.kagamu · devices devices.txt (7)
+  SSID KAGAMI · pkg com.tindrum.kagamu · devices devices/KAGAMI.txt (7)
 
   About to flash 1.4.1 + factory reset for the KAGAMI fleet.
-  Type the show id ('KAGAMI') to continue: _
+  Press Enter to continue, or S for other available show configurations: _
 ```
 
-> **Confirm the show.** This is the safety gate that binds the flash (and the provision/deploy that follow) to the correct show — wrong show means wrong WiFi and wrong build. If the show shown is wrong: Ctrl+C, run `./ml_show.sh use <id>`, and start again.
+> **Confirm the show.** This is the safety gate that binds the flash (and the provision/deploy that follow) to the correct show — wrong show means wrong WiFi and wrong build. Press **Enter** to proceed with the show shown. If the wrong show is shown, press **S** to pick a different configured show, or Ctrl+C to abort and run `./ml_show.sh use <id>`.
 
 ---
 
-## Step 5 — Enter device info and confirm
+## Step 5 — Confirm and enter device info
 
-Type the **show id** shown (e.g. `KAGAMI`) to continue, then enter the device tracking information:
+Press **Enter** to confirm the show shown, then enter the device tracking information:
 
 ```
 Device tracking
@@ -194,13 +194,15 @@ Two dialogs appear when the device is connected to the laptop.
 
 ## Step 9 — Add device IP to fleet list
 
-> **Note:** The IP shown at the end of provisioning is on the provisioning WiFi network. It will be different on site once the show APs are configured with static IPs. You'll rebuild `devices.txt` on site before running `ml_deploy.sh` or `ml_status.sh`.
+> **Note:** The IP shown at the end of provisioning is on the provisioning WiFi network. It will be different on site once the show APs are configured with static IPs. You'll rebuild the active show's `devices/<show>.txt` on site via `./utilities/ml_scan.sh` before running `ml_deploy.sh` or `ml_status.sh`.
 
-For reference, the command to add an IP is:
+For reference, the command to add an IP by hand is:
 
 ```
-echo '[device ip]' >> devices.txt
+echo '[device ip]' >> devices/$(cat .active_show).txt
 ```
+
+Or just rescan: `./utilities/ml_scan.sh --append`.
 
 ---
 
@@ -264,19 +266,19 @@ Disconnect the device and repeat from Step 1 for the next device.
 # Check device settings — single device
 ./ml_provision.sh --check
 
-# Apply ADB-settable settings to all devices in devices.txt (fleet remediation)
+# Apply ADB-settable settings to every device in the active show's fleet list (drift remediation)
 ./ml_provision.sh --fleet
 
 # Check settings across entire fleet
 ./ml_provision.sh --fleet --check
 
-# Scan network and write devices.txt
+# Scan network and write devices/<show>.txt
 ./utilities/ml_scan.sh
 
 # Deploy to a single device — connects, prompts for APK selection, pushes assets, installs
 ./ml_deploy.sh -d [ip] deploy
 
-# Deploy to all devices in devices.txt
+# Deploy to every device in the active show's fleet list
 ./ml_deploy.sh deploy
 
 # Connect to all devices over WiFi (done automatically by deploy)
@@ -300,7 +302,7 @@ Disconnect the device and repeat from Step 1 for the next device.
 | Command | Description |
 |---|---|
 | `deploy` | Interactive: select APK(s), install, set kiosk as home app — connects automatically |
-| `connect` | Connect to all devices in `devices.txt` over WiFi ADB |
+| `connect` | Connect to every device in the active show's `devices/<show>.txt` over WiFi ADB |
 | `status` | Show online/offline status of all devices |
 | `install <path.apk>` | Install a specific APK to all online devices |
 | `push <src> <dest>` | Push a file or folder to all online devices |
@@ -316,8 +318,8 @@ Disconnect the device and repeat from Step 1 for the next device.
 
 | Option | Description |
 |---|---|
-| `-d <ip>` | Target a single device by IP instead of all devices in `devices.txt` |
-| `-f <file>` | Use an alternate devices file (default: `devices.txt`) |
+| `-d <ip>` | Target a single device by IP instead of the active show's fleet list |
+| `-f <file>` | Use an alternate devices file (default: the active show's `devices/<show>.txt`, falling back to legacy `devices.txt`) |
 | `-j <n>` | Max parallel jobs (default: 20) |
 
 ### ml_status.sh flags
@@ -330,11 +332,11 @@ Run with no flags for a colored pass/fail table to the terminal. All output mode
 | `--json` | Emit a single JSON array of all devices to stdout — pipe to a file to feed `fleet_dashboard.html` |
 | `--csv` | Emit CSV (one row per device) for spreadsheet import |
 | `--failures` | Table mode, but only print devices that have at least one failing check |
-| `--fix` | After collecting, auto-fix bad settings (stay-awake → on, Bluetooth → off, brightness → `50`) |
-| `--package <pkg>` | Override which app package to report/check (default `com.tindrum.kagamu`) |
-| `--expected-os <ver>` | Flag any device whose OS version ≠ `<ver>` as failing |
-| `--expected-apk <ver>` | Flag any device whose APK version ≠ `<ver>` as failing |
-| `-f <file>` | Use an alternate devices file (default: `devices.txt`) |
+| `--fix` | After collecting, auto-fix the drift `--fix` actually handles: stay-awake → on (`stay_on_while_plugged_in=3`), Bluetooth → on (`svc bluetooth enable`), brightness → `$SHOW_BRIGHTNESS` from the active show's conf (also force-disables auto-brightness first so the value sticks). Display/dimming and Compute-Pack-Standby are headset-manual and aren't `--fix`-able. |
+| `--package <pkg>` | Override which app package to report/check (default: active show's `SHOW_PACKAGE`) |
+| `--expected-os <ver>` | Flag any device whose OS version ≠ `<ver>` as failing (default: active show's `SHOW_EXPECTED_OS`) |
+| `--expected-apk <ver>` | Flag any device whose APK version ≠ `<ver>` as failing (default: active show's `SHOW_EXPECTED_APK`) |
+| `-f <file>` | Use an alternate devices file (default: the active show's `devices/<show>.txt`, falling back to legacy `devices.txt`) |
 
 ### ml_status.sh environment variables
 
@@ -342,9 +344,11 @@ Each is the env-var equivalent of a flag; the flag wins if both are set.
 
 | Variable | Equivalent to | Default |
 |---|---|---|
-| `ML_PACKAGE` | `--package` | `com.tindrum.kagamu` |
-| `ML_EXPECTED_OS` | `--expected-os` | unset — OS pass/fail check skipped |
-| `ML_EXPECTED_APK` | `--expected-apk` | unset — APK pass/fail check skipped |
+| `ML_PACKAGE` | `--package` | active show's `SHOW_PACKAGE` |
+| `ML_EXPECTED_OS` | `--expected-os` | active show's `SHOW_EXPECTED_OS` — blank skips the check |
+| `ML_EXPECTED_APK` | `--expected-apk` | active show's `SHOW_EXPECTED_APK` — blank skips the check |
+| `ML_BRIGHTNESS` | (no flag) | active show's `SHOW_BRIGHTNESS` — used by `--fix` |
+| `ML_KIOSK_VERSION` | (no flag) | active show's `SHOW_KIOSK_VERSION` — blank skips the check |
 
 **Feeding the dashboard:** `fleet_dashboard.html` does not read files automatically — generate the JSON, then load it in the page:
 

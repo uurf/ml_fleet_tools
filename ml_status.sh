@@ -599,9 +599,13 @@ print(
 }
 
 # ── Render CSV ───────────────────────────────────────────────
+# Columns mirror what the table + JSON expose (offline stubs, kiosk
+# versionName, data-dir contents, disk usage, hand nav, charging), so
+# operators importing CSV into a spreadsheet get the same picture as
+# the dashboard. Header order matches the print() below.
 render_csv() {
   local files=("$RUN_DIR"/*.json)
-  echo "ip,online,os_version,build_id,apk_version,apk_installed,battery,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,developer_mode,usb_debugging,auto_update_off"
+  echo "ip,online,hw_serial,os_version,build_id,apk_version,apk_installed,kiosk_version,kiosk_installed,battery,charging,disk_used_pct,stay_awake,wifi_connected,wifi_ssid,bluetooth_on,screen_brightness,hand_nav_on,developer_mode,usb_debugging,auto_update_off,data_missing_count,data_extra_count"
   for f in "${files[@]}"; do
     [[ ! -f "$f" ]] && continue
     python3 -c "
@@ -609,12 +613,20 @@ import json
 d = json.load(open('$f'))
 s = d['settings']
 a = d['apk']
+k = d.get('kiosk', {})
+disk = d.get('disk', {})
+data = d.get('data', {})
 print(','.join(str(x) for x in [
-  d['ip'], d.get('online', True), d['os_version'], d['build_id'],
-  a['version'], a['installed'], d['battery'],
+  d['ip'], d.get('online', True), d.get('hw_serial', ''),
+  d['os_version'], d['build_id'],
+  a['version'], a['installed'],
+  k.get('version', ''), k.get('installed', False),
+  d['battery'], d.get('charging', False),
+  disk.get('used_pct', 0),
   s['stay_awake'], s['wifi_connected'], s['wifi_ssid'],
-  s['bluetooth_on'], s['screen_brightness'],
-  s['developer_mode'], s['usb_debugging'], s['auto_update_off']
+  s['bluetooth_on'], s['screen_brightness'], s.get('hand_nav_on', ''),
+  s['developer_mode'], s['usb_debugging'], s['auto_update_off'],
+  len(data.get('missing', [])), len(data.get('extraneous', []))
 ]))
 " 2>/dev/null
   done

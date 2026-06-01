@@ -94,9 +94,11 @@ When a new show build needs to go out mid-run:
 ./ml_deploy.sh -d <ip> deploy    # one device
 ```
 
-`deploy` requires typing the show id (it installs to the whole fleet).
-After updating, bump `SHOW_EXPECTED_APK` in `shows/<id>.conf` so the
-status sweep flags any device that missed the update.
+`deploy` prints the show banner and waits at a confirm prompt (Enter to
+proceed, `S` to switch to another configured show) before it installs
+to the whole fleet. After updating, bump `SHOW_EXPECTED_APK` in
+`shows/<id>.conf` so the status sweep flags any device that missed the
+update.
 
 ---
 
@@ -110,9 +112,9 @@ builds, run from the same codebase:
   `./utilities/ml_scan.sh`, which writes the active show's file).
 - `shows/<show>.conf` carries that show's SSID/password/package and
   expected versions. `shows/KAGAMI.conf` mirrors the original values.
-- A wrong-show action is caught by the typed-show-id confirmation at
-  flash/provision/deploy; status/dashboard are read-only and just print
-  the resolved show.
+- A wrong-show action is caught by the show-confirm gate at
+  flash/provision/deploy (banner + Enter-to-proceed / S-to-switch);
+  status/dashboard are read-only and just print the resolved show.
 
 To work the other show from the same machine: `./ml_show.sh use <other>`
 and re-run. Nothing else changes.

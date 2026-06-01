@@ -70,11 +70,12 @@ The server is easy. These four integration realities are the actual work:
    differs from `origin/main`. Fine for operators on a tagged `main`; on `dev`
    the server must pass `ML_DEV_TEST=1`.
 2. **Interactive confirmation has no TTY.** Destructive entry points call
-   `show_confirm`, which makes the operator *type the show id* in a terminal. A
-   web button has no terminal, so it would block. We'd pass
-   `ML_SHOW_CONFIRMED=1` and make **the dashboard UI the confirmation surface** —
-   which for reboot/shutdown is exactly what we want anyway (a "type the show id
-   to confirm" modal so a stray click can't power-cycle the fleet).
+   `show_confirm`, which prompts the operator at a terminal (Enter to proceed,
+   `S` to switch shows). A web button has no terminal, so it would block. We'd
+   pass `ML_SHOW_CONFIRMED=1` and make **the dashboard UI the confirmation
+   surface** — which for reboot/shutdown is exactly what we want anyway (a
+   "type the show id to confirm" modal so a stray click can't power-cycle the
+   fleet — note this is a UI-side guard, not a re-use of `show_confirm`).
 3. **Long, parallel jobs.** A status sweep hits ~200 devices; a scan walks the
    subnet. Endpoints can't be synchronous requests that hang — they must run
    async with the page polling for completion, plus a guard so two sweeps can't

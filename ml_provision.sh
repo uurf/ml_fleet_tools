@@ -33,14 +33,14 @@ SKIP="${DIM}–${RESET}"
 
 
 # ---- Google Sheets update ------------------------------------------
-# shellcheck disable=SC2034  # used inside Python subprocess string
-SHEETS_URL="https://script.google.com/macros/s/AKfycbyPsoVvtkarMWli8iZMoZSwcQpL5Ra5xcOT9hfuEOaYkhVfT9Z8LjivdswgHrU5W508/exec"
-
+# Per-show: URL comes from SHOW_SHEETS_URL in shows/<id>.conf. Blank →
+# no-op (used for shows without a tracking workbook configured yet).
 update_sheet() {
+  [[ -z "${SHOW_SHEETS_URL:-}" ]] && return 0
   local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}" wifi_ok="${5:-false}" operator_initials="${6:-}"
   python3 -c "
 import urllib.request, json, sys
-url = 'https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec'
+url = '$SHOW_SHEETS_URL'
 data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM','wifi_connected':'WIFIOK','operator_initials':'INITIALS'}).encode()
 data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode()).replace(b'WIFIOK', '$wifi_ok'.encode()).replace(b'INITIALS', '$operator_initials'.encode())
 req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/json'})

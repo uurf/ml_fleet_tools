@@ -34,14 +34,14 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---- Google Sheets update ------------------------------------------
-# shellcheck disable=SC2034  # used inside Python subprocess string
-SHEETS_URL="https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec"
-
+# Per-show: URL comes from SHOW_SHEETS_URL in shows/<id>.conf. Blank →
+# no-op (used for shows without a tracking workbook configured yet).
 update_sheet() {
+  [[ -z "${SHOW_SHEETS_URL:-}" ]] && return 0
   local action="$1" serial="$2" device_num="${3:-}" case_num="${4:-}" operator_initials="${5:-}"
   python3 -c "
 import urllib.request, json, sys
-url = 'https://script.google.com/macros/s/AKfycbwUeUL8yk89AWxX_NN6HhCh-vo1MRbnbxHbiTPbvcyhRttiVQOywnrRMH-J9uBPg7Tz/exec'
+url = '$SHOW_SHEETS_URL'
 data = json.dumps({'action':'ACTION','serial':'SERIAL','device_number':'DEVNUM','case_number':'CASENUM','operator_initials':'INITIALS'}).encode()
 data = data.replace(b'ACTION', '$action'.encode()).replace(b'SERIAL', '$serial'.encode()).replace(b'DEVNUM', '$device_num'.encode()).replace(b'CASENUM', '$case_num'.encode()).replace(b'INITIALS', '$operator_initials'.encode())
 req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/json'})
@@ -522,10 +522,9 @@ else
   echo -e "${BOLD}Manual post-flash steps:${RESET}"
   echo "  [ ] Settings → About → tap Build Number 7x (Developer Mode)"
   echo "  [ ] Allow USB Debugging when prompted"
-  echo "  [ ] Configure WiFi on device"
-  echo "  [ ] Add IP to devices.txt"
-  echo "  [ ] ./ml_deploy.sh -d <ip> install builds/kagami.apk"
-  echo "  [ ] ./ml_deploy.sh -d <ip> push assets/ /sdcard/KAGAMI/"
-  echo "  [ ] ./ml_status.sh to verify"
+  echo "  [ ] Configure WiFi on device (SHOW_SSID: $SHOW_SSID)"
+  echo "  [ ] Add IP to devices/$ML_SHOW.txt"
+  echo "  [ ] ./ml_deploy.sh -d <ip> deploy        # picks the right APK for show $ML_SHOW"
+  echo "  [ ] ./ml_status.sh -d <ip>               # verify"
   echo ""
 fi

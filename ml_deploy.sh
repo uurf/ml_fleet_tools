@@ -1,7 +1,8 @@
-#!/opt/homebrew/bin/bash
+#!/usr/bin/env bash
 # ============================================================
 # Magic Leap 2 Fleet Deploy Tool — KAGAMI / Tin Drum
 # Usage: ./ml_deploy.sh [command] [options]
+# Requires Homebrew bash 5+ (macOS default 3.2 lacks mapfile).
 # ============================================================
 
 set -euo pipefail
@@ -75,9 +76,9 @@ usage() {
   echo "  Examples:"
   echo "    ./ml_deploy.sh deploy"
   echo "    ./ml_deploy.sh -d 192.168.1.45 deploy"
-  echo "    ./ml_deploy.sh install builds/kagami_v2.apk"
-  echo "    ./ml_deploy.sh push assets/ /sdcard/KAGAMI/"
-  echo "    ./ml_deploy.sh restart com.tindrum.kagamu"
+  echo "    ./ml_deploy.sh install builds/<show>_v2.apk"
+  echo "    ./ml_deploy.sh push assets/ /sdcard/<SHOW_DATA_DIR>/"
+  echo "    ./ml_deploy.sh restart <show app package>"
   echo "    ./ml_deploy.sh shell 'pm list packages'"
   echo ""
   exit 0

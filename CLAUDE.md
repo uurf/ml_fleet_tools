@@ -106,7 +106,7 @@ It sources `shows/<id>.conf` (committed). Required fields (resolver hard-stops i
 
 **Per-show devices file**: `devices/<id>.txt` (gitignored) is the canonical fleet list (`ml_scan.sh`/`ml_show.sh` write it). Reads fall back to legacy `devices.txt` if the per-show file doesn't exist yet, so the live fleet keeps working pre-migration. An explicit `-f <file>` still overrides.
 
-**Confirmation**: destructive entry points (flash, provision, deploy) call `show_confirm`, which prints the resolved show and requires the operator to type the show id. It is a silent no-op when `ML_SHOW_CONFIRMED=1` is inherited from a parent in the chain (so the operator confirms once, at flash). Read-only paths (`ml_status.sh`, `--check`) only print `show_banner` — and in `ml_status.sh` the banner goes to **stderr** so `--json`/`--csv` stdout stays machine-readable.
+**Confirmation**: destructive entry points (flash, provision, deploy) call `show_confirm`, which prints the resolved show and asks the operator to press Enter to proceed, or `S` to switch to another configured show via a numbered picker (`_sc_pick_show`). `show_confirm` is a silent no-op when `ML_SHOW_CONFIRMED=1` is inherited from a parent in the chain (so the operator confirms once, at flash). Read-only paths (`ml_status.sh`, `--check`) only print `show_banner` — and in `ml_status.sh` the banner goes to **stderr** so `--json`/`--csv` stdout stays machine-readable.
 
 **On-site setup for a new show**: `./ml_show.sh init` prompts for the values, writes `shows/<id>.conf`, and offers to make it active — no hand-editing of bash on site.
 
@@ -181,7 +181,12 @@ Key non-obvious settings and their ADB keys:
 | `os_images/1.4.1/` | OS partition images from ML Hub (gitignored) |
 | `builds/` | APKs and show assets (gitignored) |
 | `fleet_dashboard.html` | Show-day health dashboard, fed by `ml_status.sh --json`. Surfaces trouble (wrong OS/APK, data dir missing/extraneous, extra `com.tindrum.*` APKs, `/sdcard` over `SHOW_DISK_WARN_PCT`, hand nav off). Drift/compliance lives in `ml_provision.sh --check` — not here. |
-| `apps_script/Code.gs` | Google Apps Script for Sheets integration |
+| `apps_script/Code.gs` | Google Apps Script for Sheets integration. Per-workbook bound copy; pasted into each show's bound Apps Script editor with `SHEET_TAB_NAME` const edited. The deployment URL goes in the show's `SHOW_SHEETS_URL`. |
+| `docs/onsite_osaka.md` | Supervisor-grade Osaka runbook (KAGAMI + KAGAMI_BLUE). Defers per-device steps to the operator playbooks below. |
+| `docs/playbook_red_osaka.html` | RED operator playbook (EN/JA, printable A4). 9 sections / 33 steps covering pre-flight → power up → scan → drift check → deploy → dashboard → shutdown → SSD assets → verify. |
+| `docs/playbook_blue_osaka.html` | BLUE operator playbook (EN/JA, printable A4). Pre-flight + Phase A (USB bench, 204 devices) + Phase B (fleet flow, same shape as RED). |
+| `docs/setup_checklist.html` / `docs/flash_checklist.html` / `docs/headset_checklist.html` | Per-laptop / per-device / in-headset operator checklists. EN-only. Printable. |
+| `tests/test_sheet_integration.sh` | Device-free regression suite for the per-show Sheets plumbing. Run from anywhere. |
 | `logs/` | Per-device deploy logs (gitignored) |
 | `status/` | Per-run status JSON from `ml_status.sh` (gitignored) |
 
