@@ -132,7 +132,7 @@ cmd_init() {
     break
   done
 
-  local name ssid pass sec pkg bright data_dir data_req data_opt disk_pct eapk eos
+  local name ssid pass sec pkg bright data_dir data_req data_opt disk_pct eapk eos sheets_url
   name="$(prompt_default "Display name" "$id")"
   ssid="$(prompt_default "WiFi SSID" "$id")"
   while true; do
@@ -149,6 +149,7 @@ cmd_init() {
   disk_pct="$(prompt_default "Disk-usage warn threshold (%)" "60")"
   eapk="$(prompt_default "Expected APK version (blank to skip check)" "")"
   eos="$(prompt_default "Expected OS version (blank to skip check)" "")"
+  sheets_url="$(prompt_default "Google Apps Script URL for this show's sheet (blank to skip)" "")"
 
   mkdir -p "$SHOWS_DIR"
   cat > "$SHOWS_DIR/$id.conf" <<EOF
@@ -174,6 +175,8 @@ SHOW_DISK_WARN_PCT="$disk_pct"
 
 SHOW_EXPECTED_APK="$eapk"
 SHOW_EXPECTED_OS="$eos"
+
+SHOW_SHEETS_URL="$sheets_url"
 EOF
 
   echo ""

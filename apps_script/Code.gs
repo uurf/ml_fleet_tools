@@ -2,20 +2,32 @@
  * KAGAMI Fleet — Google Apps Script
  * Tin Drum / Magic Leap 2 Fleet Management
  *
- * Deploy as a Web App:
- *   Extensions → Apps Script → Deploy → New deployment
- *   Type: Web app
- *   Execute as: Me
- *   Who has access: Anyone
+ * Per-show deployment model:
+ *   This script is bound separately to each show's tracking workbook
+ *   (KAGAMI: "Kagami Osaka - Device tracker";
+ *    KAGAMI_BLUE: "Kagami Osaka - Blue Show Device tracker").
+ *   For each workbook: paste this file verbatim into its bound Apps
+ *   Script editor, edit SHEET_TAB_NAME below to match that workbook's
+ *   first tab, then Deploy → New deployment as a Web App
+ *     (Execute as: Me · Who has access: Anyone).
+ *   Copy the resulting /macros/s/<ID>/exec URL into the show's
+ *   shows/<id>.conf as SHOW_SHEETS_URL — that's where the bash
+ *   scripts (ml_provision.sh / ml_os_flash.sh) read it.
  *
- * Called automatically by os_downgrade.sh and ml_provision.sh
+ * Column headers must match across workbooks — col() looks them up
+ * by exact text.
  */
+
+// Tab inside the bound workbook this deployment writes to.
+//   KAGAMI:      "Kagami Osaka - Device status"
+//   KAGAMI_BLUE: "Kagami Osaka - Blue Device status"
+const SHEET_TAB_NAME = "Kagami Osaka - Device status";
 
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
-      .getSheetByName("Kagami Osaka - Device status");
+      .getSheetByName(SHEET_TAB_NAME);
 
     // Find column by header text — survives column insertions/moves
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];

@@ -1,13 +1,28 @@
 # On-Site Runbook — Osaka (VS Umeda)
 
+Supervisor-grade reference for the two-show on-site deploy. **Per-device operator instructions live in the playbooks** — this runbook is for coordination, not for an operator to follow step-by-step.
+
+| Operator artifact | Audience | Format |
+|---|---|---|
+| [`playbook_red_osaka.html`](playbook_red_osaka.html) | RED operators | EN/JA side-by-side, printable A4 |
+| [`playbook_blue_osaka.html`](playbook_blue_osaka.html) | BLUE operators (Phase A + Phase B) | EN/JA side-by-side, printable A4 |
+| [`setup_checklist.html`](setup_checklist.html) | All operators — one-time per laptop | EN, printable |
+| [`headset_checklist.html`](headset_checklist.html) | All operators — manual headset settings | EN, printable |
+
+## Fleet
+
 Two shows, two fleets, two adjacent rooms in VS Umeda, Osaka.
 
-| Show         | Room       | SSID          | Fleet                          | Origin                                          |
-|--------------|------------|---------------|--------------------------------|-------------------------------------------------|
-| `KAGAMI`     | Room A     | `KAGAMI`      | 202 devices                    | Shipped from Pittsburgh, fully provisioned      |
-| `KAGAMI_BLUE`| Room B     | `KAGAMI_BLUE` | 180 devices                    | Already in Osaka, provisioned for a prior KAGAMI run; need full reconfigure |
+**Total inbound:** **204 from Pittsburgh** (firm — flashed and provisioned for KAGAMI Red before shipping) + **~180 from Hong Kong** (target; carnet / packing list not yet confirmed, and some units are expected to arrive broken). Working total ≈ 384, real total settled once HK arrives and functional triage is done.
 
-Operators are expected to keep one laptop per show (laptop's WiFi must match the SSID of the fleet being worked on, since the fleet operates over WiFi ADB).
+**Allocation:** RED is sized first (80 per showtime × 2 showtimes + 20 spares = **180 firm**); BLUE gets the remainder. RED is filled entirely from the PGH-flashed 204 (which were provisioned for KAGAMI Red in PGH); BLUE is the 24 PGH-flashed leftover + however many HK units make it through triage.
+
+| Show           | Room | SSID                  | Target count | State on arrival |
+|----------------|------|-----------------------|--------------|------------------|
+| `KAGAMI` (Red) | A    | `KAGAMI`              | 180 firm     | PGH-flashed and provisioned for this show; ready for fleet APK deploy + SSD asset load |
+| `KAGAMI_BLUE`  | B    | `KAGAMI-Blue` (TBD)   | ~204 (= 24 PGH + ~180 HK − breakage) | 24 PGH-flashed (provisioned for Red — need re-pointing to BLUE WiFi); ~180 HK (at ML2 1.4.1, never provisioned by us, fleet key not yet trusted) — **every functional BLUE device needs USB-bench Phase A before fleet flow** |
+
+Staffing model: ~4 operators, ideally 2 laptops each (8 stations total). Each laptop pins to one show (`./ml_show.sh use <id>`) — the laptop's WiFi must match the SSID of the fleet it is working on, since WiFi ADB is the fleet-control transport.
 
 ---
 
@@ -15,12 +30,12 @@ Operators are expected to keep one laptop per show (laptop's WiFi must match the
 
 Before any on-site work begins:
 
-- **Artifacts on the operator laptop**
-  - Repo cloned, `./install.sh` already run on the machine (Homebrew bash 5+, fleet `~/.android/adbkey`, ADB/fastboot, etc.)
+- **Artifacts on every operator laptop**
+  - Repo cloned, `./install.sh` already run on the machine (Homebrew bash 5+, fleet `~/.android/adbkey`, ADB/fastboot, etc.) — see `setup_checklist.html`
   - `./update.sh` run within the last day so HEAD matches `origin/main` (the update gate will hard-stop main scripts otherwise)
-  - `builds/` contains the show APK for the show this laptop is working on (`KAGAMI` APK on the KAGAMI laptop; `KAGAMI_BLUE` APK on the BLUE laptop)
+  - `builds/` contains the show APK + kiosk APK for the show this laptop is working on, when available. Phase A on BLUE can run without builds (settings + WiFi only); Phase B requires builds.
 - **Network**
-  - Both venue SSIDs (`KAGAMI`, `KAGAMI_BLUE`) are up before the first device is touched
+  - Both venue SSIDs (`KAGAMI` and the BLUE SSID, working name `KAGAMI-Blue`) are up before the first device is touched
   - Laptop is joined to the SSID matching the show it is working on
 - **Show config**
   - `shows/KAGAMI.conf` already exists (committed) and matches the venue's `KAGAMI` SSID/password — confirm before first use
@@ -38,7 +53,7 @@ Each laptop is dedicated to one show. Run these once per laptop.
 ./ml_show.sh use KAGAMI
 ```
 
-Confirm `shows/KAGAMI.conf` matches the venue: open it and verify `SHOW_SSID`, `SHOW_WIFI_PASSWORD`, `SHOW_WIFI_SECURITY`, `SHOW_PACKAGE`, and (if set) `SHOW_EXPECTED_APK` / `SHOW_EXPECTED_OS`. If any venue-specific value has changed since Pittsburgh, edit the conf and commit on `dev`.
+Confirm `shows/KAGAMI.conf` matches the venue: open it and verify `SHOW_SSID`, `SHOW_WIFI_PASSWORD`, `SHOW_WIFI_SECURITY`, `SHOW_PACKAGE`, `SHOW_BRIGHTNESS`, `SHOW_DATA_DIR`, `SHOW_KIOSK_VERSION`, `SHOW_SHEETS_URL`, and (if set) `SHOW_EXPECTED_APK` / `SHOW_EXPECTED_OS`. If any venue-specific value has changed since Pittsburgh, edit the conf and commit on `dev`.
 
 ### KAGAMI_BLUE laptop
 
@@ -46,106 +61,68 @@ Confirm `shows/KAGAMI.conf` matches the venue: open it and verify `SHOW_SSID`, `
 ./ml_show.sh init
 ```
 
-When prompted, supply:
+When prompted, supply (supervisor confirms each value — many are TBD until the BLUE show build is locked):
 
 - Show id: `KAGAMI_BLUE`
-- `SHOW_SSID`: `KAGAMI_BLUE`
-- `SHOW_WIFI_PASSWORD`: (venue value)
+- `SHOW_SSID`: working name `KAGAMI-Blue` — confirm with supervisor
+- `SHOW_WIFI_PASSWORD`: working value `KAGAmius` — confirm with supervisor
 - `SHOW_WIFI_SECURITY`: typically `wpa2`
-- `SHOW_PACKAGE`: BLUE show APK package name
+- `SHOW_PACKAGE`: BLUE show APK package name (ask supervisor; expected to change as BLUE builds iterate)
 - `SHOW_BRIGHTNESS`: raw `screen_brightness` value (KAGAMI uses `12`; accept the default unless BLUE has a different setpoint from the show)
 - `SHOW_DATA_DIR`: top-level dir under `/sdcard/` the BLUE APK reads from (KAGAMI uses `Kagami`; confirm BLUE's path before answering)
 - `SHOW_DATA_REQUIRED`: entries under `/sdcard/$SHOW_DATA_DIR/` that MUST be present (typically the asset dir copied from the SSD). Default: `data`. Missing any of these is a dashboard red flag.
 - `SHOW_DATA_OPTIONAL`: entries the show APK creates at runtime (logs, textures, registered apriltag config). Default: `applogs textures config.json marker-space-config.json`. Absence is fine — a bench-fresh device that hasn't run the show won't have these yet. Anything found under the data dir that's in neither REQUIRED nor OPTIONAL is flagged as extraneous.
 - `SHOW_DISK_WARN_PCT`: dashboard red-flag threshold for `/sdcard` usage (KAGAMI uses `60`)
-- `SHOW_EXPECTED_APK` / `SHOW_EXPECTED_OS`: optional but recommended for `--check` drift detection
+- `SHOW_EXPECTED_APK` / `SHOW_EXPECTED_OS`: optional but recommended for `--check` drift detection — bump `SHOW_EXPECTED_APK` after every BLUE build refresh so the dashboard flags stale devices
+- `SHOW_KIOSK_VERSION`: expected `versionName` of the BLUE kiosk build (the kiosk *package* is shared across shows, but the version baked into each build is per-show, e.g. `1.0b`). Blank skips the check.
+- `SHOW_SHEETS_URL`: Google Apps Script URL for the BLUE tracking sheet. Paste exactly:
+
+  ```
+  https://script.google.com/macros/s/AKfycbwF301VZqlntJlUhVVZK-6XFyVm7FAwMhXtwt7wlDPPhxQn6cfnGkOY2-0mSooAr9s/exec
+  ```
+
+  This is the Web App for the "Kagami Osaka - Blue Show Device tracker" workbook (tab: "Kagami Osaka - Blue Device status"). If you leave this blank, BLUE flash/provision will simply skip sheet updates — fine for a bench dry-run, not what you want for the real fleet.
 
 Accept the offer to make `KAGAMI_BLUE` the active show. Commit `shows/KAGAMI_BLUE.conf` on `dev` and push so other operators inherit it via `./update.sh`.
 
-> **Open item — per-show kiosk:** `CLAUDE.md` currently states `com.tindrum.kiosk` is shared across shows. If `KAGAMI_BLUE` ships its own kiosk, `shows/<id>.conf` needs a new `SHOW_KIOSK_PACKAGE` field and `ml_provision.sh` needs a corresponding change. Flag before bench-ops start if this is the case.
-
 ---
 
-## 2. KAGAMI_BLUE — Osaka 180 bench flow
+## 2. KAGAMI_BLUE — Phase A: USB-bench precursor
 
-The 180 devices in Osaka are already on ML2 1.4.1 with OOBE dismissed (an operator manually completed OOBE during their prior KAGAMI run). They are **not** flashed on site. The bench-op pipeline below brings them to the same readiness bar as the Pittsburgh 202.
+Every functional BLUE device goes through this before Phase B (fleet flow) starts. Two groups:
 
-### Per device
+- **~180 HK devices** arrive at ML2 1.4.1 (already past OOBE) but were never provisioned by this toolkit — fleet key not yet trusted, no WiFi ADB enabled. They need the operator "Allow USB debugging" tap on first connect from each laptop. Functional triage happens here: a unit that won't boot or won't respond over ADB gets set aside and reported to the supervisor; don't burn bench time fighting hardware.
+- **24 PGH-flashed devices** were provisioned for `KAGAMI` (Red) in Pittsburgh. The fleet key is already trusted (no Allow tap needed) but the stored WiFi credentials point at the Red SSID, so they need a USB-bench pass to swap to `KAGAMI-Blue` and update settings to the BLUE conf.
 
-1. **USB connect** the device to the laptop.
-2. **Authorize the fleet ADB key on the headset.** A dialog appears in the headset:
-   "Allow USB debugging?" — check **Always allow from this computer**, then **Allow**.
-   - This step is unavoidable. The ML2 user build of 1.4.1 does not honor pre-seeded `/data/misc/adb/adb_keys`, so every new (laptop, device) pair requires one manual tap. Once authorized, the fleet adbkey is trusted for that device for all operator laptops.
-3. **Run provision-and-deploy in one shot:**
+The same script run (`./ml_provision.sh --deploy` if builds are ready, else `./ml_provision.sh`) handles both groups — `ml_provision.sh` is idempotent and doesn't care whether a device was previously provisioned.
 
-   ```bash
-   ./ml_provision.sh --deploy
-   ```
-
-   What this does:
-   - Applies all ADB-settable settings (brightness, screen timeout, hand navigation, etc.)
-   - Joins the device to `KAGAMI_BLUE` WiFi (credentials from `shows/KAGAMI_BLUE.conf`)
-   - Prints a manual-headset checklist (Display Override, Segmented Dimming, Global/Max Dimming, Compute Pack Standby = Off, OS Updater = Never). Operator completes those in the headset UI, then presses Enter at the gate.
-   - Runs `ml_deploy.sh --all` over USB, installing the BLUE show APK and any supporting payloads bundled in the deploy.
-   - Enables WiFi ADB as its final step. The USB connection drops at that point — this is expected; the device is now on `KAGAMI_BLUE` and reachable over WiFi ADB.
-4. **Record the device IP** printed at the end of provision in `devices/KAGAMI_BLUE.txt` (one IP per line). The line is also printed for copy-paste.
-5. **Attach the USB-C SSD** containing the BLUE show data to the device. The show APK detects the SSD on launch and copies the asset payload from SSD → `/sdcard` internally, unattended. Leave the SSD attached until the in-device copy finishes (the APK indicates progress on the headset).
-   - `./utilities/ml_ssd_copy.sh` is **not** needed for this step. It is a fallback for cases where the show APK is not doing the copy itself.
-6. **Verify:**
-
-   ```bash
-   ./ml_status.sh -d <ip>
-   ```
-
-   or check the fleet dashboard once the device is in `devices/KAGAMI_BLUE.txt`.
+**Per-device steps live in [`playbook_blue_osaka.html`](playbook_blue_osaka.html) (EN/JA).** The high-level shape: USB-C connect → Allow dialog if it appears → `./ml_provision.sh` (with `--deploy` when builds are present) → confirm show banner shows `KAGAMI_BLUE` → press Enter → complete the manual-headset checklist → press Enter at the gate → device's WiFi ADB enabled, IP printed, USB disconnect.
 
 ### Throughput
 
-The bench process per device is faster than Pittsburgh's because there is no flash step. Limiting factors are the manual headset taps (fleet-key auth + manual settings checklist) and the SSD copy duration.
+~5 minutes per functional device including the Allow tap and the manual-headset checklist gate. **8 stations** (4 operators × 2 laptops) × ~5 min/device ≈ **~2.5 hours** for ~200 functional devices through Phase A. Triage of dead-on-arrival HK units adds variable overhead — pull them aside fast and keep the line moving.
+
+The HK ~180 are the slower group because of the unavoidable Allow tap on every first (laptop, device) pair. Once authorized, the fleet key covers all other operator laptops for that device.
 
 ---
 
-## 3. KAGAMI — Pittsburgh 202 on-site flow
+## 3. KAGAMI (Red) — Phase B: fleet flow (180 devices)
 
-The 202 arrive in Osaka fully provisioned for `KAGAMI` (settings applied, show APK installed in Pittsburgh, on the Pittsburgh `KAGAMI` SSID config). They do **not** need re-provisioning unless drift is detected.
+The 180 RED devices arrive fully provisioned for `KAGAMI` (settings applied, on the Pittsburgh `KAGAMI` SSID config). They do **not** need a USB bench unless drift is detected. The on-site work is a fleet APK deploy + per-device SSD asset load.
 
 ### Setup
 - Connect the KAGAMI laptop to the venue's `KAGAMI` SSID.
-- Confirm `shows/KAGAMI.conf` matches the venue. If the venue's `KAGAMI` SSID differs from Pittsburgh's, this is **not** a simple network swap — every device's stored WiFi credentials point at the Pittsburgh SSID and the devices will need a USB-bench WiFi update like the BLUE 180. Assume same SSID unless confirmed otherwise on the day.
+- Confirm `shows/KAGAMI.conf` matches the venue. If the venue's `KAGAMI` SSID differs from Pittsburgh's, this is **not** a simple network swap — every device's stored WiFi credentials point at the Pittsburgh SSID and would need a USB-bench WiFi update like BLUE Phase A. Assume same SSID unless confirmed otherwise on the day.
 
-### Per device
+**Per-device steps live in [`playbook_red_osaka.html`](playbook_red_osaka.html) (EN/JA).** High-level shape: power on → scan to build `devices/KAGAMI.txt` → `./ml_provision.sh --fleet --check` (drift; `./ml_status.sh --fix` to remediate) → `./ml_deploy.sh deploy` to install show APK + kiosk APK + reboot → dashboard sweep → `./ml_deploy.sh shutdown` → SSD asset load per device (timing trick: attach SSD before power-on, listen for start/finish tones from the show APK) → leave devices on for final status verify.
 
-1. **Power on** the device. It joins the venue's `KAGAMI` WiFi automatically (same SSID as Pittsburgh).
-2. **Add the device IP** to `devices/KAGAMI.txt` if not already present.
-3. **Fleet check for drift:**
-
-   ```bash
-   ./ml_provision.sh --fleet --check
-   ```
-
-   Read-only — reports which settings have drifted.
-
-   **Expected drift on first run:** all 202 will report `screen_brightness` drift (current value `0`, expected `12`). The 202 were provisioned in Pittsburgh before `SHOW_BRIGHTNESS` was promoted to show config — the value moved from `0` to `12` in the same change. To remediate the whole fleet in one pass:
-
-   ```bash
-   ./ml_status.sh --fix
-   ```
-
-   `--fix` writes `screen_brightness_mode=0` first (so the ML2 doesn't ambient-recompute the value back) and then sets `screen_brightness=$SHOW_BRIGHTNESS` on any device that has drifted. Re-run `./ml_provision.sh --fleet --check` after to confirm clean. For any other settings that drifted (rare), USB connect the offending device and re-bench (`./ml_provision.sh`, no `--deploy` if APK is current).
-4. **APK refresh (if needed).** If a newer KAGAMI APK has landed in `builds/` since Pittsburgh:
-
-   ```bash
-   ./ml_deploy.sh deploy-all
-   ```
-
-5. **Attach SSD per device** if any asset payload differs from Pittsburgh's. Show APK handles the in-device copy. Skip if the Pittsburgh copy is still current.
-6. **Verify** via `./ml_status.sh` and the dashboard.
+> **Phase B is iteration-friendly.** BLUE and RED builds will be refreshed multiple times as the shows are finalized. The operator workflow is the same each time: drop new APKs into `builds/`, re-run `./ml_deploy.sh deploy`, re-sweep the dashboard. Bump `SHOW_EXPECTED_APK` in the show conf after each refresh so the dashboard flags any device that missed it.
 
 ---
 
-## 4. Cross-show reconfigure (10s of devices)
+## 4. Cross-show reconfigure (post-Phase-A movements)
 
-A device originally provisioned for show A needs to run show B. Expected scale: tens of devices, not hundreds. Always bench-op for a show change — do not attempt a wifi-only re-point.
+The bulk cross-show move — 24 PGH-flashed devices originally provisioned for RED needing to run BLUE — is handled in BLUE Phase A above (the same `./ml_provision.sh --deploy` pass re-points them). This section covers the smaller case: a single device gets misassigned after Phase A is done and needs to be moved.
 
 ### Procedure
 
@@ -158,8 +135,8 @@ A device originally provisioned for show A needs to run show B. Expected scale: 
    ```
 
    This re-applies settings, swaps WiFi to the target show's SSID, and installs the target show's APK in one shot.
-4. Remove the device from the **source** show's `devices/<source>.txt` and add it to the **target** show's `devices/<target>.txt`.
-5. Attach SSD with the target show's asset payload; show APK handles the copy.
+4. Remove the device from the **source** show's `devices/<source>.txt` and add it to the **target** show's `devices/<target>.txt` (or re-run `./utilities/ml_scan.sh` once it's on the target SSID).
+5. Attach SSD with the target show's asset payload (timing trick from Phase B applies here too: SSD on, then power on).
 6. Verify on the target show's network.
 
 > A laptop can temporarily act on the other show without changing its `.active_show` by setting the `ML_SHOW` env var for a single command (e.g. `ML_SHOW=KAGAMI ./ml_status.sh`). Useful for read-only spot checks across shows from one laptop. **Do not** use this to bench-op cross-show — the laptop's WiFi has to match the SSID of the fleet being acted on, and bench-op modifies WiFi state, which is destructive if pointed at the wrong show.
@@ -190,7 +167,8 @@ Load the dashboard:
 
 ## 6. Open items / risks
 
-- **Per-show kiosk** — if `KAGAMI_BLUE` ships its own kiosk app, `shows/<id>.conf` needs a `SHOW_KIOSK_PACKAGE` field and a matching change in `ml_provision.sh`. Confirm before bench-ops.
-- **`shows/KAGAMI.conf` SSID match** — if the venue's `KAGAMI` SSID differs from Pittsburgh's, the 202 need a bench-op WiFi update just like the BLUE 180. Confirm SSID parity on day 1.
-- **Fleet-key auth tap** — manual, per (laptop, device) pair, unavoidable on user build 1.4.1. Plan operator time accordingly during bench-ops.
+- **BLUE SSID/password TBD** — working name `KAGAMI-Blue` / `KAGAmius` is what the playbooks default to; supervisor confirms (or overrides) at print time. The values land in `shows/KAGAMI_BLUE.conf` via `./ml_show.sh init`, so a wrong default just means the operator types over it at init time — not a deploy-time risk, but worth nailing down before laptops are handed out.
+- **BLUE show APK / kiosk / data dir / expected versions TBD** — these are expected to iterate. Tooling absorbs this cleanly (drop new APK in `builds/` → re-run deploy); the only thing that can drift is `SHOW_EXPECTED_APK` in the conf, which supervisors should bump after each build refresh so the dashboard surfaces stale devices.
+- **`shows/KAGAMI.conf` SSID match** — if the venue's `KAGAMI` SSID differs from Pittsburgh's, the 180 RED need a USB-bench WiFi update like BLUE Phase A. Confirm SSID parity on day 1.
+- **Fleet-key auth tap** — manual, per (laptop, device) pair, unavoidable on user build 1.4.1. The 180 HK in BLUE Phase A are the bulk of these taps; the 24 PGH-Blue and the 180 RED won't need them (fleet key already trusted from PGH).
 - **Update gate vs `dev` branch** — every main script hard-stops if local HEAD differs from `origin/main`. On-site work should run from `main`. If hot-fixes are made on site, merge `dev` → `main`, tag, and re-run `./update.sh` on every operator laptop before continuing.

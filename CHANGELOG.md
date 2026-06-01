@@ -10,17 +10,57 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.1.0] — 2026-06-01 — Per-show Sheets integration + Osaka operator playbooks
+
+### Added
+- **Per-show Google Sheets integration.** `SHOW_SHEETS_URL` in `shows/<id>.conf` now points the toolkit at each show's own bound Apps Script + tracking workbook (KAGAMI: `Kagami Osaka - Device tracker`; KAGAMI_BLUE: `Kagami Osaka - Blue Show Device tracker`). `ml_provision.sh` / `ml_os_flash.sh` `update_sheet()` reads `$SHOW_SHEETS_URL`; an empty value is a clean no-op (bench dry-runs / shows without a workbook). Replaces the previous single-URL constant in both scripts (one of which was stale and pointing at an archived deployment).
+- **Osaka operator playbooks** — `docs/playbook_red_osaka.html` (180 RED devices, 9 sections, 33 steps) and `docs/playbook_blue_osaka.html` (~204 BLUE devices, Phase A USB-bench precursor + Phase B fleet flow, 37 steps). EN/JA side-by-side layout (CSS grid), printable A4 with page-break-aware CSS. SSD asset-transfer timing trick documented (attach SSD before power-on, listen for start/finish tones). Japanese pass is marked "translation draft — please review" pending Tin Drum bilingual staff QC.
+- `apps_script/Code.gs`: top-level `SHEET_TAB_NAME` const + header block documenting the per-workbook bound-deployment procedure. Pasting the same canonical script into each workbook's editor + editing one line is now the supported pattern for adding a new show's sheet.
+- `ml_show.sh init`: prompts for the show's `SHOW_SHEETS_URL` so on-site setup writes it straight into `shows/<id>.conf`.
+- `tests/test_sheet_integration.sh`: device-free regression suite (11 tests) covering per-show URL plumbing, opt-out behavior, the `ml_show.sh init` prompt flow, `Code.gs` parameterization, and a guard against stale `AKfycb…` URLs reappearing.
+
+### Changed
+- `ml_status.sh --csv`: expanded column set. Adds `hw_serial`, `kiosk_version`, `kiosk_installed`, `charging`, `disk_used_pct`, `hand_nav_on`, `data_missing_count`, `data_extra_count` so the CSV mirrors what the table, JSON, and dashboard expose rather than reporting a partial view.
+- `docs/flash_checklist.html`, `docs/setup_checklist.html`, `docs/headset_checklist.html`: legibility pass. Body 13→15px, step labels 13→15.5px, section headers 9→11px, code 10.5→12.5px, checkbox 15×15→18×18, max-width 640→720px, print `@page` margin 1.2cm→0.7cm. Content unchanged.
+- `docs/onsite_osaka.md`: rewritten as a supervisor-grade reference that delegates per-device steps to the new playbooks. Fleet counts corrected — 180 RED firm (80 per showtime × 2 + 20 spares) + ~204 BLUE target (= 24 PGH-flashed + ~180 HK, less DOA triage). BLUE `SHOW_SHEETS_URL` paste-in text added inline so the operator running `./ml_show.sh init` for `KAGAMI_BLUE` has it ready.
+
+### Fixed
+- `ml_deploy.sh`: shebang restored to `#!/usr/bin/env bash` (was `#!/opt/homebrew/bin/bash`, which broke on Intel Macs where Homebrew installs to `/usr/local`). The same fix landed for the other scripts in v0.5.8 but `ml_deploy.sh` had regressed. Usage examples also de-KAGAMI-ified (no more hardcoded `com.tindrum.kagamu` / `/sdcard/KAGAMI/`).
+- `ml_os_flash.sh`: post-flash manual-steps fallback (only reached when `ml_provision.sh` is missing) no longer hardcodes `builds/kagami.apk` / `/sdcard/KAGAMI/` paths; references the active show via `$SHOW_SSID` / `$ML_SHOW` instead.
+
+### Documentation
+- `README.md`, `PROVISIONING.md`, `DEPLOYMENT.md`, `FIELD_OPS.md`, `CLAUDE.md`, `TESTPLAN.md`, `docs/flash_checklist.html`, `docs/dashboard_controls_proposal.md`: consistency pass for the post-v1.0.0 state. Replaces stale "type the show id" prompt wording with the current Enter / `S`-to-switch behavior (the gate UX changed in v1.0.0 but several docs still described the old form). Replaces hardcoded `devices.txt` with per-show `devices/<show>.txt` (legacy file is still the read-only fallback). Replaces KAGAMI-hardcoded paths/packages with per-show `SHOW_*` references. Corrects the `ml_status.sh --fix` description (brightness uses `$SHOW_BRIGHTNESS`, not the old `50`). Removes the "per-show kiosk = open item" notes (landed in v1.0.0 as `SHOW_KIOSK_VERSION`). `CLAUDE.md` key files table extended with the new playbooks.
+
+---
+
 ## [Unreleased]
 
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
+(No unreleased changes since v1.1.0.)
+
+---
+
+## [v1.0.0] — 2026-05-22 — Fleet-health dashboard hardening + per-show kiosk identity
+
+### Added
+- `SHOW_KIOSK_VERSION` per-show config field. Kiosk *package* (`com.tindrum.kiosk`) is shared across shows, but the *versionName* baked into each build is per-show — `ml_status.sh` reads versionName via `dumpsys package` (the app label isn't readable over ADB), and `fleet_dashboard.html` flags a mis-loaded kiosk. KAGAMI ships `1.0`; per-show suffix (`1.0r` / `1.0b`) is a future config-only edit.
+- Offline-device surfacing. `ml_status.sh` diffs the expected fleet list against actually-online devices and emits `online:false` stubs, so a device in `devices/<show>.txt` that's not reachable shows up as a red `OFFLINE` row instead of vanishing. The dashboard backfills device# from a localStorage last-seen `ip → hw_serial` cache.
+- `ml_status.sh`: data-dir content classification. `/sdcard/$SHOW_DATA_DIR/` entries are partitioned into required (`SHOW_DATA_REQUIRED`, missing = trouble), optional (`SHOW_DATA_OPTIONAL`, absence is fine), and extraneous (anything else, e.g. pathological `data/data` recursion). Case-insensitive match — ML2 `/sdcard` resolves paths case-insensitively (`data == Data == DATA`), confirmed 2026-05-22.
+
+### Changed
+- `show_confirm`: gate UX. Was: operator types the show id to proceed. Now: prints the show banner, prompts `Press Enter to continue, or S for other available show configurations:`. Enter proceeds; `S` opens a numbered picker of the other configured shows (writes `.active_show`, exits cleanly so the operator re-runs the command). Inheritance via `ML_SHOW_CONFIRMED=1` unchanged — chained children stay silent.
+- `fleet_dashboard.html`: scope clarified. Dashboard surfaces *trouble that affects the show* (wrong OS/APK/kiosk, data dir missing/extraneous, extra `com.tindrum.*` packages, `/sdcard` over `SHOW_DISK_WARN_PCT`, hand-nav off, offline). Drift/compliance (sleep, dev mode, USB debugging, brightness, BT) is no longer on the dashboard — that's `ml_provision.sh --check` / `ml_status.sh --fix` territory.
+
 ### Fixed
-- `ml_provision.sh`: no longer uninstalls the kiosk. `com.tindrum.kiosk` is the toolkit's own home/launcher app (installed + set as HOME by `ml_deploy.sh`), but it was listed in `REMOVE_PACKAGES` and so was uninstalled on **every** non-`--check` provision — including standalone fleet drift remediation, which has no deploy after it to reinstall it. `REMOVE_PACKAGES` is now empty and the kiosk data dir is dropped from `REMOVE_DIRS`; foreign-show scrub (`An Ark`/`The Life`/`Medusa` + `/sdcard/AnArk`) is unchanged.
+- `ml_provision.sh`: no longer uninstalls the kiosk. `com.tindrum.kiosk` is the toolkit's own home/launcher app, but it was listed in `REMOVE_PACKAGES` and so was uninstalled on **every** non-`--check` provision — including standalone fleet drift remediation, which has no deploy after it to reinstall it. `REMOVE_PACKAGES` is now empty and the kiosk data dir is dropped from `REMOVE_DIRS`; foreign-show scrub (`An Ark` / `The Life` / `Medusa` + `/sdcard/AnArk`) is unchanged.
 - `ml_status.sh --fix`: brightness fix now also forces adaptive/auto-brightness off (`screen_brightness_mode 0`) before writing `screen_brightness`. Previously it wrote the value only, so with auto-brightness on ML2 recomputed it from ambient light and the device drifted back (field: 3 devices stuck at ~50% that `--fix` wouldn't correct). `--fix` now corrects this drift even though `screen_brightness_mode` isn't a displayed status column.
 
 ### Documentation
 - `CLAUDE.md`: documented the CLI argument conventions (verb-dispatch vs single-purpose) and the default-scope rule (fleet-by-default vs single-device + `--fleet` opt-in).
+- `docs/onsite_osaka.md`: on-site runbook for the two-fleet KAGAMI / KAGAMI_BLUE Osaka deployment at VS Umeda. Documents the Pittsburgh-202 land-and-verify flow and the Osaka-180 bench-op flow (BLUE), including the unavoidable per-(laptop, device) "Allow USB debugging" tap on the 1.4.1 user build.
 - `asset_serial_list.csv`: synced from the Google tracking sheet (canonical on-site device#→serial inventory; ~half the fleet, rest in Osaka).
+- ADB pre-auth docs corrected: `adb_keys` injection runs but doesn't actually suppress the dialog on the 1.4.1 user build. The shared fleet key (`authorized_keys/adbkey_kagami_fleet`) is what keeps the fleet usable across operators — one Allow tap per device authorizes the fleet key, then every operator laptop is trusted.
 
 ---
 

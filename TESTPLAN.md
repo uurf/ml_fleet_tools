@@ -41,7 +41,7 @@ production run so the gate re-arms.
 | A1 | `./ml_show.sh` | Reports `Active show: KAGAMI` (set in Setup above). |
 | A2 | `ML_DEV_TEST=1 ./ml_status.sh` | (no device attached) passes gate, prints `Show: KAGAMI` banner, then `No devices online` — does NOT stop at the update gate |
 | A3 | `./ml_show.sh init` | Answer the prompts with a throwaway id; it writes `shows/<id>.conf`. Then run `./ml_show.sh use KAGAMI` to switch back. |
-| A4 | Open `docs/setup_checklist.html` and `docs/flash_checklist.html` | Both reference the "Select the show" / "Active show is set" step and the **type the show id** confirm — and that wording matches what the scripts actually do in A2 and B1. |
+| A4 | Open `docs/setup_checklist.html` and `docs/flash_checklist.html` | Both reference the "Select the show" / "Active show is set" step and the show-confirm gate (**Enter to proceed, S to switch shows**) — and that wording matches what the scripts actually do in A2 and B1. |
 
 ---
 
@@ -51,7 +51,7 @@ Run `ML_DEV_TEST=1 ./ml_os_flash.sh` and verify, in order:
 
 | # | Watch for | Pass criteria |
 |---|---|---|
-| B1 | Pre-flash confirm | Prompts `Type the show id ('KAGAMI') to continue:`. A wrong id aborts; `KAGAMI` proceeds. |
+| B1 | Pre-flash confirm | Prompts `Press Enter to continue, or S for other available show configurations:`. Enter proceeds; S opens a numbered picker of other configured shows. |
 | B2 | Chain hand-off | Provision and deploy do **not** re-prompt for the show (inherited confirmation). |
 | B3 | WiFi section in provision | Device connects to KAGAMI (not "Auto-connect failed"). Note whether `svc wifi enable` succeeded or errored on the device. |
 | B4 | Manual-steps gate | Checklist prints AND the script **waits** at "Press Enter when manual steps are complete". Complete the headset Device Auth + manual settings, then press Enter. **This is the key regression — confirm it actually blocks.** |
@@ -85,7 +85,7 @@ Run `ML_DEV_TEST=1 ./ml_os_flash.sh` and verify, in order:
 
 ## After the test
 
-- Confirm the printed checklists match reality: `docs/flash_checklist.html` (typed show-id confirm + active-show precondition) and `docs/setup_checklist.html` (one-time `./ml_show.sh use KAGAMI`). `docs/headset_checklist.html` is unaffected — no change expected.
+- Confirm the printed checklists match reality: `docs/flash_checklist.html` (show-confirm gate + active-show precondition) and `docs/setup_checklist.html` (one-time `./ml_show.sh use KAGAMI`). `docs/headset_checklist.html` is unaffected — no change expected.
 - All sections pass → the `dev` → `main` PR is justified.
 - Record any device-specific command corrections (esp. B3/D) before merging.
 - Ensure `ML_DEV_TEST` is unset on production/operator machines so the

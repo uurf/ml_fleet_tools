@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAGAMI Blue Osaka — Operator Playbook</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+    --warn-bg: #fff8dc;
+    --warn-border: #d4b853;
+    --tip-bg: #e8f0fe;
+    --tip-border: #5a85d8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 1.5rem 1.75rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ja {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS PGothic', sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .title-ja { font-size: 15px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .subtitle { font-size: 12.5px; color: var(--muted); }
+  .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 1.2rem; }
+  .meta em { font-style: normal; font-weight: 700; color: var(--ink); }
+
+  .draft-warning {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.4rem;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .draft-warning strong { display: block; margin-bottom: 2px; }
+
+  .tip {
+    background: var(--tip-bg);
+    border-left: 3px solid var(--tip-border);
+    padding: 0.5rem 0.8rem;
+    margin: 0.4rem 0;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .tip-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin: 0.8rem 0 1.2rem;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+    display: flex;
+    gap: 1rem;
+  }
+  .section-label .en-h, .section-label .ja-h { flex: 1; }
+
+  .phase-header {
+    margin: 2rem 0 0.4rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--ink);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  .phase-header .label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .phase-header .title-line { font-size: 16px; font-weight: 700; margin-top: 2px; }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.7rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-of-type { border-bottom: none; }
+
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .lang-block .step-label {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 3px;
+  }
+
+  .lang-block .step-detail {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .lang-block .step-detail + .step-detail { margin-top: 4px; }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 3px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    margin-top: 5px;
+    letter-spacing: 0.02em;
+  }
+
+  .repeat {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  footer {
+    margin-top: 1.4rem;
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0.6rem 0.8rem; max-width: none; }
+    @page { margin: 0.7cm; size: A4; }
+    .step { page-break-inside: avoid; }
+    .phase-header { page-break-after: avoid; }
+    .section-label { page-break-after: avoid; }
+    .repeat { page-break-inside: avoid; }
+    .draft-warning, .tip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Blue Osaka Operator Playbook</div>
+    <div class="title-ja ja">青ショー 大阪 オペレーター手順書</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<div class="meta">
+  Devices: <em>24 PGH-flashed + ~180 HK ≈ 204 total</em> (HK count + DOA triage TBD — supervisor confirms final number on site) ·
+  WiFi: <em>KAGAMI-Blue</em> (TBD — confirm with supervisor) ·
+  Show context: <em>KAGAMI_BLUE</em><br>
+  <span class="ja">対象機: <em>PGH フラッシュ済24台 ＋ HK 約180台 ≈ 合計204台</em>（HK の実数・初期故障数は現地でスーパーバイザーが確定）・WiFi: <em>KAGAMI-Blue</em>（仮 — スーパーバイザーに確認）・ショー: <em>KAGAMI_BLUE</em></span>
+</div>
+
+<div class="draft-warning">
+  <strong>Translation draft — please review.</strong>
+  <span class="ja">翻訳は下書き段階です。レビューをお願いします。</span><br>
+  Japanese pass is a first draft by the toolkit author, not a native speaker. Tin Drum bilingual staff should correct anything that reads awkwardly before this is handed to operators.
+  <span class="ja">ネイティブ翻訳ではないため、Tin Drum の日本語スタッフが必要に応じて修正してください。</span>
+</div>
+
+<div class="tip-grid">
+  <div class="tip">
+    <strong>Two phases.</strong> BLUE devices weren't fully provisioned for this show before shipping (HK 180) or were provisioned for KAGAMI Red (PGH 24). <em>Phase A</em> is a per-device USB-bench precursor that joins them to the BLUE WiFi and enables WiFi ADB. <em>Phase B</em> is the same fleet flow as the Red playbook, run once Phase A is complete on every device.
+  </div>
+  <div class="tip ja">
+    <strong>2フェーズ構成。</strong>BLUE 対象機は出荷時にこのショー向けプロビジョン未完了（HK 180台）、または KAGAMI Red 用にプロビジョン済（PGH 24台）です。<em>フェーズ A</em> は各デバイスに USB 接続して BLUE WiFi に接続・WiFi ADB を有効化する個別作業。<em>フェーズ B</em> は全機がフェーズ A を完了した後に実行する、Red 手順書と同じフリート作業です。
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 0 — PRE-FLIGHT
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">0 · Before you start (one-time per laptop)</span>
+  <span class="ja-h ja">0・開始前の準備（ノートPCごとに1回）</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Toolkit installed and up to date</div>
+      <div class="step-detail">Run <code>cd ~/Developer/ml_toolkit &amp;&amp; ./update.sh</code>. If you haven't installed yet, follow <code>docs/setup_checklist.html</code> first.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ツールキットをインストール済み・最新版である</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit &amp;&amp; ./update.sh</code> を実行。未インストールの場合はまず <code>docs/setup_checklist.html</code> を参照してください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Shared Fleet ADB key in place</div>
+      <div class="step-detail">Supervisor provides <code>adbkey_kagami_fleet</code> on a USB drive. Copy to <code>~/Developer/ml_toolkit/authorized_keys/</code> and re-run <code>./install.sh</code>. Look for "Fleet ADB key installed".</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">共有フリートADBキーが設定済み</div>
+      <div class="step-detail">スーパーバイザーから配布される USB ドライブ内の <code>adbkey_kagami_fleet</code> を <code>~/Developer/ml_toolkit/authorized_keys/</code> にコピーし、再度 <code>./install.sh</code> を実行。"Fleet ADB key installed" の表示を確認してください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Create the KAGAMI_BLUE show config</div>
+      <div class="step-detail">If your laptop doesn't yet have <code>shows/KAGAMI_BLUE.conf</code>, run <code>./ml_show.sh init</code>. Answer the prompts with the values supervisor provides:</div>
+      <div class="step-detail">
+        Show id: <em>KAGAMI_BLUE</em><br>
+        SSID: <em>KAGAMI-Blue</em> (confirm with supervisor)<br>
+        Password: <em>KAGAmius</em> (confirm)<br>
+        Security: <em>wpa2</em><br>
+        Show package, brightness, data dir, expected APK/OS, kiosk version: ask the supervisor running the deploy for current values<br>
+        Sheets URL: ask the supervisor for the BLUE Apps Script Web App URL
+      </div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">KAGAMI_BLUE のショー設定を作成</div>
+      <div class="step-detail"><code>shows/KAGAMI_BLUE.conf</code> がまだ存在しない場合、<code>./ml_show.sh init</code> を実行。スーパーバイザー提供値を入力します:</div>
+      <div class="step-detail">
+        Show id: <em>KAGAMI_BLUE</em><br>
+        SSID: <em>KAGAMI-Blue</em>（スーパーバイザーに確認）<br>
+        Password: <em>KAGAmius</em>（確認）<br>
+        Security: <em>wpa2</em><br>
+        ショーパッケージ・明るさ・データディレクトリ・期待 APK/OS・キオスクバージョン: デプロイ担当のスーパーバイザーに最新値を確認<br>
+        Sheets URL: スーパーバイザーに BLUE Apps Script Web アプリ URL を確認
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Set active show to KAGAMI_BLUE</div>
+      <div class="step-detail"><code>./ml_show.sh use KAGAMI_BLUE</code>, then <code>./ml_show.sh</code> — should report <em>Active show: KAGAMI_BLUE</em>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">アクティブショーを KAGAMI_BLUE に設定</div>
+      <div class="step-detail"><code>./ml_show.sh use KAGAMI_BLUE</code> を実行後、<code>./ml_show.sh</code> で <em>Active show: KAGAMI_BLUE</em> を確認。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Show APK and kiosk APK in builds/ when available</div>
+      <div class="step-detail">Supervisor places the latest BLUE show build and kiosk build in <code>~/Developer/ml_toolkit/builds/</code>. Phase A can proceed without them — if no APKs are present, Phase A is settings + WiFi only. Phase B re-deploys whenever new builds arrive.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ショー APK・キオスク APK を builds/ に配置（入手次第）</div>
+      <div class="step-detail">スーパーバイザーが最新の BLUE ショービルドとキオスクビルドを <code>~/Developer/ml_toolkit/builds/</code> に配置します。フェーズ A は APK なしでも実行可能（設定 + WiFi のみ）。新ビルド到着時はフェーズ B で再デプロイ。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">KAGAMI-Blue WiFi broadcasting in the room</div>
+      <div class="step-detail">SSID: <em>KAGAMI-Blue</em> · Password: <em>KAGAmius</em> (TBD — confirm). Your laptop's WiFi must also be on this SSID for Phase B. Phase A is USB so it doesn't depend on WiFi, but devices need the WiFi to be live when they're powered on.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">会場で KAGAMI-Blue WiFi が稼働している</div>
+      <div class="step-detail">SSID: <em>KAGAMI-Blue</em>・パスワード: <em>KAGAmius</em>（仮 — 確認）。フェーズ B ではノート PC もこの SSID に接続が必要。フェーズ A は USB 接続のため WiFi に依存しませんが、デバイス起動時には WiFi が稼働していることが必要です。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PHASE A — USB BENCH PRECURSOR
+     ============================================================ -->
+<div class="phase-header">
+  <div>
+    <div class="label">Phase A</div>
+    <div class="title-line">USB bench: join BLUE WiFi + enable WiFi ADB</div>
+  </div>
+  <div class="ja">
+    <div class="label">フェーズ A</div>
+    <div class="title-line">USB ベンチ: BLUE WiFi 接続＋WiFi ADB 有効化</div>
+  </div>
+</div>
+
+<div class="tip-grid">
+  <div class="tip">
+    <strong>Throughput.</strong> ~5 minutes per functional device including the Allow tap and the manual checklist. With 8 operator stations (4 operators × 2 laptops), ~200 functional devices take ~2.5 hours. One device per laptop at a time. <strong>If a HK unit won't boot or won't respond over ADB, set it aside and report to the supervisor — don't burn bench time on hardware faults.</strong>
+  </div>
+  <div class="tip ja">
+    <strong>処理速度の目安。</strong>1台あたり約5分（許可ダイアログ＋手動チェックリスト込み）。8 ステーション（4 オペレーター × 2 ノートPC）で 約200台＝合計約2.5時間。1ノートPCあたり同時1台。<strong>HK の機体が起動しない、または ADB が応答しない場合は脇に置きスーパーバイザーに報告してください — 故障機にベンチ時間を費やさない。</strong>
+  </div>
+</div>
+
+<div class="section-label">
+  <span class="en-h">A · Per device (repeat across stations until every functional unit is done)</span>
+  <span class="ja-h ja">A・各デバイスごと（全ステーション合計で全稼働機が完了するまで繰り返し）</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Connect device to MacBook via USB-C</div>
+      <div class="step-detail">One device at a time per laptop. Plug the Compute Pack into your USB-C port.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">デバイスを USB-C で MacBook に接続</div>
+      <div class="step-detail">1 ノート PC につき同時 1 台。Compute Pack を USB-C ポートに接続。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Check that the device powers on and shows up</div>
+      <div class="step-detail">Within ~10 seconds the device should boot and appear in <code>adb devices</code>. If it won't power on, or doesn't show up after a power-cycle and a different USB-C cable, <em>set it aside in the DOA stack</em> and pick up the next unit. Note the carnet/case number for the supervisor.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">デバイスが起動し認識されることを確認</div>
+      <div class="step-detail">約10秒以内に起動し <code>adb devices</code> に表示されるはず。起動しない、または再起動・USB-C ケーブル交換後も認識されない場合は<em>故障機スタックに脇置き</em>し、次の機体へ。スーパーバイザー報告用にカルネ/ケース番号を控える。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Tap "Allow USB debugging" in the headset (first connect)</div>
+      <div class="step-detail">For HK devices (never seen this laptop before): a dialog appears in the headset on first connect. Put the headset on, check <em>Always allow from this computer</em>, tap <em>Allow</em>.</div>
+      <div class="step-detail">For PGH-flashed devices: dialog may not appear (fleet key already trusted). Either way, proceed when the device shows up in <code>adb devices</code>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ヘッドセット内で「USB デバッグを許可」をタップ（初回接続時）</div>
+      <div class="step-detail">HK デバイス（このノート PC に初めて接続）の場合、初回接続時にダイアログが表示されます。ヘッドセットを装着し <em>このコンピュータを常に許可</em> をチェック、<em>許可</em> をタップ。</div>
+      <div class="step-detail">PGH フラッシュ済みデバイスはダイアログが表示されない場合あり（フリートキーが既に信頼済み）。<code>adb devices</code> でデバイスが認識されたら次へ進んでください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Dismiss "USB Device Detected"</div>
+      <div class="step-detail">A second dialog appears on every connection regardless of authorization — just tap <em>OK</em>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">「USB デバイスを検出」を閉じる</div>
+      <div class="step-detail">認証状態に関わらず接続のたびに表示される2つ目のダイアログです。<em>OK</em> をタップしてください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Run provision (with deploy if builds are ready)</div>
+      <div class="step-detail">If show + kiosk APKs are in <code>builds/</code>: <code>./ml_provision.sh --deploy</code>. This applies settings, joins KAGAMI-Blue WiFi, runs the manual-headset checklist gate, installs APKs over USB, then enables WiFi ADB.</div>
+      <div class="step-detail">If APKs aren't ready yet: <code>./ml_provision.sh</code> (no <code>--deploy</code>). Settings + WiFi + WiFi ADB only; APK install happens later in Phase B.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">プロビジョンを実行（ビルドが揃っていればデプロイも）</div>
+      <div class="step-detail"><code>builds/</code> にショー＋キオスク APK がある場合: <code>./ml_provision.sh --deploy</code>。設定適用、KAGAMI-Blue WiFi 接続、ヘッドセット手動チェックリスト確認、USB 経由 APK インストール、最後に WiFi ADB を有効化します。</div>
+      <div class="step-detail">APK が未到着の場合: <code>./ml_provision.sh</code>（<code>--deploy</code> なし）。設定 + WiFi + WiFi ADB のみ。APK インストールはフェーズ B で実施します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm the show — press Enter</div>
+      <div class="step-detail">Prompt: <em>"Press Enter to continue, or S for other available show configurations:"</em>. Banner above must show <em>Show: KAGAMI_BLUE</em>. Press <em>Enter</em>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ショーを確認 → Enter を押す</div>
+      <div class="step-detail">プロンプト <em>"Press Enter to continue, or S for other available show configurations:"</em>。上部バナーが <em>Show: KAGAMI_BLUE</em> であることを確認し、<em>Enter</em> を押します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Enter device tracking info if prompted</div>
+      <div class="step-detail">If the script prompts for device number / case number / operator initials, fill them in. (Standalone Phase A may not prompt — that's fine.)</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">プロンプトが出たらデバイス追跡情報を入力</div>
+      <div class="step-detail">デバイス番号・ケース番号・オペレーターイニシャルの入力プロンプトが表示されたら入力。フェーズ A 単独実行ではプロンプトが出ない場合もあり、その場合は不要です。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Complete the manual-headset checklist gate</div>
+      <div class="step-detail">Script pauses at: <em>"Press Enter when manual steps are complete..."</em>. While paused, complete the items in <code>docs/headset_checklist.html</code> — Display Override, Segmented/Global/Max Dimming, Compute Pack Standby = Off, OS Updater = Never. Then press <em>Enter</em>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ヘッドセット手動チェックリストを完了</div>
+      <div class="step-detail">スクリプトが <em>"Press Enter when manual steps are complete..."</em> で一時停止します。停止中に <code>docs/headset_checklist.html</code> の項目を完了 — Display Override、Segmented/Global/Max Dimming、Compute Pack Standby = Off、OS Updater = Never。完了後 <em>Enter</em> を押す。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Note the device IP from the final output</div>
+      <div class="step-detail">The script prints <em>Device IP: 10.x.x.x</em>. Confirm the line <em>WiFi ADB enabled on port 5555</em> appears. The USB connection drops here — that's expected, the device is on KAGAMI-Blue now.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">最終出力からデバイス IP を記録</div>
+      <div class="step-detail">スクリプトが <em>Device IP: 10.x.x.x</em> を表示します。<em>WiFi ADB enabled on port 5555</em> の行も確認。ここで USB 接続が切れるのは正常 — デバイスは KAGAMI-Blue に接続済みです。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Disconnect USB and move to next device</div>
+      <div class="step-detail">Stage the just-finished device aside (still powered on so it stays on the BLUE WiFi). Pick up the next device, return to step A1.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">USB を外し次のデバイスへ</div>
+      <div class="step-detail">完了したデバイスは電源を入れたまま脇に置きます（KAGAMI-Blue WiFi に接続を維持）。次のデバイスを取り、A1 へ戻ります。</div>
+    </div>
+  </div>
+</div>
+
+<div class="repeat">
+  <div>Phase A done across all stations? → Continue to Phase B.</div>
+  <div class="ja">全ステーションでフェーズ A 完了？ → フェーズ B へ進む。</div>
+</div>
+
+<!-- ============================================================
+     PHASE B — FLEET FLOW
+     ============================================================ -->
+<div class="phase-header">
+  <div>
+    <div class="label">Phase B</div>
+    <div class="title-line">Fleet deploy + asset transfer</div>
+  </div>
+  <div class="ja">
+    <div class="label">フェーズ B</div>
+    <div class="title-line">フリートデプロイ＋アセット転送</div>
+  </div>
+</div>
+
+<div class="tip-grid">
+  <div class="tip">
+    <strong>Same as Red Phase B.</strong> Once every BLUE device is on the KAGAMI-Blue network and reachable over WiFi ADB, the rest is identical to the Red playbook — just with the BLUE show context active. New builds can be re-deployed at any time; the longest wait is the WiFi APK install, not flashing (we are not flashing on site).
+  </div>
+  <div class="tip ja">
+    <strong>Red のフェーズ B と同じ。</strong>BLUE 全機が KAGAMI-Blue ネットワーク上で WiFi ADB 到達可能になれば、以降は Red 手順書と同一です（ショーコンテキストが BLUE になるだけ）。新ビルドはいつでも再デプロイ可能。最大の待ち時間は WiFi 経由の APK インストールで、フラッシュではありません（現地ではフラッシュは行いません）。
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION B — SCAN THE FLEET
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">B · Inventory the BLUE fleet on the network</span>
+  <span class="ja-h ja">B・ネットワーク上の BLUE フリートを確認</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm devices are powered on and on KAGAMI-Blue</div>
+      <div class="step-detail">If devices were staged off after Phase A, power them on now. They auto-join KAGAMI-Blue WiFi from the credentials applied during Phase A.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">全機が起動し KAGAMI-Blue に接続されていることを確認</div>
+      <div class="step-detail">フェーズ A 後に電源を切った場合は今ここで再起動。フェーズ A で設定された認証情報により KAGAMI-Blue WiFi に自動接続されます。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Scan the network for ML2 devices</div>
+      <div class="step-detail"><code>./utilities/ml_scan.sh</code> writes <code>devices/KAGAMI_BLUE.txt</code>. Confirm the count matches the supervisor's expected total (= 24 PGH + functional HK units that cleared Phase A). If short, power-cycle the missing devices and rescan with <code>--append</code>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ネットワーク上の ML2 デバイスをスキャン</div>
+      <div class="step-detail"><code>./utilities/ml_scan.sh</code> が <code>devices/KAGAMI_BLUE.txt</code> を作成します。台数がスーパーバイザー確定の合計値（24 PGH ＋ フェーズ A 完了済の HK 稼働機）と一致することを確認。不足している場合は該当機を再起動し、<code>--append</code> で再スキャン。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION C — DRIFT CHECK
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">C · Drift check</span>
+  <span class="ja-h ja">C・ドリフトチェック</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Run fleet drift check</div>
+      <div class="step-detail"><code>./ml_provision.sh --fleet --check</code>. Read-only audit. Phase A should have brought every device to the expected baseline — drift here usually means a device that was missed in Phase A or a settings change that didn't take.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリート全体のドリフトチェック</div>
+      <div class="step-detail"><code>./ml_provision.sh --fleet --check</code> を実行（読み取り専用）。フェーズ A 後は基準値に揃っているはず — ドリフトが出た場合は、フェーズ A で漏れたデバイスか、設定が適用されなかったケースの可能性。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Auto-fix if drift is reported</div>
+      <div class="step-detail"><code>./ml_status.sh --fix</code> for stay-awake / BT / brightness drift. For anything else, USB-bench the offending device again (back to Phase A for that unit).</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ドリフトが報告されたら自動修復</div>
+      <div class="step-detail">スリープ防止・BT・明るさのドリフトは <code>./ml_status.sh --fix</code>。それ以外のドリフトは、該当機をフェーズ A で USB ベンチからやり直してください。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION D — DEPLOY
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">D · Deploy the BLUE show + kiosk APKs</span>
+  <span class="ja-h ja">D・BLUE ショー APK＋キオスク APK のデプロイ</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm the BLUE builds are in builds/</div>
+      <div class="step-detail"><code>ls -la ~/Developer/ml_toolkit/builds/*.apk</code>. The BLUE show APK package name differs from Red — confirm with supervisor. The kiosk APK is shared between shows, but the kiosk versionName is per-show (BLUE's will be e.g. <code>1.0b</code>).</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">BLUE 用ビルドが builds/ にあることを確認</div>
+      <div class="step-detail"><code>ls -la ~/Developer/ml_toolkit/builds/*.apk</code>。BLUE ショー APK のパッケージ名は Red と異なります — スーパーバイザーに確認してください。キオスク APK パッケージは共通ですが、versionName はショーごとに異なります（BLUE は <code>1.0b</code> 想定）。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Start the deploy</div>
+      <div class="step-detail"><code>./ml_deploy.sh deploy</code>. Connects to every device in <code>devices/KAGAMI_BLUE.txt</code>. At the confirm prompt, banner must show <em>Show: KAGAMI_BLUE</em> — press <em>Enter</em> to proceed.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">デプロイを開始</div>
+      <div class="step-detail"><code>./ml_deploy.sh deploy</code> を実行。<code>devices/KAGAMI_BLUE.txt</code> の全機に接続。確認プロンプトでバナーが <em>Show: KAGAMI_BLUE</em> であることを確認し、<em>Enter</em> を押します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Select APKs and wait</div>
+      <div class="step-detail">Pick the APK numbers (e.g. <code>1 2</code>), press Enter. The script installs, sets kiosk as home, persists, and reboots. Allow 5–15 minutes depending on build size + AP load. End state: <em>Deploy complete. Devices are rebooting.</em></div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">APK を選択し完了を待つ</div>
+      <div class="step-detail">APK 番号を入力（例: <code>1 2</code>）、Enter を押す。インストール、キオスクをホームに設定、保存、再起動を実行。所要時間 5〜15分（ビルドサイズと AP 負荷次第）。終了表示: <em>Deploy complete. Devices are rebooting.</em></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION E — DASHBOARD
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">E · Confirm fleet health via the dashboard</span>
+  <span class="ja-h ja">E・ダッシュボードで全機の状態を確認</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Wait ~45s for reboots to finish, then generate snapshot</div>
+      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code>. Open <code>fleet_dashboard.html</code> and drag the JSON onto it.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">再起動完了まで約45秒待ち、スナップショット生成</div>
+      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code> を実行。<code>fleet_dashboard.html</code> を開き、JSON をドラッグ＆ドロップ。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Expected state at this point</div>
+      <div class="step-detail">Every BLUE device that cleared Phase A online; BLUE show APK + kiosk version matching <code>shows/KAGAMI_BLUE.conf</code>; no OFFLINE rows; no extraneous <code>com.tindrum.*</code> packages. Data folder rows still red (assets not loaded yet).</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">この時点での期待状態</div>
+      <div class="step-detail">フェーズ A を完了した全 BLUE 機がオンライン、BLUE ショー APK・キオスクバージョンが <code>shows/KAGAMI_BLUE.conf</code> と一致、OFFLINE 行なし、余分な <code>com.tindrum.*</code> パッケージなし。データフォルダ行はまだ赤（アセット未転送）。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Report any unexpected red rows</div>
+      <div class="step-detail">Note IPs of any devices showing wrong APK / kiosk / extraneous packages and hand to supervisor before proceeding.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">想定外の赤行はスーパーバイザーへ報告</div>
+      <div class="step-detail">誤った APK・キオスク・余分なパッケージが検出された IP を記録し、次へ進む前にスーパーバイザーに報告。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION F — SHUTDOWN
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">F · Shut the fleet down for asset transfer</span>
+  <span class="ja-h ja">F・アセット転送のため全機をシャットダウン</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Shut down all devices</div>
+      <div class="step-detail"><code>./ml_deploy.sh shutdown</code>. Required for the timing-critical SSD load in Section G — the show APK only triggers its SSD copy on a fresh power-on with the SSD already attached.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">全機をシャットダウン</div>
+      <div class="step-detail"><code>./ml_deploy.sh shutdown</code> を実行。セクション G のタイミング依存の SSD ロードに必要 — ショー APK は SSD 接続済みの状態で起動した直後にのみコピー処理を起動します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Wait for each device's fan to stop</div>
+      <div class="step-detail">Don't attach SSDs or proceed while the Compute Pack fan is spinning.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">各デバイスのファンが停止するまで待つ</div>
+      <div class="step-detail">Compute Pack のファンが回っている間は SSD を接続したり次の作業に進まないでください。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION G — SSD ASSET LOAD
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">G · Load BLUE show assets per device via SSD</span>
+  <span class="ja-h ja">G・SSD から各デバイスへ BLUE ショーアセットを転送</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">One device at a time — order is strict</div>
+      <div class="step-detail">Always: <em>attach SSD → power on device → put on headset → listen</em>. The show APK looks for the SSD at launch; missing the window means the copy doesn't start.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">1台ずつ作業 — 順序を厳守</div>
+      <div class="step-detail">常に <em>SSD 接続 → デバイス電源オン → ヘッドセット装着 → 音を聞く</em>。ショー APK は起動時にのみ SSD を検出。タイミングを逃すとコピーは開始しません。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Attach the BLUE SSD before powering on</div>
+      <div class="step-detail">USB-C SSD with the BLUE asset payload. Plug into the Compute Pack while the device is still off.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">起動前に BLUE 用 SSD を接続</div>
+      <div class="step-detail">BLUE アセットが入った USB-C SSD を、デバイスがオフの状態のまま Compute Pack に接続。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Power on, put on headset, listen for start tones</div>
+      <div class="step-detail">Hold <em>Power</em>. The kiosk + show APK launch. A start tone series plays when copy begins.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">電源オン、ヘッドセット装着、開始音を聞く</div>
+      <div class="step-detail"><em>電源</em> を長押し。キオスクとショー APK が起動。コピー開始時に開始音のシリーズが鳴ります。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Wait for the finish tone series</div>
+      <div class="step-detail">Second tone series = copy complete. Safe to remove the SSD only after the finish tones.</div>
+      <div class="step-detail">No tones within ~30s of boot? Timing window missed. Shut down, re-attach SSD, power on again.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">終了音が鳴るまで待つ</div>
+      <div class="step-detail">終了音が鳴ったらコピー完了。これを聞いてから SSD を外してください。</div>
+      <div class="step-detail">起動から約30秒経っても音が鳴らない場合はタイミング失敗。シャットダウン → SSD 再接続 → 再起動でやり直してください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Remove SSD, leave device powered on</div>
+      <div class="step-detail">Detach SSD. Device stays on for the final dashboard sweep in Section H.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">SSD を外し、デバイスは起動したまま残す</div>
+      <div class="step-detail">SSD を取り外します。セクション H の最終ダッシュボード取得のため、電源は入れたままにしてください。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Repeat across operators</div>
+      <div class="step-detail">~200 functional devices × ~3 minutes per device. With multiple SSDs (one per operator), 8 stations finish in ~75 minutes of device-time.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">複数オペレーターで繰り返し</div>
+      <div class="step-detail">約200台 × 約3分。SSD を複数（1 オペレーター 1 台）用意し、8 ステーション並列で約75分（実時間）で完了見込み。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION H — FINAL VERIFY
+     ============================================================ -->
+<div class="section-label">
+  <span class="en-h">H · Verify the BLUE fleet is show-ready</span>
+  <span class="ja-h ja">H・BLUE フリートのショー本番準備完了を確認</span>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Re-run the status sweep</div>
+      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code>, reload <code>fleet_dashboard.html</code>.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ステータススイープを再実行</div>
+      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code> を実行し、<code>fleet_dashboard.html</code> を再読み込み。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm data-folder rows are clean</div>
+      <div class="step-detail">Devices that completed the SSD copy should no longer flag "data missing". Disk usage rises — that's expected.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">データフォルダ行がクリーンになっていることを確認</div>
+      <div class="step-detail">SSD コピーが完了したデバイスは「data missing」フラグが消えるはず。ディスク使用量増加は想定どおり。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Report to supervisor</div>
+      <div class="step-detail">Note All-OK / Issues / Offline counts, any stubborn red IPs, and hand the dashboard view to the supervisor. They decide go / no-go.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">スーパーバイザーに報告</div>
+      <div class="step-detail">All-OK・Issues・Offline 件数、しつこく赤のままの IP を記録し、ダッシュボードをスーパーバイザーに引き継ぎます。本番可否はスーパーバイザーが判断。</div>
+    </div>
+  </div>
+</div>
+
+<div class="repeat">
+  <div>BLUE fleet is show-ready.</div>
+  <div class="ja">BLUE フリート、本番準備完了。</div>
+</div>
+
+<footer>
+  <span>KAGAMI / Tin Drum &nbsp;·&nbsp; Blue Osaka operator playbook &nbsp;·&nbsp; Translation draft</span>
+  <span>docs/playbook_blue_osaka.html</span>
+</footer>
+
+</body>
+</html>
