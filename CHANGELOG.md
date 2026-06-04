@@ -10,6 +10,23 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.1.1] — 2026-06-04 — Inline fleet-key install + bilingual setup checklist + ADB-key cleanup
+
+### Added
+- **`install.sh` now waits for the fleet key inline.** On a fresh machine the installer pauses after cloning, prompts the operator to drop `adbkey_kagami_fleet` into `authorized_keys/`, waits for confirmation, activates it, and only then reports `Installation complete!`. It reads from `/dev/tty` so the prompt works even under the `curl … | bash` one-liner (where stdin is the piped script, not the keyboard). Replaces the old "installer reports complete, then separately place the key and run it again" two-pass flow.
+- **Japanese translation column on `docs/setup_checklist.html`.** The machine-setup checklist is now bilingual EN | JA (two-column CSS grid), matching the Osaka operator playbooks. Carries the same "translation draft — please review" banner pending Tin Drum bilingual QC.
+
+### Changed
+- **`ml_provision.sh`: ADB-key injection disabled.** The block that pushed `authorized_keys/*` into the device's `/data/misc/adb/adb_keys` is commented out. It is a no-op on the production ML2 1.4.1 *user* build — the secure OS ignores pre-seeded `adb_keys` — and its "All authorized keys pushed" output falsely implied ADB auth was handled. What actually authorizes the fleet is the shared fleet key plus a single in-headset "Allow" tap per device. Re-enable only for userdebug/non-secure builds. (`ml_os_flash.sh`'s equivalent injection is intentionally left as-is — flash is the rarely-run, problem-device-only path.)
+- **`install.sh` internals + honest completion.** De-duplicated key activation (was copy-pasted across two branches) into `install_fleet_key()`, added `fleet_key_matches()` for clean "already configured" detection on re-run, and made the final banner/Next-steps reflect whether the key actually installed (if not, it leads with the remaining fleet-key task instead of a flat "complete").
+- **`docs/setup_checklist.html`: single-run flow + optional OS-image section.** Replaced the "copy key / run installer again" steps with "add the fleet key when prompted" plus a fallback step for operators who don't yet have the key. Marked the **OS image** section *Optional* (EN/JA badge + note) — it's only needed to flash a device to a clean factory MLOS state, which is occasional and for specific problem devices.
+
+### Documentation
+- **`authorized_keys/README.txt` rewritten around the fleet-key model.** Describes the shared `adbkey_kagami_fleet` as the sole working mechanism (every laptop installs it as `~/.android/adbkey` → one identity → one "Allow" tap per device, *not* per laptop). Drops the obsolete "commit and push your machine's `.pub`" instructions; the per-machine `.pub` files are inert on the production build (gitignored, no effect) and now documented as such.
+- `install.sh`: "Action required" message names `adbkey_kagami_fleet` (was `adbkey`).
+
+---
+
 ## [v1.1.0] — 2026-06-01 — Per-show Sheets integration + Osaka operator playbooks
 
 ### Added
@@ -37,7 +54,7 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
-(No unreleased changes since v1.1.0.)
+(No unreleased changes since v1.1.1.)
 
 ---
 
