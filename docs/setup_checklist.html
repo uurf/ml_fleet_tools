@@ -11,6 +11,8 @@
     --rule: #ccc;
     --bg: #fff;
     --badge-bg: #f0f0f0;
+    --warn-bg: #fff8dc;
+    --warn-border: #d4b853;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,8 +23,12 @@
     color: var(--ink);
     background: var(--bg);
     padding: 1.5rem 1.75rem;
-    max-width: 720px;
+    max-width: 900px;
     margin: 0 auto;
+  }
+
+  .ja {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS PGothic', sans-serif;
   }
 
   header {
@@ -35,7 +41,19 @@
   }
 
   .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .title-ja { font-size: 15px; font-weight: 600; color: var(--muted); margin-top: 2px; }
   .subtitle { font-size: 12.5px; color: var(--muted); }
+
+  .draft-warning {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.4rem;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .draft-warning strong { display: block; margin-bottom: 2px; }
 
   .section-label {
     font-size: 11px;
@@ -44,7 +62,10 @@
     text-transform: uppercase;
     color: var(--muted);
     margin: 1.4rem 0 0.6rem;
+    display: flex;
+    gap: 1rem;
   }
+  .section-label .en-h, .section-label .ja-h { flex: 1; }
 
   .step {
     display: flex;
@@ -54,7 +75,7 @@
     border-bottom: 0.5px solid var(--rule);
   }
 
-  .step:last-child { border-bottom: none; }
+  .step:last-of-type { border-bottom: none; }
 
   .checkbox {
     width: 18px;
@@ -65,20 +86,27 @@
     margin-top: 1px;
   }
 
-  .step-content { flex: 1; }
+  .step-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
 
-  .step-label {
+  .lang-block .step-label {
     font-size: 15.5px;
     font-weight: 600;
     line-height: 1.4;
     margin-bottom: 3px;
   }
 
-  .step-detail {
+  .lang-block .step-detail {
     font-size: 13.5px;
     color: var(--muted);
     line-height: 1.55;
   }
+
+  .lang-block .step-detail + .step-detail { margin-top: 4px; }
 
   .step-detail em {
     font-style: normal;
@@ -94,19 +122,7 @@
     border-radius: 3px;
     padding: 1px 5px;
     color: var(--ink);
-  }
-
-  .badge {
-    display: inline-block;
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 1px 8px;
-    border-radius: 3px;
-    background: var(--badge-bg);
-    border: 1px solid var(--rule);
-    color: var(--ink);
-    margin-top: 5px;
-    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
   }
 
   .note {
@@ -117,10 +133,13 @@
     font-size: 13px;
     color: var(--muted);
     line-height: 1.6;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
   }
 
   footer {
-    margin-top: 1.25rem;
+    margin-top: 1.4rem;
     font-size: 11.5px;
     color: var(--muted);
     display: flex;
@@ -130,6 +149,10 @@
   @media print {
     body { padding: 0.6rem 0.8rem; max-width: none; }
     @page { margin: 0.7cm; size: A4; }
+    .step { page-break-inside: avoid; }
+    .section-label { page-break-after: avoid; }
+    .note { page-break-inside: avoid; }
+    .draft-warning { background: var(--warn-bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -138,125 +161,229 @@
 <header>
   <div>
     <div class="title">Machine setup checklist</div>
+    <div class="title-ja ja">マシンセットアップ・チェックリスト</div>
     <div class="subtitle" style="margin-top:3px;">One-time setup per laptop · see SETUP.md for full instructions</div>
+    <div class="subtitle ja" style="margin-top:2px;">ノートPCごとに1回のセットアップ・詳細は SETUP.md を参照</div>
   </div>
   <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
 </header>
 
+<div class="draft-warning">
+  <strong>Translation draft — please review.</strong>
+  <span class="ja">翻訳は下書き段階です。レビューをお願いします。</span><br>
+  Japanese pass is a first draft by the toolkit author, not a native speaker. Tin Drum bilingual staff should correct anything that reads awkwardly before this is handed to operators.
+  <span class="ja">ネイティブ翻訳ではないため、Tin Drum の日本語スタッフが必要に応じて修正してください。</span>
+</div>
+
 <!-- BEFORE YOU START -->
-<div class="section-label">Before you start</div>
+<div class="section-label">
+  <span class="en-h">Before you start</span>
+  <span class="ja-h ja">開始前の準備</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Mac with a free USB-C port while plugged in to power</div>
+    <div class="lang-block">
+      <div class="step-label">Mac with a free USB-C port while plugged in to power</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">電源に接続した状態で、空きの USB-C ポートがある Mac</div>
+    </div>
   </div>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Fleet ADB key file from your team lead</div>
-    <div class="step-detail"><code>adbkey_kagami_fleet</code> — every machine connecting to fleet devices must use this key</div>
+    <div class="lang-block">
+      <div class="step-label">Fleet ADB key file from your team lead</div>
+      <div class="step-detail"><code>adbkey_kagami_fleet</code> — every machine connecting to fleet devices must use this key</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">チームリードから受け取るフリート ADB キーファイル</div>
+      <div class="step-detail"><code>adbkey_kagami_fleet</code> — フリート機に接続するすべてのマシンがこのキーを使用する必要があります</div>
+    </div>
   </div>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Internet connection</div>
+    <div class="lang-block">
+      <div class="step-label">Internet connection</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">インターネット接続</div>
+    </div>
   </div>
 </div>
 
 <!-- INSTALL -->
-<div class="section-label">Install</div>
+<div class="section-label">
+  <span class="en-h">Install</span>
+  <span class="ja-h ja">インストール</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Open Terminal</div>
-    <div class="step-detail">Press <em>Cmd+Space</em>, type <em>Terminal</em>, press Enter</div>
+    <div class="lang-block">
+      <div class="step-label">Open Terminal</div>
+      <div class="step-detail">Press <em>Cmd+Space</em>, type <em>Terminal</em>, press Enter</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ターミナルを開く</div>
+      <div class="step-detail"><em>Cmd+Space</em> を押し、<em>Terminal</em> と入力して Enter を押す</div>
+    </div>
   </div>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Run the installer</div>
-    <div class="step-detail" style="margin-top:3px;"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
-    <div class="step-detail" style="margin-top:4px;">Enter your Mac password if prompted. Wait for <em>Installation complete!</em></div>
+    <div class="lang-block">
+      <div class="step-label">Run the installer</div>
+      <div class="step-detail"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
+      <div class="step-detail">Enter your Mac password if prompted. Wait for <em>Installation complete!</em></div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">インストーラーを実行</div>
+      <div class="step-detail"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
+      <div class="step-detail">求められたら Mac のパスワードを入力。<em>Installation complete!</em> と表示されるまで待つ</div>
+    </div>
   </div>
 </div>
 
 <!-- FLEET KEY -->
-<div class="section-label">Fleet ADB key</div>
+<div class="section-label">
+  <span class="en-h">Fleet ADB key</span>
+  <span class="ja-h ja">フリート ADB キー</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Copy fleet key to toolkit</div>
-    <div class="step-detail">Place <code>adbkey_kagami_fleet</code> at:</div>
-    <div class="step-detail" style="margin-top:3px;"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+    <div class="lang-block">
+      <div class="step-label">Copy fleet key to toolkit</div>
+      <div class="step-detail">Place <code>adbkey_kagami_fleet</code> at:</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリートキーをツールキットにコピー</div>
+      <div class="step-detail"><code>adbkey_kagami_fleet</code> を次の場所に配置:</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+    </div>
   </div>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Run installer again to activate key</div>
-    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
-    <div class="step-detail" style="margin-top:4px;">Look for <em>Fleet ADB key installed</em></div>
+    <div class="lang-block">
+      <div class="step-label">Run installer again to activate key</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
+      <div class="step-detail">Look for <em>Fleet ADB key installed</em></div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">インストーラーを再実行してキーを有効化</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
+      <div class="step-detail"><em>Fleet ADB key installed</em> の表示を確認</div>
+    </div>
   </div>
 </div>
 
 <!-- OS IMAGE -->
-<div class="section-label">OS image</div>
+<div class="section-label">
+  <span class="en-h">OS image</span>
+  <span class="ja-h ja">OS イメージ</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Download OS image from Magic Leap Hub</div>
-    <div class="step-detail">Package Manager → Device OS Versions → select version → Apply Changes → wait → Open Folder</div>
+    <div class="lang-block">
+      <div class="step-label">Download OS image from Magic Leap Hub</div>
+      <div class="step-detail">Package Manager → Device OS Versions → select version → Apply Changes → wait → Open Folder</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">Magic Leap Hub から OS イメージをダウンロード</div>
+      <div class="step-detail">Package Manager → Device OS Versions → バージョンを選択 → Apply Changes → 待機 → Open Folder</div>
+    </div>
   </div>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Copy image folder to toolkit and rename to version number</div>
-    <div class="step-detail" style="margin-top:3px;"><code>~/Developer/ml_toolkit/os_images/1.4.1/</code></div>
-    <div class="step-detail" style="margin-top:4px;">Folder must contain <code>flashall_amd.sh</code> and <code>*.img</code> files</div>
+    <div class="lang-block">
+      <div class="step-label">Copy image folder to toolkit and rename to version number</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/os_images/1.4.1/</code></div>
+      <div class="step-detail">Folder must contain <code>flashall_amd.sh</code> and <code>*.img</code> files</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">イメージフォルダをツールキットにコピーし、バージョン番号にリネーム</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/os_images/1.4.1/</code></div>
+      <div class="step-detail">フォルダには <code>flashall_amd.sh</code> と <code>*.img</code> ファイルが含まれている必要があります</div>
+    </div>
   </div>
 </div>
 
 <!-- SELECT SHOW -->
-<div class="section-label">Select the show</div>
+<div class="section-label">
+  <span class="en-h">Select the show</span>
+  <span class="ja-h ja">ショーを選択</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Set the active show for this laptop</div>
-    <div class="step-detail">One-time per machine. Your team lead tells you which show — for the main show:</div>
-    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</code></div>
-    <div class="step-detail" style="margin-top:4px;">Confirm with <code>./ml_show.sh</code> — should report <em>Active show: KAGAMI</em>. Until this is set, every flash/provision/deploy command stops with a "no show configured" error.</div>
+    <div class="lang-block">
+      <div class="step-label">Set the active show for this laptop</div>
+      <div class="step-detail">One-time per machine. Your team lead tells you which show — for the main show:</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</code></div>
+      <div class="step-detail">Confirm with <code>./ml_show.sh</code> — should report <em>Active show: KAGAMI</em>. Until this is set, every flash/provision/deploy command stops with a "no show configured" error.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">このノートPCのアクティブショーを設定</div>
+      <div class="step-detail">マシンごとに1回。どのショーかはチームリードが指示します — メインショーの場合:</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</code></div>
+      <div class="step-detail"><code>./ml_show.sh</code> で確認 — <em>Active show: KAGAMI</em> と表示されるはず。設定するまで、flash/provision/deploy の各コマンドは "no show configured" エラーで停止します。</div>
+    </div>
   </div>
 </div>
 
 <!-- VERIFY -->
-<div class="section-label">Verify</div>
+<div class="section-label">
+  <span class="en-h">Verify</span>
+  <span class="ja-h ja">確認</span>
+</div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
-    <div class="step-label">Run flash script to confirm setup</div>
-    <div class="step-detail" style="margin-top:3px;"><code>cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</code></div>
-    <div class="step-detail" style="margin-top:4px;">With the show set and no device connected, it prints the show banner then stops at <em>No device found over USB</em> — that's success, not an error. A "no show configured" or "out of date" message means the step above (or the toolkit) still needs attention.</div>
+    <div class="lang-block">
+      <div class="step-label">Run flash script to confirm setup</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</code></div>
+      <div class="step-detail">With the show set and no device connected, it prints the show banner then stops at <em>No device found over USB</em> — that's success, not an error. A "no show configured" or "out of date" message means the step above (or the toolkit) still needs attention.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フラッシュスクリプトを実行してセットアップを確認</div>
+      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</code></div>
+      <div class="step-detail">ショーが設定され、デバイス未接続の状態では、ショーバナーを表示後 <em>No device found over USB</em> で停止します — これはエラーではなく成功です。"no show configured" や "out of date" のメッセージが出る場合は、上記の手順（またはツールキット）の対応がまだ必要です。</div>
+    </div>
   </div>
 </div>
 
 <div class="note">
-  To update the toolkit later: <code>cd ~/Developer/ml_toolkit && ./update.sh</code><br>
-  If a script tells you to update when you run it, this is the command to use.
+  <div>
+    To update the toolkit later: <code>cd ~/Developer/ml_toolkit && ./update.sh</code><br>
+    If a script tells you to update when you run it, this is the command to use.
+  </div>
+  <div class="ja">
+    後でツールキットを更新するには: <code>cd ~/Developer/ml_toolkit && ./update.sh</code><br>
+    実行時にスクリプトが更新を求めてきた場合は、このコマンドを使用してください。
+  </div>
 </div>
 
 <footer>

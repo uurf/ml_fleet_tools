@@ -141,7 +141,7 @@ else
   echo ""
   echo -e "  ${YELLOW}${BOLD}Action required:${RESET}"
   echo -e "  The fleet ADB key is distributed separately for security."
-  echo -e "  Ask your team lead for the file: ${CYAN}adbkey${RESET}"
+  echo -e "  Ask your team lead for the file: ${CYAN}adbkey_kagami_fleet${RESET}"
   echo -e "  Then place it at: ${CYAN}$FLEET_KEY${RESET}"
   echo -e "  And run: ${CYAN}./install.sh${RESET} again"
   echo ""

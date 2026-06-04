@@ -673,40 +673,53 @@ fi
 # NETWORK / IDENTITY SUMMARY
 # ====================================================================
 # ====================================================================
-# ADB KEYS — push all authorized keys while we have confirmed ADB access
+# ADB KEYS — injection DISABLED (2026-06-04)
 # ====================================================================
-if ! $FLEET_WORKER; then
-
-section "ADB key authorization"
-
-ADB_KEY="$HOME/.android/adbkey.pub"
-EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
-ALL_KEYS_TMP=$(mktemp)
-
-if [[ -f "$ADB_KEY" ]]; then
-  cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
-  echo "" >> "$ALL_KEYS_TMP"
-fi
-if [[ -d "$EXTRA_KEYS_DIR" ]]; then
-  for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
-    [[ -f "$keyfile" ]] || continue
-    cat "$keyfile" >> "$ALL_KEYS_TMP"
-    echo "" >> "$ALL_KEYS_TMP"
-  done
-fi
-
-if [[ -s "$ALL_KEYS_TMP" ]]; then
-  KEY_COUNT=$(grep -c "." "$ALL_KEYS_TMP" 2>/dev/null || echo "0")
-  command adb -s "$SERIAL" push "$ALL_KEYS_TMP" /data/misc/adb/adb_keys &>/dev/null &&     sh "chmod 0640 /data/misc/adb/adb_keys" 2>/dev/null || true
-  sh "setprop ctl.restart adbd" 2>/dev/null || true
-  sleep 1
-  printf "  %b  %-52s ${DIM}%s keys${RESET}\n" "$TICK" "All authorized keys pushed" "$KEY_COUNT"
-else
-  printf "  %b  No keys found in authorized_keys/\n" "$CROSS"
-fi
-rm -f "$ALL_KEYS_TMP"
-
-fi  # end ! FLEET_WORKER (ADB key authorization)
+# This block pushed authorized_keys/* into the device's
+# /data/misc/adb/adb_keys to pre-authorize operator laptops. It only
+# takes effect on ML's non-secure (userdebug) OS builds. On the
+# production ML2 1.4.1 *user* build the OS ignores pre-seeded
+# adb_keys, so this did nothing in practice and its "All authorized
+# keys pushed" output was misleading (it looked like ADB auth was
+# handled when it was not). What actually authorizes the fleet is the
+# shared fleet key (adbkey_kagami_fleet installed to ~/.android/adbkey
+# by install.sh) plus a single in-headset "Allow USB debugging" tap
+# per device — one tap per device, not per laptop, because every
+# laptop shares that one identity. Re-enable (uncomment) only if you
+# are provisioning a userdebug / non-secure build.
+#
+# if ! $FLEET_WORKER; then
+#
+# section "ADB key authorization"
+#
+# ADB_KEY="$HOME/.android/adbkey.pub"
+# EXTRA_KEYS_DIR="$(dirname "${BASH_SOURCE[0]}")/authorized_keys"
+# ALL_KEYS_TMP=$(mktemp)
+#
+# if [[ -f "$ADB_KEY" ]]; then
+#   cat "$ADB_KEY" >> "$ALL_KEYS_TMP"
+#   echo "" >> "$ALL_KEYS_TMP"
+# fi
+# if [[ -d "$EXTRA_KEYS_DIR" ]]; then
+#   for keyfile in "$EXTRA_KEYS_DIR"/*.pub; do
+#     [[ -f "$keyfile" ]] || continue
+#     cat "$keyfile" >> "$ALL_KEYS_TMP"
+#     echo "" >> "$ALL_KEYS_TMP"
+#   done
+# fi
+#
+# if [[ -s "$ALL_KEYS_TMP" ]]; then
+#   KEY_COUNT=$(grep -c "." "$ALL_KEYS_TMP" 2>/dev/null || echo "0")
+#   command adb -s "$SERIAL" push "$ALL_KEYS_TMP" /data/misc/adb/adb_keys &>/dev/null &&     sh "chmod 0640 /data/misc/adb/adb_keys" 2>/dev/null || true
+#   sh "setprop ctl.restart adbd" 2>/dev/null || true
+#   sleep 1
+#   printf "  %b  %-52s ${DIM}%s keys${RESET}\n" "$TICK" "All authorized keys pushed" "$KEY_COUNT"
+# else
+#   printf "  %b  No keys found in authorized_keys/\n" "$CROSS"
+# fi
+# rm -f "$ALL_KEYS_TMP"
+#
+# fi  # end ! FLEET_WORKER (ADB key authorization)
 
 section "Network"
 sleep 3
