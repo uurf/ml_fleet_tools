@@ -111,42 +111,75 @@ echo ""
 
 FLEET_KEY="$INSTALL_DIR/authorized_keys/adbkey_kagami_fleet"
 ADB_KEY="$HOME/.android/adbkey"
+FLEET_KEY_OK=false
 
-if [[ -f "$FLEET_KEY" ]]; then
-  # Check if current adb key matches fleet key
+# Install the fleet private key as this machine's ADB identity, backing up
+# any existing key first. Every operator laptop installs the SAME fleet key,
+# so they all present one identity to devices.
+install_fleet_key() {
+  mkdir -p "$HOME/.android"
   if [[ -f "$ADB_KEY" ]]; then
-    CURRENT_PUB=$(ssh-keygen -y -f "$ADB_KEY" 2>/dev/null | awk '{print $2}' || echo "")
-    FLEET_PUB=$(ssh-keygen -y -f "$FLEET_KEY" 2>/dev/null | awk '{print $2}' || echo "")
-    if [[ "$CURRENT_PUB" == "$FLEET_PUB" ]]; then
-      printf "  %b  ADB fleet key already configured\n" "$TICK"
-    else
-      echo -e "  ${YELLOW}Installing fleet key (your current key will be backed up).${RESET}"
-      cp "$ADB_KEY" "$HOME/.android/adbkey.backup.$(date +%Y%m%d)" 2>/dev/null || true
-      cp "$FLEET_KEY" "$ADB_KEY"
-      chmod 600 "$ADB_KEY"
-      ssh-keygen -y -f "$ADB_KEY" > "${ADB_KEY}.pub"
-      adb kill-server && adb start-server &>/dev/null || true
-      printf "  %b  Fleet ADB key installed\n" "$TICK"
-    fi
-  else
-    mkdir -p "$HOME/.android"
-    cp "$FLEET_KEY" "$ADB_KEY"
-    chmod 600 "$ADB_KEY"
-    ssh-keygen -y -f "$ADB_KEY" > "${ADB_KEY}.pub"
-    adb kill-server && adb start-server &>/dev/null || true
-    printf "  %b  Fleet ADB key installed\n" "$TICK"
+    cp "$ADB_KEY" "$HOME/.android/adbkey.backup.$(date +%Y%m%d)" 2>/dev/null || true
   fi
+  cp "$FLEET_KEY" "$ADB_KEY"
+  chmod 600 "$ADB_KEY"
+  ssh-keygen -y -f "$ADB_KEY" > "${ADB_KEY}.pub"
+  adb kill-server && adb start-server &>/dev/null || true
+}
+
+# True if ~/.android/adbkey already matches the fleet key.
+fleet_key_matches() {
+  [[ -f "$ADB_KEY" && -f "$FLEET_KEY" ]] || return 1
+  local cur fleet
+  cur=$(ssh-keygen -y -f "$ADB_KEY" 2>/dev/null | awk '{print $2}' || echo "")
+  fleet=$(ssh-keygen -y -f "$FLEET_KEY" 2>/dev/null | awk '{print $2}' || echo "")
+  [[ -n "$fleet" && "$cur" == "$fleet" ]]
+}
+
+if fleet_key_matches; then
+  printf "  %b  ADB fleet key already configured\n" "$TICK"
+  FLEET_KEY_OK=true
+elif [[ -f "$FLEET_KEY" ]]; then
+  echo -e "  ${YELLOW}Installing fleet key (your current key will be backed up).${RESET}"
+  install_fleet_key
+  printf "  %b  Fleet ADB key installed\n" "$TICK"
+  FLEET_KEY_OK=true
 else
-  printf "  %b  ${YELLOW}Fleet ADB key not found${RESET}\n" "$CROSS"
+  # The fleet key is distributed separately and is gitignored, so a fresh
+  # clone never has it. Prompt the operator to drop it in now and wait. We
+  # read from /dev/tty (not stdin) so this works even under `curl ... | bash`,
+  # where stdin is the piped script rather than the keyboard.
+  echo -e "  ${YELLOW}${BOLD}Fleet ADB key needed.${RESET}"
+  echo -e "  Get the file ${CYAN}adbkey_kagami_fleet${RESET} from your team lead"
+  echo -e "  (AirDrop, 1Password, etc.) and copy it into the folder created here:"
+  echo -e "     ${CYAN}$INSTALL_DIR/authorized_keys/${RESET}"
+  echo -e "  ${DIM}full path: $FLEET_KEY${RESET}"
   echo ""
-  echo -e "  ${YELLOW}${BOLD}Action required:${RESET}"
-  echo -e "  The fleet ADB key is distributed separately for security."
-  echo -e "  Ask your team lead for the file: ${CYAN}adbkey${RESET}"
-  echo -e "  Then place it at: ${CYAN}$FLEET_KEY${RESET}"
-  echo -e "  And run: ${CYAN}./install.sh${RESET} again"
-  echo ""
-  echo -e "  ${DIM}Without this key, devices flashed on other machines will require"
-  echo -e "  a one-time 'Allow USB debugging' tap per laptop.${RESET}"
+
+  if [[ -r /dev/tty ]]; then
+    while true; do
+      printf "  Press ${BOLD}Enter${RESET} once the file is in place, or type ${BOLD}s${RESET} to skip: "
+      IFS= read -r reply < /dev/tty || reply="s"
+      if [[ "$reply" == "s" || "$reply" == "S" ]]; then
+        break
+      fi
+      if [[ -f "$FLEET_KEY" ]]; then
+        install_fleet_key
+        printf "  %b  Fleet ADB key installed\n" "$TICK"
+        FLEET_KEY_OK=true
+        break
+      fi
+      echo -e "  ${YELLOW}Still not found at that path — check the filename (no extension) and try again.${RESET}"
+    done
+  fi
+
+  if [[ "$FLEET_KEY_OK" != true ]]; then
+    echo ""
+    echo -e "  ${YELLOW}Fleet key not installed yet.${RESET} Once you have it, place it at the"
+    echo -e "  path above and run ${CYAN}cd $INSTALL_DIR && ./install.sh${RESET} again to finish."
+    echo -e "  ${DIM}Without this key, every device needs a manual 'Allow USB debugging'"
+    echo -e "  tap before this laptop can connect.${RESET}"
+  fi
 fi
 
 # ---- Verify shell is using Homebrew bash ---------------------------
@@ -165,12 +198,25 @@ fi
 # ---- Final summary -------------------------------------------------
 echo ""
 echo -e "${BOLD}═══════════════════════════════════════════════════${RESET}"
-echo -e "${GREEN}${BOLD}Installation complete!${RESET}"
+if [[ "$FLEET_KEY_OK" == true ]]; then
+  echo -e "${GREEN}${BOLD}Installation complete!${RESET}"
+else
+  echo -e "${YELLOW}${BOLD}Installation finished — fleet key still needed.${RESET}"
+  echo -e "  ${DIM}Re-run ./install.sh after placing adbkey_kagami_fleet to finish.${RESET}"
+fi
 echo ""
 echo -e "  Toolkit location: ${CYAN}$INSTALL_DIR${RESET}"
 echo ""
 echo -e "${BOLD}Next steps:${RESET}"
 echo ""
+if [[ "$FLEET_KEY_OK" != true ]]; then
+  echo -e "  ${YELLOW}${BOLD}First — finish the fleet key (required before this laptop can reach devices):${RESET}"
+  echo -e "     a. Get ${CYAN}adbkey_kagami_fleet${RESET} from your team lead (AirDrop, 1Password, etc.)"
+  echo -e "     b. Copy it into ${CYAN}$INSTALL_DIR/authorized_keys/${RESET}"
+  echo -e "     c. Re-run ${CYAN}cd $INSTALL_DIR && ./install.sh${RESET}"
+  echo -e "        ${DIM}— it activates the key and then reports \"Installation complete!\"${RESET}"
+  echo ""
+fi
 echo "  1. Download OS image from ML Hub:"
 echo "     Package Manager → Device OS Versions → 1.4.1 → Apply"
 echo "     Then copy the image folder to:"
