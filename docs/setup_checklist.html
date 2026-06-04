@@ -67,6 +67,31 @@
   }
   .section-label .en-h, .section-label .ja-h { flex: 1; }
 
+  .opt-tag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0 5px;
+    margin-left: 0.45rem;
+    vertical-align: middle;
+  }
+
+  .section-note {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+    font-style: italic;
+    margin: 0 0 0.5rem;
+  }
+
   .step {
     display: flex;
     gap: 0.75rem;
@@ -245,12 +270,12 @@
     <div class="lang-block">
       <div class="step-label">Run the installer</div>
       <div class="step-detail"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
-      <div class="step-detail">Enter your Mac password if prompted. Wait for <em>Installation complete!</em></div>
+      <div class="step-detail">Enter your Mac password if prompted. It installs the tools and clones the toolkit, then <em>pauses to ask for the fleet key</em> (next step).</div>
     </div>
     <div class="lang-block ja">
       <div class="step-label">インストーラーを実行</div>
       <div class="step-detail"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
-      <div class="step-detail">求められたら Mac のパスワードを入力。<em>Installation complete!</em> と表示されるまで待つ</div>
+      <div class="step-detail">求められたら Mac のパスワードを入力。ツールをインストールしツールキットをクローンした後、<em>フリートキーの入力を求めて一時停止します</em>（次のステップ）。</div>
     </div>
   </div>
 </div>
@@ -265,14 +290,16 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Copy fleet key to toolkit</div>
-      <div class="step-detail">Place <code>adbkey_kagami_fleet</code> at:</div>
-      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+      <div class="step-label">When prompted, add the fleet key</div>
+      <div class="step-detail">Get <code>adbkey_kagami_fleet</code> from your team lead and copy it into:</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/</code></div>
+      <div class="step-detail">Then press <em>Enter</em>. The installer activates the key and finishes with <em>Installation complete!</em></div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">フリートキーをツールキットにコピー</div>
-      <div class="step-detail"><code>adbkey_kagami_fleet</code> を次の場所に配置:</div>
-      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/adbkey_kagami_fleet</code></div>
+      <div class="step-label">プロンプトが出たらフリートキーを追加</div>
+      <div class="step-detail">チームリードから <code>adbkey_kagami_fleet</code> を受け取り、次の場所にコピー:</div>
+      <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/</code></div>
+      <div class="step-detail">その後 <em>Enter</em> を押す。インストーラーがキーを有効化し、<em>Installation complete!</em> と表示して完了します。</div>
     </div>
   </div>
 </div>
@@ -281,22 +308,27 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Run installer again to activate key</div>
-      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
-      <div class="step-detail">Look for <em>Fleet ADB key installed</em></div>
+      <div class="step-label">Don't have the key yet? (fallback)</div>
+      <div class="step-detail">Type <em>s</em> at the prompt to skip.</div>
+      <div class="step-detail">Later, place <code>adbkey_kagami_fleet</code> at the path above and run <code>cd ~/Developer/ml_toolkit && ./install.sh</code> to finish. Look for <em>Fleet ADB key installed</em>.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">インストーラーを再実行してキーを有効化</div>
-      <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./install.sh</code></div>
-      <div class="step-detail"><em>Fleet ADB key installed</em> の表示を確認</div>
+      <div class="step-label">まだキーが無い場合（フォールバック）</div>
+      <div class="step-detail">プロンプトで <em>s</em> を入力してスキップ。</div>
+      <div class="step-detail">後で <code>adbkey_kagami_fleet</code> を上記の場所に配置し、<code>cd ~/Developer/ml_toolkit && ./install.sh</code> を実行して完了。<em>Fleet ADB key installed</em> の表示を確認。</div>
     </div>
   </div>
 </div>
 
 <!-- OS IMAGE -->
 <div class="section-label">
-  <span class="en-h">OS image</span>
-  <span class="ja-h ja">OS イメージ</span>
+  <span class="en-h">OS image <span class="opt-tag">Optional</span></span>
+  <span class="ja-h ja">OS イメージ <span class="opt-tag">任意</span></span>
+</div>
+
+<div class="section-note">
+  <div>Only needed if you will flash devices to a clean, factory MLOS state. Most operators can skip this section — flashing is occasional and only for specific problem devices.</div>
+  <div class="ja">デバイスを工場出荷時のクリーンな MLOS 状態にフラッシュする場合のみ必要。多くのオペレーターはこのセクションをスキップできます — フラッシュは特定の問題デバイスに対してのみ行う作業です。</div>
 </div>
 
 <div class="step">
