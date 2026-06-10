@@ -10,6 +10,21 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.1.2] — 2026-06-10 — Operator-only playbook re-scope + translator JA finalized
+
+### Changed
+- **RED & BLUE operator playbooks re-scoped to operator-only.** Supervisor fleet operations (network scan, `--fleet --check` drift, `ml_deploy.sh deploy`, dashboard sweep, fleet shutdown, final verify) were cut from the operator playbooks and live in `docs/onsite_osaka.md`. Operator playbooks now cover only the physical, large-parallel hands-on work: RED is the per-device SSD asset-load loop; BLUE is Phase A USB-bench provisioning + the same SSD loop. Rationale: operators do physical work, supervisors run the network/fleet scripts — the two were previously mixed in one doc.
+- **SSD asset-load loop corrected and shared between RED and BLUE.** Distinguishes the device **boot sound** from the show APK's **copy tones** (起動音 vs 開始音/終了音); the copy is confirmed by glancing into the headset (data folders in the display), not by wearing it continuously; operators run several devices in parallel with multiple SSDs; finished devices are left powered on and racked. Dropped the device-hours time estimate. Closing line softened from "fleet is show-ready" to "Assets loaded — handed off to supervisor" (readiness is the supervisor's go/no-go call).
+- **BLUE Phase A: manual headset settings inlined.** The manual-headset checklist gate step now spells out the six settings bilingually (Battery → Compute Pack Standby: Off; Display Override: Off; Global / Segmented / Maximum Dimming; System → OS Updater: Never) instead of pointing operators at the EN-only `headset_checklist.html`. Added a follow-on step to record the completed settings in the *Kagami Osaka – Device tracker* sheet.
+
+### Documentation
+- **Translator (Maria Takeuchi) JA revisions applied** to `docs/setup_checklist.html` and the retained sections of `docs/playbook_blue_osaka.html` (RED was applied earlier this cycle), completing the EN/JA roundtrip for the operator docs. House-style term decisions: デバイス (not 機), ラップトップ (not ノートPC), チームリーダー, 修正 (not 修復), 開始音/終了音; polite です・ます detail text with terse dictionary-form labels.
+- **"Translation draft — please review" banners removed** from `setup_checklist.html` and both playbooks now that the Japanese has been translator-reviewed (footer "Translation draft" tags dropped too).
+- **`docs/onsite_osaka.md`:** RED §3 reworded so the scan → check → deploy → dashboard → shutdown chain reads as an explicit **supervisor** sequence; added a parallel **BLUE Phase B fleet-flow** supervisor sequence (`ML_SHOW=KAGAMI_BLUE`); added a **supervisor prerequisite** to share the *Device tracker* sheet with each operator's Google account as Editor (per-account, not "anyone with the link") before Phase A — the playbook link is only a deep-link and does not grant access.
+- **BLUE §0 trimmed** to BLUE-specific setup; the generic *toolkit installed* / *fleet ADB key* steps (duplicated verbatim in `setup_checklist.html`, which §0 already references) were removed.
+
+---
+
 ## [v1.1.1] — 2026-06-04 — Inline fleet-key install + bilingual setup checklist + ADB-key cleanup
 
 ### Added
@@ -54,7 +69,7 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 _Work in progress on `dev` branch. Merge to `main` via pull request when ready to release._
 
-(No unreleased changes since v1.1.1.)
+(No unreleased changes since v1.1.2.)
 
 ---
 

@@ -188,17 +188,10 @@
     <div class="title">Machine setup checklist</div>
     <div class="title-ja ja">マシンセットアップ・チェックリスト</div>
     <div class="subtitle" style="margin-top:3px;">One-time setup per laptop · see SETUP.md for full instructions</div>
-    <div class="subtitle ja" style="margin-top:2px;">ノートPCごとに1回のセットアップ・詳細は SETUP.md を参照</div>
+    <div class="subtitle ja" style="margin-top:2px;">ラップトップごとに1回のセットアップ・詳細は SETUP.md を参照</div>
   </div>
   <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
 </header>
-
-<div class="draft-warning">
-  <strong>Translation draft — please review.</strong>
-  <span class="ja">翻訳は下書き段階です。レビューをお願いします。</span><br>
-  Japanese pass is a first draft by the toolkit author, not a native speaker. Tin Drum bilingual staff should correct anything that reads awkwardly before this is handed to operators.
-  <span class="ja">ネイティブ翻訳ではないため、Tin Drum の日本語スタッフが必要に応じて修正してください。</span>
-</div>
 
 <!-- BEFORE YOU START -->
 <div class="section-label">
@@ -213,7 +206,7 @@
       <div class="step-label">Mac with a free USB-C port while plugged in to power</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">電源に接続した状態で、空きの USB-C ポートがある Mac</div>
+      <div class="step-label">電源に接続した状態で、空きの USB-C ポートがある Mac が必要</div>
     </div>
   </div>
 </div>
@@ -226,8 +219,8 @@
       <div class="step-detail"><code>adbkey_kagami_fleet</code> — every machine connecting to fleet devices must use this key</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">チームリードから受け取るフリート ADB キーファイル</div>
-      <div class="step-detail"><code>adbkey_kagami_fleet</code> — フリート機に接続するすべてのマシンがこのキーを使用する必要があります</div>
+      <div class="step-label">チームリーダーからフリート ADB キーファイルを受け取る</div>
+      <div class="step-detail"><code>adbkey_kagami_fleet</code> — フリートデバイスに接続するすべてのマシンでこの ADB キーファイルを使用する必要があります</div>
     </div>
   </div>
 </div>
@@ -275,7 +268,7 @@
     <div class="lang-block ja">
       <div class="step-label">インストーラーを実行</div>
       <div class="step-detail"><code>curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</code></div>
-      <div class="step-detail">求められたら Mac のパスワードを入力。ツールをインストールしツールキットをクローンした後、<em>フリートキーの入力を求めて一時停止します</em>（次のステップ）。</div>
+      <div class="step-detail">求められたら Mac のパスワードを入力。ツールをインストールしツールキットをクローンした後、<em>フリートキーの入力待ちで一時停止します</em>（次のステップ）。</div>
     </div>
   </div>
 </div>
@@ -296,10 +289,10 @@
       <div class="step-detail">Then press <em>Enter</em>. The installer activates the key and finishes with <em>Installation complete!</em></div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">プロンプトが出たらフリートキーを追加</div>
-      <div class="step-detail">チームリードから <code>adbkey_kagami_fleet</code> を受け取り、次の場所にコピー:</div>
+      <div class="step-label">プロンプトが表示されたらフリートキーを追加</div>
+      <div class="step-detail">チームリーダーから <code>adbkey_kagami_fleet</code> を受け取り、次の場所にコピーしてください:</div>
       <div class="step-detail"><code>~/Developer/ml_toolkit/authorized_keys/</code></div>
-      <div class="step-detail">その後 <em>Enter</em> を押す。インストーラーがキーを有効化し、<em>Installation complete!</em> と表示して完了します。</div>
+      <div class="step-detail">その後 <em>Enter</em> を押す。インストーラーがキーを有効化し、<em>Installation complete!</em> と表示されて完了します。</div>
     </div>
   </div>
 </div>
@@ -313,9 +306,9 @@
       <div class="step-detail">Later, place <code>adbkey_kagami_fleet</code> at the path above and run <code>cd ~/Developer/ml_toolkit && ./install.sh</code> to finish. Look for <em>Fleet ADB key installed</em>.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">まだキーが無い場合（フォールバック）</div>
-      <div class="step-detail">プロンプトで <em>s</em> を入力してスキップ。</div>
-      <div class="step-detail">後で <code>adbkey_kagami_fleet</code> を上記の場所に配置し、<code>cd ~/Developer/ml_toolkit && ./install.sh</code> を実行して完了。<em>Fleet ADB key installed</em> の表示を確認。</div>
+      <div class="step-label">まだキーが無い場合（暫定対応）</div>
+      <div class="step-detail">プロンプトで <em>s</em> を入力してスキップしてください。</div>
+      <div class="step-detail">後で <code>adbkey_kagami_fleet</code> を上記のパスに配置し、<code>cd ~/Developer/ml_toolkit && ./install.sh</code> を実行して完了。<em>Fleet ADB key installed</em> の表示を確認。</div>
     </div>
   </div>
 </div>
@@ -328,7 +321,7 @@
 
 <div class="section-note">
   <div>Only needed if you will flash devices to a clean, factory MLOS state. Most operators can skip this section — flashing is occasional and only for specific problem devices.</div>
-  <div class="ja">デバイスを工場出荷時のクリーンな MLOS 状態にフラッシュする場合のみ必要。多くのオペレーターはこのセクションをスキップできます — フラッシュは特定の問題デバイスに対してのみ行う作業です。</div>
+  <div class="ja">デバイスを工場出荷時のクリーンな MLOS 状態にフラッシュする場合のみ必要。ほとんどのオペレーターはこのセクションをスキップできます — フラッシュは特定の問題のあるデバイスに対してのみ行う作業です。</div>
 </div>
 
 <div class="step">
@@ -356,7 +349,7 @@
     <div class="lang-block ja">
       <div class="step-label">イメージフォルダをツールキットにコピーし、バージョン番号にリネーム</div>
       <div class="step-detail"><code>~/Developer/ml_toolkit/os_images/1.4.1/</code></div>
-      <div class="step-detail">フォルダには <code>flashall_amd.sh</code> と <code>*.img</code> ファイルが含まれている必要があります</div>
+      <div class="step-detail">フォルダには <code>flashall_amd.sh</code> と <code>*.img</code> ファイルが含まれている必要があります。</div>
     </div>
   </div>
 </div>
@@ -377,10 +370,10 @@
       <div class="step-detail">Confirm with <code>./ml_show.sh</code> — should report <em>Active show: KAGAMI</em>. Until this is set, every flash/provision/deploy command stops with a "no show configured" error.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">このノートPCのアクティブショーを設定</div>
-      <div class="step-detail">マシンごとに1回。どのショーかはチームリードが指示します — メインショーの場合:</div>
+      <div class="step-label">このラップトップのアクティブショーを設定</div>
+      <div class="step-detail">マシンごとに1回。どのショーかはチームリーダーが指示します — メインショーの場合:</div>
       <div class="step-detail"><code>cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</code></div>
-      <div class="step-detail"><code>./ml_show.sh</code> で確認 — <em>Active show: KAGAMI</em> と表示されるはず。設定するまで、flash/provision/deploy の各コマンドは "no show configured" エラーで停止します。</div>
+      <div class="step-detail"><code>./ml_show.sh</code> を実行して確認 — <em>Active show: KAGAMI</em> と表示されれば正常です。設定が完了するまで、flash/provision/deploy の各コマンドは "no show configured" エラーで停止します。</div>
     </div>
   </div>
 </div>
