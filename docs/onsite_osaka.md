@@ -114,9 +114,20 @@ The 180 RED devices arrive fully provisioned for `KAGAMI` (settings applied, on 
 - Connect the KAGAMI laptop to the venue's `KAGAMI` SSID.
 - Confirm `shows/KAGAMI.conf` matches the venue. If the venue's `KAGAMI` SSID differs from Pittsburgh's, this is **not** a simple network swap — every device's stored WiFi credentials point at the Pittsburgh SSID and would need a USB-bench WiFi update like BLUE Phase A. Assume same SSID unless confirmed otherwise on the day.
 
-**Per-device steps live in [`playbook_red_osaka.html`](playbook_red_osaka.html) (EN/JA).** High-level shape: power on → scan to build `devices/KAGAMI.txt` → `./ml_provision.sh --fleet --check` (drift; `./ml_status.sh --fix` to remediate) → `./ml_deploy.sh deploy` to install show APK + kiosk APK + reboot → dashboard sweep → `./ml_deploy.sh shutdown` → SSD asset load per device (timing trick: attach SSD before power-on, listen for start/finish tones from the show APK) → leave devices on for final status verify.
+**Supervisor — fleet preparation (network ops over WiFi ADB, run once; not an operator task):**
+1. Power on the fleet (operators can do the physical power-on).
+2. `./utilities/ml_scan.sh` → build `devices/KAGAMI.txt`; confirm the device count.
+3. `./ml_provision.sh --fleet --check` for drift; `./ml_status.sh --fix` to remediate.
+4. `./ml_deploy.sh deploy` → install show APK + kiosk APK + reboot.
+5. Dashboard sweep (`./ml_status.sh --json > status/latest.json` → `fleet_dashboard.html`) to confirm fleet health.
+6. `./ml_deploy.sh shutdown` to power the fleet down for asset load.
+7. Prepare and distribute the SSDs; hand the powered-off, deployed devices off to operators.
 
-> **Phase B is iteration-friendly.** BLUE and RED builds will be refreshed multiple times as the shows are finalized. The operator workflow is the same each time: drop new APKs into `builds/`, re-run `./ml_deploy.sh deploy`, re-sweep the dashboard. Bump `SHOW_EXPECTED_APK` in the show conf after each refresh so the dashboard flags any device that missed it.
+**Operators — per-device SSD asset load:** the operator job is *only* this loop, documented in [`playbook_red_osaka.html`](playbook_red_osaka.html) (EN/JA). Each operator carries multiple SSDs and runs several devices in parallel: attach SSD to a powered-off device → power on → glance into the headset to confirm the copy started (folders + tones, not the boot sound) → start the next SSD while it copies → on the finish tones/splash, remove the SSD → leave the device powered on and racked → reuse the freed SSD on the next device. Throughput scales with SSD count. Operators do **not** run the fleet scripts — that's the supervisor chain above.
+
+**Final verify (supervisor):** re-run `./ml_status.sh --json`, re-sweep the dashboard, confirm the data-dir rows are clean (assets landed, no "data missing" flags), and make the go / no-go call.
+
+> **Phase B is iteration-friendly.** BLUE and RED builds will be refreshed multiple times as the shows are finalized. The supervisor's deploy workflow is the same each time: drop new APKs into `builds/`, re-run `./ml_deploy.sh deploy`, re-sweep the dashboard. Bump `SHOW_EXPECTED_APK` in the show conf after each refresh so the dashboard flags any device that missed it.
 
 ---
 

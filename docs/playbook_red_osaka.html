@@ -195,23 +195,23 @@
 </div>
 
 <!-- ============================================================
-     SECTION A — BEFORE YOU START
+     SSD ASSET LOAD — the operator loop (the whole operator job)
      ============================================================ -->
 <div class="section-label">
-  <span class="en-h">A · Before you start (one-time per laptop)</span>
-  <span class="ja-h ja">A・開始前の準備（ノートPCごとに1回）</span>
+  <span class="en-h">Load show assets onto each device via SSD</span>
+  <span class="ja-h ja">SSD から各デバイスへショーアセットを転送</span>
 </div>
 
 <div class="step">
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Toolkit installed and up to date</div>
-      <div class="step-detail">Run <code>cd ~/Developer/ml_toolkit &amp;&amp; ./update.sh</code>. If you haven't installed yet, follow <code>docs/setup_checklist.html</code> first.</div>
+      <div class="step-label">Collect your SSDs and confirm the handoff</div>
+      <div class="step-detail">The supervisor has already provisioned these devices, deployed the show build, and powered them off — they're ready for asset load. Collect your SSDs from the supervisor (about 2 each). You'll keep several devices copying at once — one per SSD you're holding. More SSDs = more devices in parallel.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">ツールキットをインストール済み・最新版である</div>
-      <div class="step-detail"><code>cd ~/Developer/ml_toolkit &amp;&amp; ./update.sh</code> を実行。未インストールの場合はまず <code>docs/setup_checklist.html</code> を参照してください。</div>
+      <div class="step-label">SSD を受け取り、引き継ぎ状態を確認</div>
+      <div class="step-detail">これらのデバイスはスーパーバイザーによってプロビジョン済み・ショービルドのデプロイ済みで、電源オフの状態でアセット転送を待っています。スーパーバイザーから SSD（1人およそ2台）を受け取ってください。手持ちの SSD の数だけ複数のデバイスを同時にコピーできます（SSD 1台につき1デバイス）。SSD が多いほど並列数が増えます。</div>
     </div>
   </div>
 </div>
@@ -220,396 +220,12 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Shared Fleet ADB key in place</div>
-      <div class="step-detail">Supervisor provides <code>adbkey_kagami_fleet</code> on a USB drive. Copy to <code>~/Developer/ml_toolkit/authorized_keys/</code> and re-run <code>./install.sh</code>. Look for "Fleet ADB key installed".</div>
+      <div class="step-label">Attach the SSD to a powered-off device first</div>
+      <div class="step-detail">Plug the USB-C SSD (Kagami payload) into the Compute Pack while the device is off. Attaching before you power on means you won't miss the copy window.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">共有フリートADBキーが設定済み</div>
-      <div class="step-detail">スーパーバイザーから配布される USB ドライブ内の <code>adbkey_kagami_fleet</code> を <code>~/Developer/ml_toolkit/authorized_keys/</code> にコピーし、再度 <code>./install.sh</code> を実行。"Fleet ADB key installed" の表示を確認してください。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Active show set to KAGAMI</div>
-      <div class="step-detail">Run <code>./ml_show.sh use KAGAMI</code> then <code>./ml_show.sh</code> — it should report <em>Active show: KAGAMI</em>.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">アクティブショーを KAGAMI に設定</div>
-      <div class="step-detail"><code>./ml_show.sh use KAGAMI</code> を実行後、<code>./ml_show.sh</code> で <em>Active show: KAGAMI</em> と表示されることを確認。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Latest show APK and kiosk APK in builds/</div>
-      <div class="step-detail">Supervisor places the current Kagami show build and kiosk build in <code>~/Developer/ml_toolkit/builds/</code>. New builds may arrive multiple times as the show is finalized — always check just before deploying.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">最新のショー APK・キオスク APK が builds/ にある</div>
-      <div class="step-detail">スーパーバイザーが最新の Kagami ショービルドとキオスクビルドを <code>~/Developer/ml_toolkit/builds/</code> に配置。ショー本番までビルドは複数回更新される想定です。デプロイ直前に必ず確認してください。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">KAGAMI WiFi broadcasting in the room</div>
-      <div class="step-detail">SSID: <em>KAGAMI</em> · Password: <em>KAGAmius</em>. Devices will auto-join when powered on. Your laptop must also be on this SSID — the fleet operates over WiFi ADB.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">会場で KAGAMI WiFi が稼働している</div>
-      <div class="step-detail">SSID: <em>KAGAMI</em>・パスワード: <em>KAGAmius</em>。デバイス起動時に自動接続されます。フリートは WiFi ADB で動作するため、ノート PC もこの SSID に接続する必要があります。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION B — POWER UP THE FLEET
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">B · Power up the fleet</span>
-  <span class="ja-h ja">B・全デバイスの起動</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Power on all 180 devices</div>
-      <div class="step-detail">Hold the <em>Power</em> button on each Compute Pack until the boot indicator appears. Devices were provisioned in Pittsburgh — they boot straight to the kiosk, no OOBE.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">180台すべてを起動する</div>
-      <div class="step-detail">各 Compute Pack (コンピュートパック) の <em>電源</em> ボタンを起動表示が出るまで長押し。デバイスはピッツバーグのスタジオでプロビジョン済みのため、OOBE はスキップされ、直接キオスクが起動します。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Devices auto-join KAGAMI WiFi</div>
-      <div class="step-detail">SSID credentials were saved during Pittsburgh provisioning. No headset interaction needed.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">デバイスは KAGAMI WiFi に自動接続される</div>
-      <div class="step-detail">ピッツバーグでのプロビジョン時に SSID の認証情報は保存済みです。ヘッドセット側での操作は不要です。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION C — INVENTORY THE FLEET ON THE NETWORK
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">C · Inventory the fleet on the network</span>
-  <span class="ja-h ja">C・ネットワーク上のフリートを確認</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Scan the network for ML2 devices</div>
-      <div class="step-detail"><code>./utilities/ml_scan.sh</code> — finds every device with ADB port 5555 open on the local subnet, prompts to confirm, then writes <code>devices/KAGAMI.txt</code>.</div>
-      <div class="step-detail">If the auto-detected subnet looks wrong, override: <code>./utilities/ml_scan.sh --subnet 10.x.x.0/24</code>.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ネットワーク上の ML2 デバイスをスキャン</div>
-      <div class="step-detail"><code>./utilities/ml_scan.sh</code> を実行。ローカルサブネット上で ADB ポート 5555 が開いているデバイスをすべて検出し、確認後に <code>devices/KAGAMI.txt</code> に保存します。</div>
-      <div class="step-detail">自動検出されたサブネットが誤っている場合は <code>./utilities/ml_scan.sh --subnet 10.x.x.0/24</code> のコマンドで上書きしてください。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Confirm device count matches 180</div>
-      <div class="step-detail">The scan table shows IP / model / serial / OS for each device found. If the count is short: power-cycle the missing devices, wait 30s, and rescan with <code>./utilities/ml_scan.sh --append</code>.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">検出台数が 180 と一致することを確認</div>
-      <div class="step-detail">スキャン結果に検出された各デバイスの IP・モデル・シリアル・OS バージョンが表示されます。台数が不足している場合は該当デバイスを再起動し、30秒待ってから <code>./utilities/ml_scan.sh --append</code> で再スキャンしてください。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION D — DRIFT CHECK
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">D · Drift check before deploying</span>
-  <span class="ja-h ja">D・デプロイ前のドリフト(構成のずれ)チェック</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Run fleet drift check</div>
-      <div class="step-detail"><code>./ml_provision.sh --fleet --check</code>. Read-only sweep across every device in <code>devices/KAGAMI.txt</code>. Reports which settings have drifted from the show config (brightness, WiFi, stay-awake, BT, hand nav, etc.).</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">フリート全体のドリフトチェック</div>
-      <div class="step-detail"><code>./ml_provision.sh --fleet --check</code> を実行。<code>devices/KAGAMI.txt</code> 内の全デバイスを読み取り専用でチェックし、ショー設定（明るさ・WiFi・スリープ防止・Bluetooth・ハンドナビ等）からズレている項目を報告します。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">If drift is reported, auto-fix</div>
-      <div class="step-detail"><code>./ml_status.sh --fix</code> remediates stay-awake, Bluetooth, and brightness in one pass. After it finishes, re-run <code>--fleet --check</code> to confirm clean.</div>
-      <div class="step-detail">Headset-manual items (Display Override, Segmented/Global/Max Dimming, Compute Pack Standby, OS Updater = Never) were set in Pittsburgh and should not have drifted.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ドリフトが報告された場合は自動修正する</div>
-      <div class="step-detail"><code>./ml_status.sh --fix</code> を実行すると、スリープ防止・Bluetooth・明るさを一括で修正します。完了後、<code>--fleet --check</code> を再実行してクリーンであることを確認してください。</div>
-      <div class="step-detail">ヘッドセット側で手動設定する項目（Display Override・Segmented/Global/Max Dimming・Compute Pack Standby・OS Updater = Never）はピッツバーグで設定済み、通常はドリフトしません。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION E — DEPLOY SHOW + KIOSK APKS
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">E · Deploy the show + kiosk APKs</span>
-  <span class="ja-h ja">E・ショー APK＋キオスク APK のデプロイ</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Verify the right builds are in builds/</div>
-      <div class="step-detail">Run <code>ls -la ~/Developer/ml_toolkit/builds/*.apk</code>. Look for the show APK (Kagami) and the kiosk APK. If they're stale, ask the supervisor for the latest before deploying.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">適切なビルドが builds/ にあるか確認</div>
-      <div class="step-detail"><code>ls -la ~/Developer/ml_toolkit/builds/*.apk</code> を実行し、ショー APK（Kagami）とキオスク APK の存在・バージョンを確認。古い場合はスーパーバイザーに最新版を依頼してから次へ。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Start the deploy</div>
-      <div class="step-detail"><code>./ml_deploy.sh deploy</code>. It connects to every device in <code>devices/KAGAMI.txt</code> in parallel, then prints the show banner and the confirm prompt.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">デプロイを開始</div>
-      <div class="step-detail"><code>./ml_deploy.sh deploy</code> を実行。<code>devices/KAGAMI.txt</code> 内の全デバイスに並列接続後、ショーバナーと確認プロンプトが表示されます。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Confirm the show — press Enter</div>
-      <div class="step-detail">Prompt reads <em>"Press Enter to continue, or S for other available show configurations:"</em>. The banner above must show <em>Show: KAGAMI</em>. Press <em>Enter</em>. (If banner shows the wrong show, press <em>S</em> to pick KAGAMI, or Ctrl+C and re-run with the right context.)</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ショーを確認 → Enter を押す</div>
-      <div class="step-detail">プロンプトには <em>"Press Enter to continue, or S for other available show configurations:"</em> と表示されます。上部のバナーが <em>Show: KAGAMI</em> であることを確認し、<em>Enter</em> を押します。（バナーに誤ったショーが表示されている場合は <em>S</em> で KAGAMI を選択、または Ctrl+C で中止し正しいコンテキストで再実行。）</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Select the APKs to install</div>
-      <div class="step-detail">The script lists numbered APKs from <code>builds/</code>. Type the numbers separated by spaces (e.g. <code>1 2</code> to install both Kagami and the kiosk). Press Enter.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">インストールする APK を選択</div>
-      <div class="step-detail">スクリプトは <code>builds/</code> 内の APK を番号付きで一覧表示します。スペース区切りで番号を入力してください。（例: Kagami とキオスクを両方インストールする場合は <code>1 2</code> ）Enter を押します。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Wait for install + kiosk-as-home + reboot</div>
-      <div class="step-detail">The script installs each APK in parallel (up to 20 devices at a time), sets <code>com.tindrum.kiosk</code> as the home app, lets PackageManager persist that, then reboots all devices. End state: <em>Deploy complete. Devices are rebooting.</em></div>
-      <div class="step-detail">Typical duration: 5–15 minutes depending on build sizes and AP capacity.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">インストール → キオスクをホームに設定 → 再起動 を待つ</div>
-      <div class="step-detail">スクリプトは最大20台同時に各 APK を並列インストールし、<code>com.tindrum.kiosk</code> をホームアプリに設定して、PackageManager が確実に保存するのを待ってから全デバイスを再起動します。終了表示: <em>Deploy complete. Devices are rebooting.</em></div>
-      <div class="step-detail">所要時間の目安: ビルドサイズと AP の負荷次第で 5〜15 分程度。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION F — DASHBOARD VERIFY
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">F · Confirm fleet health via the dashboard</span>
-  <span class="ja-h ja">F・ダッシュボードで全デバイスの状態を確認</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Wait for devices to finish rebooting</div>
-      <div class="step-detail">Allow ~45 seconds after the deploy completion message before sweeping. ML2 reboot + kiosk launch takes that long.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">デバイスの再起動の完了を待つ</div>
-      <div class="step-detail">デプロイ完了メッセージが表示されてから約45秒待って、ステータス取得を開始してください。ML2 の再起動 + キオスク起動にその程度の時間がかかります。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Generate the status snapshot</div>
-      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code>. Collects OS / APK / kiosk / settings / disk / data-folder state from every device in <code>devices/KAGAMI.txt</code> in parallel.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ステータススナップショットを生成</div>
-      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code> を実行。<code>devices/KAGAMI.txt</code> 内の全デバイスから OS・APK・キオスク・設定・ディスク・データフォルダ情報を並列取得します。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Open the dashboard and load the JSON</div>
-      <div class="step-detail">Open <code>fleet_dashboard.html</code> in your browser. Click <em>Load JSON</em> (or drag <code>status/latest.json</code> onto the page).</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ダッシュボードを開き JSON を読み込む</div>
-      <div class="step-detail">ブラウザで <code>fleet_dashboard.html</code> を開き、<em>Load JSON</em> をクリック、または <code>status/latest.json</code> をページにドラッグ&amp;ドロップ。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Read the All-OK / Issues / Offline counts</div>
-      <div class="step-detail">Header shows totals. Goal at this stage: every device online; APK + kiosk versions match the show config; no OFFLINE rows; data-folder rows still red (assets not loaded yet — Section H).</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">All-OK / Issues / Offline の件数を確認</div>
-      <div class="step-detail">ヘッダーに合計件数が表示されます。この時点での目標状態: 全デバイスがオンライン、APK・キオスクのバージョンがショー設定と一致、OFFLINE 行がないこと、データフォルダの行は赤表示で問題ありません（アセット未転送 — セクション H で対応）。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Investigate any unexpected red rows</div>
-      <div class="step-detail">If a device shows wrong APK version, missing kiosk, or extraneous <code>com.tindrum.*</code> packages — make a note of the IP and report to the supervisor. Don't power-cycle yet; we want diagnosis before remediation.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">想定外の赤表示の行を調査</div>
-      <div class="step-detail">APK バージョンが不一致、キオスクの未インストール、または不要な <code>com.tindrum.*</code> パッケージが表示されている場合は、IP アドレスを記録してスーパーバイザーに報告してください。診断前に再起動しないでください。修正前に原因を特定することが重要です。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION G — SHUT DOWN FOR ASSET TRANSFER
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">G · Shut the fleet down for asset transfer</span>
-  <span class="ja-h ja">G・アセット転送のため全デバイスをシャットダウン</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Shut down all devices</div>
-      <div class="step-detail"><code>./ml_deploy.sh shutdown</code>. Powers off every reachable device in parallel. Required because the show APK's SSD-load step only triggers on a fresh power-on with the SSD already attached.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">全デバイスをシャットダウン</div>
-      <div class="step-detail"><code>./ml_deploy.sh shutdown</code> を実行。到達可能な全デバイスを並列で電源オフ。ショー APK の SSD 読み込み処理は、SSD が接続済みの状態で電源を入れた直後にのみ起動するため、この手順が必要です。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Wait for the fan on each device to stop</div>
-      <div class="step-detail">A spinning fan means the device is still finishing shutdown. Do not attach the SSD or proceed until the Compute Pack is silent.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">各デバイスのファンが停止するまで待つ</div>
-      <div class="step-detail">ファンが回転している間はデバイスはまだシャットダウン中です。コンピュートパック（Compute Pack）が無音になるまで SSD 接続や次の作業に進まないでください。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION H — LOAD SHOW ASSETS PER DEVICE
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">H · Load show assets per device via SSD</span>
-  <span class="ja-h ja">H・SSD から各デバイスへショーアセットを転送</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">One device at a time — timing matters</div>
-      <div class="step-detail">The show APK looks for an attached SSD at launch. If the SSD isn't attached before the device boots, the copy doesn't start. Order is strict: <em>attach SSD → power on device → put on headset</em>.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">1台ずつ作業 — タイミングが重要</div>
-      <div class="step-detail">ショー APK は起動時にのみ SSD を検出します。起動前に SSD を接続していないとコピーは開始しません。順序厳守: <em>SSD 接続 → デバイス電源オン → ヘッドセット装着</em>。</div>
-    </div>
-  </div>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Attach the SSD to the device first</div>
-      <div class="step-detail">USB-C SSD with the Kagami asset payload. Plug into the Compute Pack while the device is still off.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">最初に SSD をデバイスに接続</div>
-      <div class="step-detail">Kagami アセットが入った USB-C SSD を、デバイスがオフの状態のままコンピュートパック（Compute Pack）に接続します。</div>
+      <div class="step-label">最初にオフのデバイスへ SSD を接続</div>
+      <div class="step-detail">Kagami アセットが入った USB-C SSD を、デバイスがオフのままコンピュートパック（Compute Pack）に接続します。電源を入れる前に接続しておくと、コピーのタイミングを逃しません。</div>
     </div>
   </div>
 </div>
@@ -619,11 +235,11 @@
   <div class="step-content">
     <div class="lang-block">
       <div class="step-label">Power on the device</div>
-      <div class="step-detail">Hold <em>Power</em> until the boot indicator appears. The kiosk + show APK will launch automatically.</div>
+      <div class="step-detail">Hold <em>Power</em> until the LEDs begin the "marching" boot sequence, then release. The Magic Leap logo appears and the device plays its boot sound — this is just the OS booting, not the copy.</div>
     </div>
     <div class="lang-block ja">
       <div class="step-label">デバイスを起動</div>
-      <div class="step-detail">起動表示が出るまで <em>電源</em> を長押し。キオスクとショー APK が自動的に起動します。</div>
+      <div class="step-detail">LED が「流れる」起動シーケンスを開始するまで <em>電源</em> を長押しし、離します。Magic Leap のロゴが表示され、起動音が鳴ります — これは OS の起動であり、コピーではありません。</div>
     </div>
   </div>
 </div>
@@ -632,12 +248,14 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Put on the headset and listen</div>
-      <div class="step-detail">When the show APK starts copying, you'll hear a <em>start tone series</em>. The headset display shows progress while copying.</div>
+      <div class="step-label">Glance into the headset to confirm the copy started</div>
+      <div class="step-detail">Right after boot, KAGAMI detects the SSD and shows the data folders copying in the display, with its own tones. Look into the headset to see the folders — that, not the boot sound, confirms the copy is running.</div>
+      <div class="step-detail">The tones help, but with several devices close together they're hard to tell apart, so the glance is the reliable check. If the device goes straight to the splash screen with no copy folders, the SSD wasn't picked up: power off, re-attach the SSD, and power on again.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">ヘッドセットを装着し音を聞く</div>
-      <div class="step-detail">ショー APK がコピーを開始すると <em>開始音</em>が鳴ります。コピー中はヘッドセットに進捗が表示されます。</div>
+      <div class="step-label">ヘッドセットをのぞいてコピー開始を確認</div>
+      <div class="step-detail">起動直後に KAGAMI が SSD を検出し、ディスプレイにコピー中のフォルダーを表示します（専用の音も鳴ります）。ヘッドセットをのぞいてフォルダーを確認してください — 起動音ではなく、これがコピー実行中の合図です。</div>
+      <div class="step-detail">音も手がかりになりますが、複数のデバイスが近接していると聞き分けが難しいため、目視確認が確実です。フォルダーが表示されないままスプラッシュ画面になった場合は SSD 未検出です。電源を切り、SSD を再接続し、再起動してください。</div>
     </div>
   </div>
 </div>
@@ -646,14 +264,12 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Wait for the finish tone series</div>
-      <div class="step-detail">When the copy finishes, a second tone series plays. Only then is it safe to remove the SSD.</div>
-      <div class="step-detail">If you don't hear tones within ~30 seconds of boot: the timing window was missed. Shut the device down, re-attach the SSD, and power on again.</div>
+      <div class="step-label">Move to your next SSD while it copies</div>
+      <div class="step-detail">You don't need to wait at one device. Once a copy is confirmed running, start the next device with another SSD. Keep as many devices copying as you have SSDs.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">終了音が鳴るまで待つ</div>
-      <div class="step-detail">コピー完了時に終了音が鳴ります。安全に取り外すため、必ずこの音を聞いた後に SSD を外してください。</div>
-      <div class="step-detail">起動から約30秒経っても音が鳴らない場合はタイミングを逃しています。デバイスをシャットダウンし、SSD を再接続し、再起動してください。</div>
+      <div class="step-label">コピー中に次の SSD へ</div>
+      <div class="step-detail">1台のデバイスで待つ必要はありません。コピー実行を確認したら、別の SSD で次のデバイスを開始します。手持ちの SSD の数だけデバイスを同時にコピーし続けてください。</div>
     </div>
   </div>
 </div>
@@ -662,12 +278,12 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Remove SSD, leave device powered on</div>
-      <div class="step-detail">Detach the SSD. <em>Do not power the device off</em> — Section I needs it online for the dashboard sweep.</div>
+      <div class="step-label">Glance in again for the splash, then remove the SSD</div>
+      <div class="step-detail">When the copy finishes, the device plays a second set of tones; KAGAMI then fully initializes and shows its splash screen. Once the splash appears, detach the SSD.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">SSD を外し、デバイスの電源は起動したままにする</div>
-      <div class="step-detail">SSD を取り外します。<em>デバイスの電源は切らないでください</em> — セクション I のダッシュボードスウィープでオンライン状態が必要です。</div>
+      <div class="step-label">もう一度のぞいてスプラッシュを確認し、SSD を外す</div>
+      <div class="step-detail">コピーが完了すると2回目の音が鳴り、その後 KAGAMI が完全に初期化されてスプラッシュ画面を表示します。スプラッシュが表示されたら SSD を取り外してください。</div>
     </div>
   </div>
 </div>
@@ -676,34 +292,12 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Move to next device, repeat</div>
-      <div class="step-detail">Multiple operators can run this in parallel with one SSD per operator. 180 devices × ~3 minutes per device = ~9 device-hours total.</div>
+      <div class="step-label">Place the device in the case/rack — powered on and plugged in</div>
+      <div class="step-detail">Leave the device powered on and connected to power in its case or rack slot. Do not shut it down.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">次のデバイスへ移り、繰り返す</div>
-      <div class="step-detail">1人 1 台の SSD で複数のオペレーターによる並列作業が可能です。180台 × 約3分/台 = 合計約9時間相当の作業量。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     SECTION I — FINAL VERIFY
-     ============================================================ -->
-<div class="section-label">
-  <span class="en-h">I · Verify the fleet is show-ready</span>
-  <span class="ja-h ja">I・ショー本番に向けた最終確認</span>
-</div>
-
-<div class="step">
-  <div class="checkbox"></div>
-  <div class="step-content">
-    <div class="lang-block">
-      <div class="step-label">Re-run the status sweep</div>
-      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code>, then reload <code>fleet_dashboard.html</code>.</div>
-    </div>
-    <div class="lang-block ja">
-      <div class="step-label">ステータススイープを再実行</div>
-      <div class="step-detail"><code>./ml_status.sh --json &gt; status/latest.json</code> を再実行し、<code>fleet_dashboard.html</code> を再読み込み。</div>
+      <div class="step-label">デバイスをケース／ラックに収納（電源オン・電源接続のまま）</div>
+      <div class="step-detail">デバイスは電源オンのまま、ケースまたはラックのスロットで電源に接続したままにします。シャットダウンしないでください。</div>
     </div>
   </div>
 </div>
@@ -712,12 +306,12 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Confirm data-folder rows are now clean</div>
-      <div class="step-detail">Devices that just received the SSD copy should show the show's data dir populated (no "data missing" red flag). Disk usage may rise — that's expected.</div>
+      <div class="step-label">Reuse the freed SSD on the next device; repeat until none remain</div>
+      <div class="step-detail">The SSD you just removed goes onto the next powered-off device. Keep cycling your SSDs through the fleet until every device assigned to you has been loaded.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">データフォルダ行がクリーンになっていることを確認</div>
-      <div class="step-detail">SSD コピーが完了したデバイスはショーのデータディレクトリにファイルが配置され、「data missing」の赤いフラグが消えるはずです。ディスク使用量が増えますが想定どおりです。</div>
+      <div class="step-label">空いた SSD を次のデバイスへ。デバイスがなくなるまで繰り返す</div>
+      <div class="step-detail">取り外した SSD を次のオフのデバイスに使います。担当するすべてのデバイスの転送が終わるまで、SSD を順番に使い回してください。</div>
     </div>
   </div>
 </div>
@@ -726,19 +320,19 @@
   <div class="checkbox"></div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Report to supervisor</div>
-      <div class="step-detail">Note the All-OK count, the Issues count, the IP of any device still red, and hand the dashboard view to the supervisor. They decide go / no-go for show.</div>
+      <div class="step-label">Report to your supervisor when your batch is done</div>
+      <div class="step-detail">Tell the supervisor when all your assigned devices are loaded, and flag any device that wouldn't take the copy (no tones/folders even after re-attaching). The supervisor verifies fleet health on the dashboard and makes the go / no-go call.</div>
     </div>
     <div class="lang-block ja">
-      <div class="step-label">スーパーバイザーに報告</div>
-      <div class="step-detail">All-OK の件数・Issues の件数・赤表示のデバイス IP を記録し、ダッシュボード画面をスーパーバイザーに引き継ぎます。本番可否の判断はスーパーバイザーが行います。</div>
+      <div class="step-label">担当分が完了したらスーパーバイザーに報告</div>
+      <div class="step-detail">担当する全デバイスの転送が完了したらスーパーバイザーに報告し、再接続してもコピーできなかったデバイス（音もフォルダー表示もない）があれば伝えてください。フリート全体の健全性確認と本番可否の判断はスーパーバイザーがダッシュボードで行います。</div>
     </div>
   </div>
 </div>
 
 <div class="repeat">
-  <div>Red fleet is show-ready.</div>
-  <div class="ja">レッドフリート、本番準備完了。</div>
+  <div>Assets loaded — handed off to supervisor.</div>
+  <div class="ja">アセット転送完了 — スーパーバイザーへ引き継ぎ。</div>
 </div>
 
 <footer>
