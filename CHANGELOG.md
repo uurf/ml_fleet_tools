@@ -10,6 +10,17 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.0] — 2026-06-17 — Foreign-show app removal + resilient APK install
+
+### Added
+- **`SHOW_REMOVE_PACKAGES` config field** — space-separated packages from *other* shows to uninstall while provisioning this show. `KAGAMI_BLUE.conf` removes the RED show app `com.tindrum.kagamu`; `KAGAMI.conf` removes the BLUE app `com.tindrum.kagami.blue` (symmetric). Seeds `ml_provision.sh`'s `REMOVE_PACKAGES`, so it's gated to the provision pass and never runs under `--check`. `--check` now also lists these explicit packages. Config-driven — onboarding a show stays a conf edit.
+
+### Fixed
+- **`ml_deploy.sh` APK install survives a signature mismatch.** `do_install` previously did a bare `adb install -r -g`, which fails when the on-device package was signed with a different key — exactly what happened deploying `kiosk-kagami-blue.apk` over a `com.tindrum.kiosk` written with a non-fleet key. It now tries `-r -d -g` (the `-d` also clears a version-downgrade in place), and **only on a signature/downgrade conflict** uninstalls the offending package (parsed from adb's error) and reinstalls. A fleet-key app still updates in place with no uninstall.
+- **Failed deploys show the real reason.** The per-device `✗` line printed `tail -1` of the log, which is usually a trailing blank line — so failures rendered as `✗ <serial> —` with no message. It now surfaces the actual `Failure […]` / `INSTALL_FAILED…` / `adb:` line (both result loops in `ml_deploy.sh`).
+
+---
+
 ## [v1.1.4] — 2026-06-17 — install.sh: persist Homebrew PATH to all profiles + honest bash check
 
 ### Fixed

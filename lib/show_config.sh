@@ -143,6 +143,12 @@ _sc_init() {
   # shared across shows but built per show with a distinct versionName
   # (e.g. 1.0b / 1.0r) so a mis-loaded kiosk is caught. Blank skips it.
   : "${SHOW_KIOSK_VERSION:=}"
+  # Packages belonging to OTHER shows that must be uninstalled when
+  # provisioning this show (space-separated). E.g. KAGAMI_BLUE removes the
+  # RED show app com.tindrum.kagamu so a re-purposed device doesn't carry a
+  # foreign show app. ml_provision.sh seeds REMOVE_PACKAGES from this; applied
+  # only in the provision pass, never in --check. Blank = remove nothing extra.
+  : "${SHOW_REMOVE_PACKAGES:=}"
   # Google Apps Script web app URL for this show's tracking sheet. Each
   # show has its own bound workbook + deployment (see apps_script/Code.gs
   # header). Blank = no sheet sync for this show (update_sheet no-ops).
@@ -180,7 +186,7 @@ _sc_init() {
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
-         SHOW_BRIGHTNESS SHOW_SHEETS_URL \
+         SHOW_REMOVE_PACKAGES SHOW_BRIGHTNESS SHOW_SHEETS_URL \
          SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT
 }
