@@ -10,6 +10,17 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.1.4] — 2026-06-17 — install.sh: persist Homebrew PATH to all profiles + honest bash check
+
+### Fixed
+- **`install.sh` now persists the Homebrew `shellenv` line to every profile a macOS shell might read** (`.zprofile`, `.zshrc`, `.bash_profile`, `.bashrc`), not just `.zprofile`. `.zprofile` is read by *login* zsh shells only, so operators whose terminal runs a non-login interactive shell (or bash) still resolved `/bin/bash` 3.2 after install.
+- **The post-install bash check no longer lies.** It previously probed `bash` in install.sh's own process — which had already `eval`'d `brew shellenv`, so it always reported "bash 5.x in use" even when the operator's actual terminals would still get 3.2 (symptom: script reports 5 but `bash --version` says 3.2). It now probes a fresh `zsh -lic` login shell, reflecting what a new terminal will really resolve, and prints the exact `eval "$(brew shellenv)"` recovery line if not.
+
+### Operator note
+If you already ran the old `install.sh` and `bash --version` still shows 3.2: run `eval "$(/opt/homebrew/bin/brew shellenv)"` in your terminal (or re-run `./install.sh` and open a new terminal).
+
+---
+
 ## [v1.1.3] — 2026-06-17 — Hard-stop scripts on bash 3.2 + reliable Homebrew bash on PATH
 
 ### Fixed
