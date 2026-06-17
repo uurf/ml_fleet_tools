@@ -170,6 +170,7 @@ Key non-obvious settings and their ADB keys:
 | File | Purpose |
 |------|---------|
 | `lib/show_config.sh` | Sourced by every main script; resolves + validates the active show |
+| `lib/require_bash5.sh` | Sourced first by every main script; hard-stops with guidance if running under macOS's stock bash 3.2 instead of Homebrew bash 5+ (stays bash-3.2-compatible itself) |
 | `shows/<id>.conf` | Per-show config (committed); `shows/KAGAMI.conf` = original values; `shows/EXAMPLE.conf` = template |
 | `ml_show.sh` | Select/create the active show (`use`, `init`, status) |
 | `.active_show` | Machine's selected show id (gitignored, set by `ml_show.sh use`) |

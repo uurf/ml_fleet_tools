@@ -28,6 +28,9 @@
 
 set -euo pipefail
 
+# bash 5+ required (macOS default 3.2 lacks mapfile et al.) — hard-stop early
+source "$(dirname "${BASH_SOURCE[0]}")/lib/require_bash5.sh"
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 

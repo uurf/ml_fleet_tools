@@ -22,6 +22,9 @@
 
 set -euo pipefail
 
+# bash 5+ required (macOS default 3.2 lacks mapfile et al.) — hard-stop early
+source "$(dirname "${BASH_SOURCE[0]}")/lib/require_bash5.sh"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
