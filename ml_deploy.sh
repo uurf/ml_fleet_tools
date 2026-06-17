@@ -209,10 +209,12 @@ run_parallel() {
       echo -e "  ${GREEN}✓${RESET} $serial"
       ((success++)) || true
     else
-      # Surface the actual failure, not a trailing blank line.
-      local why
-      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1)
-      [[ -z "$why" ]] && why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1)
+      # Surface the actual failure, not a trailing blank line. The `|| true`
+      # guards are required: grep returns non-zero when nothing matches, which
+      # under `set -o pipefail` would otherwise abort the whole run right here.
+      local why=""
+      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1) || true
+      [[ -n "$why" ]] || why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1) || true
       echo -e "  ${RED}✗${RESET} $serial — $why"
       ((fail++)) || true
     fi
@@ -225,10 +227,14 @@ run_parallel() {
 
 # ---- Per-device operations ----
 do_install() {
+  # Every capture below is `|| true`-guarded: adb/grep return non-zero on
+  # failure/no-match, and under the script's `set -euo pipefail` an
+  # unguarded `x=$(failing | pipe)` aborts the whole run here. Status is
+  # derived from the "Success" text, not exit codes.
   local s="$1" apk="$2" out pkg
   # Normal replace. -d also clears a version-downgrade conflict in place,
   # keeping app data (no uninstall needed for that case).
-  out=$(adb -s "$s" install -r -d -g "$apk" 2>&1)
+  out=$(adb -s "$s" install -r -d -g "$apk" 2>&1) || true
   if printf '%s' "$out" | grep -q "Success"; then printf '%s\n' "$out"; return 0; fi
 
   # A signature mismatch can't be replaced in place — e.g. a com.tindrum.kiosk
@@ -236,14 +242,14 @@ do_install() {
   # error, uninstall it, and reinstall this build. Only triggers on the
   # signature case, so a fleet-key app just updates above without an uninstall.
   if printf '%s' "$out" | grep -qiE "signatures do not match|INSTALL_FAILED_UPDATE_INCOMPATIBLE"; then
-    pkg=$(printf '%s' "$out" | grep -oiE "package [a-z0-9_.]+" | head -1 | awk '{print $2}')
-    [[ -z "$pkg" ]] && pkg=$(printf '%s' "$out" | grep -oE "com\.[a-z0-9_.]+" | head -1)
+    pkg=$(printf '%s' "$out" | grep -oiE "package [a-z0-9_.]+" | head -1 | awk '{print $2}') || true
+    [[ -n "$pkg" ]] || pkg=$(printf '%s' "$out" | grep -oE "com\.[a-z0-9_.]+" | head -1) || true
     if [[ -n "$pkg" ]]; then
       printf 'signature mismatch on %s — uninstalling and reinstalling\n' "$pkg"
       adb -s "$s" uninstall "$pkg" >/dev/null 2>&1 || true
-      out=$(adb -s "$s" install -r -g "$apk" 2>&1)
+      out=$(adb -s "$s" install -r -g "$apk" 2>&1) || true
       printf '%s\n' "$out"
-      printf '%s' "$out" | grep -q "Success"; return $?
+      printf '%s' "$out" | grep -q "Success" && return 0 || return 1
     fi
   fi
   printf '%s\n' "$out"
@@ -403,10 +409,12 @@ run_push() {
       echo -e "  ${GREEN}✓${RESET} $serial  ${DIM}${summary_line}${RESET}"
       ((success++)) || true
     else
-      # Surface the actual failure, not a trailing blank line.
-      local why
-      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1)
-      [[ -z "$why" ]] && why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1)
+      # Surface the actual failure, not a trailing blank line. The `|| true`
+      # guards are required: grep returns non-zero when nothing matches, which
+      # under `set -o pipefail` would otherwise abort the whole run right here.
+      local why=""
+      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1) || true
+      [[ -n "$why" ]] || why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1) || true
       echo -e "  ${RED}✗${RESET} $serial — $why"
       ((fail++)) || true
     fi
