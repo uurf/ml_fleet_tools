@@ -10,6 +10,22 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.2] — 2026-06-17 — Fix bootstrap deadlock: update.sh blocked on bash 3.2
+
+### Fixed
+- **`update.sh` no longer requires bash 5.** v1.1.3 added the bash-5 guard to `update.sh`, which deadlocked the exact machines that needed updating: an operator on macOS's stock bash 3.2 got `This script needs bash 5+` and couldn't pull the fix. `update.sh` only runs `git` + the fleet-key backup — none of which need bash 5 — so the guard is removed (with a comment to never re-add it). `install.sh` was already guard-free and 3.2-safe; it remains the script that installs Homebrew bash and fixes PATH.
+
+### Operator recovery (for a laptop already stuck on this)
+Homebrew bash is installed but not on PATH. In the current terminal:
+```
+eval "$(/opt/homebrew/bin/brew shellenv)"     # Apple Silicon; Intel: /usr/local/bin/brew
+./update.sh                                     # now pulls this fix
+./install.sh                                    # writes Homebrew to all shell profiles
+```
+Then open a new terminal.
+
+---
+
 ## [v1.2.1] — 2026-06-17 — Fix v1.2.0 regression: deploy aborted silently on a failed install
 
 ### Fixed
