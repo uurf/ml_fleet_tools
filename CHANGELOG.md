@@ -10,6 +10,13 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.1] — 2026-06-17 — Fix v1.2.0 regression: deploy aborted silently on a failed install
+
+### Fixed
+- **`ml_deploy.sh` no longer dies silently mid-deploy.** v1.2.0's new failure-surfacing code used `why=$(grep … | tail -1)` and `do_install` used unguarded `out=$(adb … 2>&1)` / `pkg=$(… | grep | …)` captures. Under the script's `set -euo pipefail`, `grep` returning non-zero on a no-match (surfaced by `pipefail`) made those `x=$(failing pipeline)` assignments abort the entire run — so a failed kiosk install dropped straight back to the prompt with no `✗`, no reason, and no "Done" line. Every such capture is now `|| true`-guarded and status is derived from the `Success` text, not exit codes. Verified the deploy survives: fallback-reinstall success, total install failure, and an empty job log all complete cleanly now.
+
+---
+
 ## [v1.2.0] — 2026-06-17 — Foreign-show app removal + resilient APK install
 
 ### Added
