@@ -64,12 +64,18 @@ if [[ -x "$BREW_BIN" ]]; then
 fi
 
 # Persist it so NEW terminals get the right PATH too. Homebrew's own installer
-# adds this on a fresh install, but not when brew was already present — add it
-# idempotently so operators don't have to think about PATH ordering.
+# only edits ~/.zprofile on a fresh install — and .zprofile is read by *login*
+# zsh shells only. Operators hit bash 3.2 when their terminal runs a non-login
+# interactive shell (reads .zshrc), or uses bash. Append idempotently to every
+# profile a macOS shell might read so PATH ordering "just works" regardless.
 SHELLENV_LINE="eval \"\$($BREW_BIN shellenv)\""
-if [[ -x "$BREW_BIN" ]] && ! grep -qF "$BREW_BIN shellenv" "$HOME/.zprofile" 2>/dev/null; then
-  printf '\n%s\n' "$SHELLENV_LINE" >> "$HOME/.zprofile"
-  printf "  %b  Added Homebrew to ~/.zprofile (new terminals)\n" "$TICK"
+if [[ -x "$BREW_BIN" ]]; then
+  for profile in "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.bashrc"; do
+    if ! grep -qF "$BREW_BIN shellenv" "$profile" 2>/dev/null; then
+      printf '\n# Homebrew on PATH (added by ml_toolkit install.sh)\n%s\n' "$SHELLENV_LINE" >> "$profile"
+    fi
+  done
+  printf "  %b  Added Homebrew to shell profiles (.zprofile/.zshrc/.bash_profile/.bashrc)\n" "$TICK"
 fi
 
 # ---- Install required packages -------------------------------------
@@ -207,20 +213,27 @@ echo ""
 
 # The ml_* scripts use a `#!/usr/bin/env bash` shebang, so they run whatever
 # `bash` PATH resolves first. That MUST be Homebrew bash 5+ — macOS's stock
-# /bin/bash is 3.2 and lacks `mapfile` et al. Verify what actually runs, not
-# just that the file exists (the old check was cosmetic and passed on 3.2).
-RESOLVED_BASH=$(command -v bash || true)
-# single quotes intentional: BASH_VERSINFO must expand in the child bash, not here
+# /bin/bash is 3.2 and lacks `mapfile` et al.
+#
+# Verify what a FRESH shell will resolve, NOT this process: install.sh already
+# eval'd `brew shellenv` above, so its own PATH always finds bash 5 and would
+# falsely report success even when the operator's terminals still get 3.2.
+# Spawn a clean login+interactive shell so the probe reflects the profiles we
+# just wrote — i.e. what `bash --version` will say in a new terminal.
+# single quotes intentional: BASH_VERSINFO must expand in the child bash
 # shellcheck disable=SC2016
-RESOLVED_MAJOR=$("$RESOLVED_BASH" -c 'echo "${BASH_VERSINFO[0]}"' 2>/dev/null || echo 0)
+PROBE='b=$(command -v bash); echo "$b ${BASH_VERSINFO:-}"; "$b" -c "echo \${BASH_VERSINFO[0]}"'
+FRESH=$(zsh -lic "$PROBE" 2>/dev/null | tail -1 || echo 0)
+RESOLVED_BASH=$(zsh -lic 'command -v bash' 2>/dev/null | tail -1 || true)
 
-if [[ "$RESOLVED_MAJOR" -ge 5 ]]; then
-  printf "  %b  bash %s.x in use (%s)\n" "$TICK" "$RESOLVED_MAJOR" "$RESOLVED_BASH"
+if [[ "${FRESH:-0}" -ge 5 ]]; then
+  printf "  %b  new terminals will use bash %s.x (%s)\n" "$TICK" "$FRESH" "$RESOLVED_BASH"
 else
-  printf "  %b  ${YELLOW}bash resolves to %s (version %s.x) — scripts need 5+${RESET}\n" \
-    "$CROSS" "${RESOLVED_BASH:-not found}" "$RESOLVED_MAJOR"
-  echo -e "     ${YELLOW}Homebrew bash is installed but not first on this shell's PATH.${RESET}"
-  echo -e "     ${BOLD}Open a NEW terminal${RESET} (or run ${CYAN}exec zsh -l${RESET}) before running any ml_* script."
+  printf "  %b  ${YELLOW}a new terminal would still resolve bash to %s.x (%s)${RESET}\n" \
+    "$CROSS" "${FRESH:-?}" "${RESOLVED_BASH:-not found}"
+  echo -e "     ${YELLOW}The profile edit didn't take for your login shell.${RESET}"
+  echo -e "     Run this in the terminal you'll use, then re-check ${CYAN}bash --version${RESET}:"
+  echo -e "       ${CYAN}eval \"\$($BREW_BIN shellenv)\"${RESET}"
 fi
 
 # ---- Final summary -------------------------------------------------
