@@ -10,6 +10,19 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.5] — 2026-06-18 — Disable ADB auth timeout (fleet was silently de-authorizing) + re-include scan fix
+
+### Fixed
+- **The fleet's adb authorizations were expiring after ~7 days.** Android revokes an authorized laptop key — *even "Always allow"* — for any computer that hasn't reconnected within `adb_allowed_connection_time` (default 7 days). That's why the Pittsburgh fleet, provisioned in late April/May and then **shipped unconnected for weeks**, showed "Allow USB debugging" / "failed to authenticate" on first power-up in Osaka — not a lost key, not a mistapped dialog. (Confirmed against the AOSP `AdbDebuggingManager` behavior: `0` = never expire.)
+- **`ml_provision.sh`** now sets `settings put global adb_allowed_connection_time 0` (disable the timeout) as part of the Developer-mode pass, and `--check` verifies it. Applied to every newly provisioned device so authorizations persist for the full show.
+- **`ml_status.sh`** now collects `adb_allowed_connection_time` (exposed in `--json` as `settings.adb_auth_timeout_off` / `adb_auth_timeout_raw`), and **`--fix` sets it to 0** — so already-provisioned devices (e.g. the ones provisioned in Osaka this week) can be corrected over WiFi without re-provisioning, before *they* hit the 7-day window.
+
+### Note
+- The scan-at-scale fix (v1.2.4) is re-included here — it had been reverted from `main` for mid-show stability, but operators are re-syncing (`./update.sh && ./install.sh`) for this auth fix anyway.
+- **Verify on one device before mass-applying:** confirm `adb shell settings put global adb_allowed_connection_time 0` actually reads back as `0` on the ML2 user build. If the write is blocked, use the Developer Options **"Disable adb authorization timeout"** toggle instead.
+
+---
+
 ## [v1.2.4] — 2026-06-17 — ml_scan works at fleet scale (was tuned for ~5 devices)
 
 ### Fixed
