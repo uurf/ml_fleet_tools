@@ -30,7 +30,9 @@ There is no build system. All scripts are standalone bash and run directly:
 ./utilities/ml_ssd_copy.sh                     # Copy show assets from USB-C SSD to fleet
 ```
 
-**Shell requirement**: Scripts require bash 5+ (macOS ships with bash 3.2; Homebrew bash is required). `install.sh` handles this.
+**Shell requirement**: Scripts require bash 5+ (macOS ships with bash 3.2; Homebrew bash is required). `install.sh` handles this. The bash-5 guard (`lib/require_bash5.sh`) is sourced by the device-facing scripts (`ml_os_flash`/`ml_provision`/`ml_deploy`/`ml_status`/`ml_show`) which use bash-5 features.
+
+> **Bootstrap guardrail (learned the hard way — caused a 17/18-laptop fleet outage):** `install.sh` and `update.sh` are the bootstrap/maintenance scripts and **must stay bash-3.2-safe** — no `mapfile`/assoc-arrays/`${x^^}`, and **never source the bash-5 guard.** A bootstrap script must never require the very thing it exists to install/deliver, or it deadlocks the exact machines that need it (e.g. a guarded `update.sh` can't pull its own fix on a 3.2 laptop). Relatedly, to detect a *modern* bash, check `${BASH_VERSINFO[0]} -ge 5` or the binary at `$(brew --prefix)/bin/bash` — **never `command -v bash`**, which always finds macOS's stock 3.2 `/bin/bash` and silently skips `brew install bash`.
 
 **Linting/testing**: There is no test suite. Manual testing is done against real devices. Use `shellcheck` if available for static analysis of shell scripts.
 
