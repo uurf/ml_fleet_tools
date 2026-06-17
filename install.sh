@@ -40,18 +40,36 @@ echo ""
 echo -e "${BOLD}Checking dependencies...${RESET}"
 echo ""
 
+# Homebrew prefix differs by arch: /opt/homebrew (Apple Silicon) vs /usr/local (Intel)
+if [[ "$ARCH" == "arm64" ]]; then
+  BREW_BIN="/opt/homebrew/bin/brew"
+else
+  BREW_BIN="/usr/local/bin/brew"
+fi
+
 if ! command -v brew &>/dev/null; then
   echo "  Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  # Add brew to PATH for Apple Silicon
-  if [[ "$ARCH" == "arm64" ]]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
-    eval "$(/usr/local/bin/brew shellenv)"
-  fi
   printf "  %b  Homebrew installed\n" "$TICK"
 else
   printf "  %b  Homebrew already installed\n" "$TICK"
+fi
+
+# Put brew (and thus Homebrew bash) on PATH for THIS process — needed in both
+# branches: the current shell may predate the .zprofile edit, and the
+# "already installed" case never eval'd shellenv at all. Without this, the
+# `env bash` shebang on every ml_* script keeps resolving to /bin/bash 3.2.
+if [[ -x "$BREW_BIN" ]]; then
+  eval "$("$BREW_BIN" shellenv)"
+fi
+
+# Persist it so NEW terminals get the right PATH too. Homebrew's own installer
+# adds this on a fresh install, but not when brew was already present — add it
+# idempotently so operators don't have to think about PATH ordering.
+SHELLENV_LINE="eval \"\$($BREW_BIN shellenv)\""
+if [[ -x "$BREW_BIN" ]] && ! grep -qF "$BREW_BIN shellenv" "$HOME/.zprofile" 2>/dev/null; then
+  printf '\n%s\n' "$SHELLENV_LINE" >> "$HOME/.zprofile"
+  printf "  %b  Added Homebrew to ~/.zprofile (new terminals)\n" "$TICK"
 fi
 
 # ---- Install required packages -------------------------------------
@@ -187,12 +205,22 @@ echo ""
 echo -e "${BOLD}Verifying shell configuration...${RESET}"
 echo ""
 
-BREW_BASH="/opt/homebrew/bin/bash"
-if [[ -f "$BREW_BASH" ]]; then
-  # Scripts already use Homebrew bash shebang — no modification needed
-  printf "  %b  Homebrew bash available at %s\n" "$TICK" "$BREW_BASH"
+# The ml_* scripts use a `#!/usr/bin/env bash` shebang, so they run whatever
+# `bash` PATH resolves first. That MUST be Homebrew bash 5+ — macOS's stock
+# /bin/bash is 3.2 and lacks `mapfile` et al. Verify what actually runs, not
+# just that the file exists (the old check was cosmetic and passed on 3.2).
+RESOLVED_BASH=$(command -v bash || true)
+# single quotes intentional: BASH_VERSINFO must expand in the child bash, not here
+# shellcheck disable=SC2016
+RESOLVED_MAJOR=$("$RESOLVED_BASH" -c 'echo "${BASH_VERSINFO[0]}"' 2>/dev/null || echo 0)
+
+if [[ "$RESOLVED_MAJOR" -ge 5 ]]; then
+  printf "  %b  bash %s.x in use (%s)\n" "$TICK" "$RESOLVED_MAJOR" "$RESOLVED_BASH"
 else
-  printf "  %b  ${YELLOW}Homebrew bash not found — scripts may fail on Apple Silicon${RESET}\n" "$CROSS"
+  printf "  %b  ${YELLOW}bash resolves to %s (version %s.x) — scripts need 5+${RESET}\n" \
+    "$CROSS" "${RESOLVED_BASH:-not found}" "$RESOLVED_MAJOR"
+  echo -e "     ${YELLOW}Homebrew bash is installed but not first on this shell's PATH.${RESET}"
+  echo -e "     ${BOLD}Open a NEW terminal${RESET} (or run ${CYAN}exec zsh -l${RESET}) before running any ml_* script."
 fi
 
 # ---- Final summary -------------------------------------------------

@@ -10,6 +10,18 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.1.3] — 2026-06-17 — Hard-stop scripts on bash 3.2 + reliable Homebrew bash on PATH
+
+### Fixed
+- **Scripts no longer fail cryptically under macOS's stock bash 3.2.** The `ml_*` scripts use a `#!/usr/bin/env bash` shebang, so they silently ran under `/bin/bash` (3.2) whenever Homebrew bash wasn't first on PATH — surfacing as `mapfile: command not found` deep inside `ml_deploy.sh` (and anywhere else relying on bash 4+ builtins). New `lib/require_bash5.sh` is sourced first by every script and hard-stops with an actionable message (open a new terminal / `exec zsh -l`; run `./script`, not `sh script`) before any 3.2-incompatible code runs.
+- **`install.sh` now actually puts Homebrew bash on PATH — for the current shell and new terminals.** Previously `eval "$(brew shellenv)"` ran only on a fresh Homebrew install (never the "already installed" path), and the change never reached the running terminal, so the very next `./ml_deploy.sh` in the same window hit bash 3.2. It now evals `shellenv` in both branches and appends it idempotently to `~/.zprofile`.
+- **`install.sh` bash check is no longer cosmetic.** It previously only checked that `/opt/homebrew/bin/bash` existed and printed a green tick even when 3.2 was what actually ran. It now probes the resolved `bash`'s major version and, if it's still < 5, tells the operator to open a new terminal.
+
+### Changed
+- The bash-5 guard is wired into `ml_os_flash.sh`, `ml_provision.sh`, `ml_deploy.sh`, `ml_status.sh`, `ml_show.sh`, and `update.sh`.
+
+---
+
 ## [v1.1.2] — 2026-06-10 — Operator-only playbook re-scope + translator JA finalized
 
 ### Changed
