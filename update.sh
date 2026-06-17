@@ -10,8 +10,10 @@ GREEN='\033[0;32m'; CYAN='\033[0;36m'
 BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 TICK="${GREEN}✓${RESET}"
 
-# bash 5+ required (macOS default 3.2 lacks mapfile et al.) — hard-stop early
-source "$(dirname "${BASH_SOURCE[0]}")/lib/require_bash5.sh"
+# NOTE: do NOT add the bash-5 guard here. update.sh only runs git + the fleet-key
+# backup, none of which need bash 5 — and gating it would deadlock the exact
+# bash-3.2 machines that need to pull the fix (the v1.1.3 regression). install.sh
+# (also guard-free, 3.2-safe) is what puts Homebrew bash on PATH.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
