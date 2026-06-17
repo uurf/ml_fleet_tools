@@ -91,7 +91,19 @@ install_if_missing() {
 }
 
 install_if_missing "android-platform-tools" "adb"
-install_if_missing "bash"
+
+# bash needs a version-aware check, NOT install_if_missing: `command -v bash`
+# always finds macOS's stock /bin/bash 3.2, so the generic helper would report
+# "already installed" and never `brew install bash` — the real reason fleet
+# laptops stayed on 3.2. Check for the Homebrew bash binary specifically.
+BREW_BASH_PATH="$(dirname "$BREW_BIN")/bash"   # e.g. /opt/homebrew/bin/bash
+if [[ -x "$BREW_BASH_PATH" ]]; then
+  printf "  %b  Homebrew bash already installed\n" "$TICK"
+else
+  echo "  Installing bash (Homebrew 5+; macOS ships 3.2)..."
+  brew install bash
+  printf "  %b  bash installed\n" "$TICK"
+fi
 install_if_missing "git"
 install_if_missing "python3"
 

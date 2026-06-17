@@ -10,6 +10,22 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.3] — 2026-06-17 — install.sh actually installs Homebrew bash (root cause of the 3.2 fleet)
+
+### Fixed
+- **`install.sh` now really installs Homebrew bash.** The check was `install_if_missing "bash"`, whose `command -v bash` test *always* succeeds on macOS (it finds the stock `/bin/bash` 3.2) — so it reported "bash already installed ✓" and **never ran `brew install bash`.** That's why fleet laptops stayed on 3.2 despite a green install: Homebrew bash was never installed. Replaced with a version-aware check for the Homebrew bash binary at `$(brew --prefix)/bin/bash`; installs it when absent. This was the actual root cause behind the v1.1.3/v1.1.4/v1.2.2 PATH symptoms.
+
+### Operator recovery (corrected — Homebrew bash may not be installed at all)
+```
+cd ~/Developer/ml_toolkit
+eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
+brew install bash          # the step install.sh used to skip; no-op if already present
+./update.sh && ./install.sh
+```
+Then open a new terminal; `bash --version` should read 5.x.
+
+---
+
 ## [v1.2.2] — 2026-06-17 — Fix bootstrap deadlock: update.sh blocked on bash 3.2
 
 ### Fixed
