@@ -209,7 +209,11 @@ run_parallel() {
       echo -e "  ${GREEN}✓${RESET} $serial"
       ((success++)) || true
     else
-      echo -e "  ${RED}✗${RESET} $serial — $(tail -1 "$logfile")"
+      # Surface the actual failure, not a trailing blank line.
+      local why
+      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1)
+      [[ -z "$why" ]] && why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1)
+      echo -e "  ${RED}✗${RESET} $serial — $why"
       ((fail++)) || true
     fi
   done
@@ -220,7 +224,31 @@ run_parallel() {
 }
 
 # ---- Per-device operations ----
-do_install() { local s="$1" apk="$2"; adb -s "$s" install -r -g "$apk"; }
+do_install() {
+  local s="$1" apk="$2" out pkg
+  # Normal replace. -d also clears a version-downgrade conflict in place,
+  # keeping app data (no uninstall needed for that case).
+  out=$(adb -s "$s" install -r -d -g "$apk" 2>&1)
+  if printf '%s' "$out" | grep -q "Success"; then printf '%s\n' "$out"; return 0; fi
+
+  # A signature mismatch can't be replaced in place — e.g. a com.tindrum.kiosk
+  # written with a non-fleet key. Pull the conflicting package out of adb's
+  # error, uninstall it, and reinstall this build. Only triggers on the
+  # signature case, so a fleet-key app just updates above without an uninstall.
+  if printf '%s' "$out" | grep -qiE "signatures do not match|INSTALL_FAILED_UPDATE_INCOMPATIBLE"; then
+    pkg=$(printf '%s' "$out" | grep -oiE "package [a-z0-9_.]+" | head -1 | awk '{print $2}')
+    [[ -z "$pkg" ]] && pkg=$(printf '%s' "$out" | grep -oE "com\.[a-z0-9_.]+" | head -1)
+    if [[ -n "$pkg" ]]; then
+      printf 'signature mismatch on %s — uninstalling and reinstalling\n' "$pkg"
+      adb -s "$s" uninstall "$pkg" >/dev/null 2>&1 || true
+      out=$(adb -s "$s" install -r -g "$apk" 2>&1)
+      printf '%s\n' "$out"
+      printf '%s' "$out" | grep -q "Success"; return $?
+    fi
+  fi
+  printf '%s\n' "$out"
+  return 1
+}
 do_push()    { local s="$1" src="$2" dest="$3"; adb -s "$s" push "$src" "$dest"; }
 do_launch()  { local s="$1" pkg="$2"; adb -s "$s" shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1; }
 do_stop()    { local s="$1" pkg="$2"; adb -s "$s" shell am force-stop "$pkg"; }
@@ -375,7 +403,11 @@ run_push() {
       echo -e "  ${GREEN}✓${RESET} $serial  ${DIM}${summary_line}${RESET}"
       ((success++)) || true
     else
-      echo -e "  ${RED}✗${RESET} $serial — $(tail -1 "$logfile")"
+      # Surface the actual failure, not a trailing blank line.
+      local why
+      why=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$logfile" 2>/dev/null | tail -1)
+      [[ -z "$why" ]] && why=$(grep -v '^[[:space:]]*$' "$logfile" 2>/dev/null | tail -1)
+      echo -e "  ${RED}✗${RESET} $serial — $why"
       ((fail++)) || true
     fi
   done

@@ -158,6 +158,15 @@ WIFI_PASSWORD="$SHOW_WIFI_PASSWORD"
 WIFI_SECURITY="$SHOW_WIFI_SECURITY"
 APP_PACKAGE="$SHOW_PACKAGE"
 
+# Seed foreign-show package removals from the active show's config (e.g.
+# KAGAMI_BLUE removes the RED show app com.tindrum.kagamu). Config-driven so
+# onboarding a show stays a conf edit. Applied only in the provision pass —
+# the "Remove apps" section is gated on MODE != check.
+if [[ -n "${SHOW_REMOVE_PACKAGES:-}" ]]; then
+  # shellcheck disable=SC2206  # intentional word-split: space-separated list
+  REMOVE_PACKAGES+=($SHOW_REMOVE_PACKAGES)
+fi
+
 # ---- Fleet dispatcher ----------------------------------------------
 # Reads the per-show devices file, connects all, spawns --fleet-worker
 # per device in parallel, buffers per-device output, prints + summary.
@@ -565,6 +574,10 @@ fi
 section "Remove apps"
 
 if [[ "$MODE" == "check" ]]; then
+  for pkg in "${REMOVE_PACKAGES[@]+"${REMOVE_PACKAGES[@]}"}"; do
+    [[ -z "$pkg" ]] && continue
+    printf "  %b  %-52s ${DIM}(run without --check to remove)${RESET}\n" "$SKIP" "Check for: $pkg"
+  done
   for name in "${REMOVE_FRIENDLY_NAMES[@]}"; do
     printf "  %b  %-52s ${DIM}(run without --check to remove)${RESET}\n" "$SKIP" "Check for: $name"
   done
