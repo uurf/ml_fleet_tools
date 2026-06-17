@@ -29,8 +29,9 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 TICK="${GREEN}✓${RESET}"; CROSS="${RED}✗${RESET}"
 
 ADB_PORT=5555
-TIMEOUT=1          # per-host ping/nc timeout (seconds)
+TIMEOUT=2          # per-host nc connect/idle timeout (seconds) — see probe_host
 MAX_PARALLEL=64    # parallel scan jobs
+ID_PARALLEL=32     # parallel adb-identify jobs (lighter: one adb server)
 
 # ── Defaults ────────────────────────────────────────────────
 SUBNET=""          # auto-detect if blank
@@ -150,13 +151,16 @@ probe_host() {
   local ip="$1"
   local found_dir="$2"
 
-  # Quick ping first to avoid hanging nc on non-existent hosts
-  if ping -c 1 -W "$TIMEOUT" -t "$TIMEOUT" "$ip" &>/dev/null 2>&1 || \
-     ping -c 1 -W "$TIMEOUT" "$ip" &>/dev/null 2>&1; then
-    # Host alive — check ADB port
-    if nc -z -w "$TIMEOUT" "$ip" "$ADB_PORT" &>/dev/null 2>&1; then
-      echo "$ip" > "${found_dir}/${ip}"
-    fi
+  # Bounded ADB-port probe, NO ICMP pre-gate. Two reasons the old ping gate
+  # broke at fleet scale (it was tuned against ~5 devices):
+  #   1. macOS `ping -W` is MILLISECONDS, so `-W $TIMEOUT` (=1) waited 1ms —
+  #      no WiFi device answers ICMP that fast, so live devices were dropped.
+  #   2. ICMP is unreliable anyway (devices/APs drop it).
+  # We probe 5555 directly. CRITICAL: macOS `nc -w` does NOT bound the connect
+  # (it hangs ~66s on a dead host) — `-G` is the connection timeout. Both are
+  # in seconds. macOS-only toolkit, so `-G` is safe to rely on.
+  if nc -z -G "$TIMEOUT" -w "$TIMEOUT" "$ip" "$ADB_PORT" >/dev/null 2>&1; then
+    echo "$ip" > "${found_dir}/${ip}"
   fi
 }
 
@@ -164,23 +168,27 @@ export -f probe_host
 export ADB_PORT TIMEOUT
 
 # ── Try to identify a device via ADB ─────────────────────────
+# Identify one device; writes "model|serial|os" to $2 (or "UNAUTHORIZED|||"
+# state markers). Runs in parallel — must not abort under set -e, so every
+# capture is guarded.
 adb_identify() {
-  local ip="$1"
+  local ip="$1" outfile="$2"
   local serial="${ip}:${ADB_PORT}"
-  local model hw_serial os_ver
+  local model="" hw_serial="" os_ver="" state=""
 
-  # Try connecting (non-fatal)
-  adb connect "$serial" &>/dev/null || true
-  sleep 0.4
-
-  if adb devices | grep -q "$serial"; then
-    model=$(adb -s "$serial" shell getprop ro.product.model 2>/dev/null | tr -d '\r' || echo "")
-    hw_serial=$(adb -s "$serial" shell getprop ro.serialno 2>/dev/null | tr -d '\r' || echo "")
-    os_ver=$(adb -s "$serial" shell getprop ro.build.version.lumin 2>/dev/null | tr -d '\r' || echo "")
-    echo "${model}|${hw_serial}|${os_ver}"
-  else
-    echo "||"
+  adb connect "$serial" >/dev/null 2>&1 || true
+  sleep 1.5
+  # get-state returns "device" only when authorized & online — unlike
+  # `adb devices | grep`, which also matches unauthorized/offline lines.
+  state=$(adb -s "$serial" get-state 2>/dev/null | tr -d '\r') || true
+  if [[ "$state" == "device" ]]; then
+    model=$(adb -s "$serial" shell getprop ro.product.model 2>/dev/null | tr -d '\r') || true
+    hw_serial=$(adb -s "$serial" shell getprop ro.serialno 2>/dev/null | tr -d '\r') || true
+    os_ver=$(adb -s "$serial" shell getprop ro.build.version.lumin 2>/dev/null | tr -d '\r') || true
+  elif [[ -n "$state" ]]; then
+    model="$state"   # e.g. "unauthorized" / "offline" — surface it, don't hide as unknown
   fi
+  echo "${model}|${hw_serial}|${os_ver}" > "$outfile"
 }
 
 # ── Main ─────────────────────────────────────────────────────
@@ -260,12 +268,26 @@ fi
 echo -e "  ${GREEN}Found ${#FOUND_IPS[@]} device(s) with ADB port open:${RESET}"
 echo ""
 
-# Try to ADB-identify each device for display
+# ADB-identify all devices for display — throttled-parallel (sequential was
+# fine at ~5 devices but races/crawls at fleet scale, producing the wall of
+# "UNKNOWN"). Each job writes its result to a temp file; collect afterward.
+echo -e "  ${DIM}Identifying ${#FOUND_IPS[@]} device(s)...${RESET}"
 declare -A DEVICE_INFO
+ID_TMP=$(mktemp -d)
+ID_PIDS=()
 for ip in "${FOUND_IPS[@]}"; do
-  info=$(adb_identify "$ip" 2>/dev/null || echo "||")
-  DEVICE_INFO["$ip"]="$info"
+  adb_identify "$ip" "${ID_TMP}/${ip}" &
+  ID_PIDS+=($!)
+  if (( ${#ID_PIDS[@]} >= ID_PARALLEL )); then
+    wait "${ID_PIDS[0]}" 2>/dev/null || true
+    ID_PIDS=("${ID_PIDS[@]:1}")
+  fi
 done
+for pid in "${ID_PIDS[@]}"; do wait "$pid" 2>/dev/null || true; done
+for ip in "${FOUND_IPS[@]}"; do
+  DEVICE_INFO["$ip"]="$(cat "${ID_TMP}/${ip}" 2>/dev/null || echo '||')"
+done
+rm -rf "$ID_TMP"
 
 # Print table
 printf "  ${BOLD}%-18s %-22s %-16s %-10s${RESET}\n" "IP" "Model" "Serial" "OS"
