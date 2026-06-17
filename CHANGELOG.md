@@ -10,6 +10,16 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.4] — 2026-06-17 — ml_scan works at fleet scale (was tuned for ~5 devices)
+
+### Fixed
+- **`ml_scan.sh` no longer undercounts the fleet.** The probe gated every host on an ICMP ping with `-W "$TIMEOUT"` (=1). On macOS `ping -W` is **milliseconds**, so it waited 1 ms — no WiFi device answers ICMP that fast, so live devices were dropped before the port check. Removed the ICMP gate; probe ADB port 5555 directly. **`nc -w` alone does NOT bound the connect on macOS** (it hangs ~66 s on a dead host — the reason a gate existed at all), so the probe now uses `nc -z -G "$TIMEOUT" -w "$TIMEOUT"` (`-G` = connection timeout, seconds). Bumped `TIMEOUT` 1→2.
+- **`ml_scan.sh` device identification no longer renders a wall of "UNKNOWN" at scale.** `adb_identify` was sequential with a 0.4 s settle — fine at ~5 devices, racy and slow at 100+. Now throttled-parallel (`ID_PARALLEL=32`) with a 1.5 s settle, and it reports `unauthorized`/`offline` explicitly (via `adb get-state`) instead of hiding every non-ready device as "UNKNOWN". (Identification is display-only; it never affected which IPs get written.)
+
+> Context: first run of these tools against a full fleet (127 devices) rather than the ~5-device bench set they were validated on — classic scale shakeout. NOTE: this fixes *discovery*; a device showing `unauthorized` means its on-device `adb_keys` was wiped (factory reset/reflash) and needs a one-time "Allow" tap — it is **not** a laptop fleet-key problem (the fleet key authorizes by public-key fingerprint, unaffected by file re-encodes).
+
+---
+
 ## [v1.2.3] — 2026-06-17 — install.sh actually installs Homebrew bash (root cause of the 3.2 fleet)
 
 ### Fixed
