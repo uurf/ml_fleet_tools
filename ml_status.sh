@@ -70,7 +70,8 @@ TARGET_PACKAGE="${ML_PACKAGE:-$SHOW_PACKAGE}"
 KIOSK_PACKAGE="com.tindrum.kiosk"
 EXPECTED_OS="${ML_EXPECTED_OS:-$SHOW_EXPECTED_OS}"    # blank skips check
 EXPECTED_APK="${ML_EXPECTED_APK:-$SHOW_EXPECTED_APK}"  # blank skips check
-EXPECTED_KIOSK="${ML_KIOSK_VERSION:-$SHOW_KIOSK_VERSION}"  # blank skips check
+EXPECTED_KIOSK="${ML_KIOSK_VERSION:-$SHOW_KIOSK_VERSION}"  # blank skips exact (drift) check
+EXPECTED_KIOSK_SUFFIX="${ML_KIOSK_SUFFIX:-$SHOW_KIOSK_SUFFIX}"  # show-marker r/b; blank skips wrong-show check
 
 # ── Expected settings (pass/fail logic) ─────────────────────
 # Brightness comes from the active show's shows/<id>.conf
@@ -372,7 +373,8 @@ collect_device() {
     "package": "$KIOSK_PACKAGE",
     "installed": $kiosk_installed,
     "version": "$kiosk_version",
-    "expected_version": "$EXPECTED_KIOSK"
+    "expected_version": "$EXPECTED_KIOSK",
+    "expected_suffix": "$EXPECTED_KIOSK_SUFFIX"
   },
   "disk": {
     "mount": "/sdcard",
@@ -478,7 +480,7 @@ emit_offline() {
   "battery": "0",
   "charging": false,
   "apk": { "package": "$TARGET_PACKAGE", "installed": false, "version": "", "version_code": "", "expected_version": "$EXPECTED_APK" },
-  "kiosk": { "package": "$KIOSK_PACKAGE", "installed": false, "version": "", "expected_version": "$EXPECTED_KIOSK" },
+  "kiosk": { "package": "$KIOSK_PACKAGE", "installed": false, "version": "", "expected_version": "$EXPECTED_KIOSK", "expected_suffix": "$EXPECTED_KIOSK_SUFFIX" },
   "disk": { "mount": "/sdcard", "total_kb": 0, "used_kb": 0, "available_kb": 0, "used_pct": 0, "warn_pct": $SHOW_DISK_WARN_PCT },
   "data": { "root": "/sdcard/$SHOW_DATA_DIR", "root_exists": null, "required": [], "optional": [], "present": [], "missing": [], "extraneous": [] },
   "packages": { "tindrum_all": [], "extraneous_tindrum": [] },
@@ -547,7 +549,7 @@ print(
 " 2>/dev/null || echo "error")"
 
     # Pass/fail per setting
-    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk c_kiosk
+    local c_sleep c_wifi c_bt c_bright c_dev c_usb c_update c_os c_apk c_kiosk c_kiosk_suffix
     c_sleep=$(check "$stay_awake" "true")
     c_wifi=$(check "$wifi_ok" "true")
     c_bt=$(check "$bt_on" "true")           # want BT ON — controllers need it
@@ -559,6 +561,13 @@ print(
     c_os=$(check "$os_ver" "$EXPECTED_OS")
     c_apk=$(check "$apk_ver" "$EXPECTED_APK")
     c_kiosk=$(check "$kiosk_ver" "$EXPECTED_KIOSK")
+    # Kiosk show-marker: versionName must END WITH this show's suffix (r/b).
+    # Independent of the (blank-able) exact version check, so a wrong-show kiosk
+    # is caught even during build churn when SHOW_KIOSK_VERSION is blank.
+    c_kiosk_suffix="skip"
+    if [[ -n "$EXPECTED_KIOSK_SUFFIX" && "$kiosk_ver" != "MISSING" ]]; then
+      if [[ "$kiosk_ver" == *"$EXPECTED_KIOSK_SUFFIX" ]]; then c_kiosk_suffix="pass"; else c_kiosk_suffix="fail"; fi
+    fi
 
     # Overall pass?
     local all_ok=true
@@ -570,6 +579,7 @@ print(
     [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && all_ok=false
     [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && all_ok=false
     [[ -n "$EXPECTED_KIOSK" && "$kiosk_ver" != "MISSING" && "$c_kiosk" == "fail" ]] && all_ok=false
+    [[ "$c_kiosk_suffix" == "fail" ]] && all_ok=false   # wrong-show kiosk
 
     $FAILURES_ONLY && $all_ok && continue
 
@@ -596,6 +606,7 @@ print(
 
     local kiosk_disp="$kiosk_ver"
     [[ -n "$EXPECTED_KIOSK" && "$kiosk_ver" != "MISSING" && "$c_kiosk" == "fail" ]] && kiosk_disp="${YELLOW}$kiosk_ver${RESET}"
+    [[ "$c_kiosk_suffix" == "fail" ]] && kiosk_disp="${RED}$kiosk_ver WRONG-SHOW${RESET}"
     [[ "$kiosk_ver" == "MISSING" ]] && kiosk_disp="${RED}MISSING${RESET}"
 
     local os_disp="$os_ver"
