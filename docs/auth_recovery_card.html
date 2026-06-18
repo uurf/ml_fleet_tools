@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAGAMI — Pittsburgh Fleet ADB Re-Authorization</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+    --note-bg: #f6f6f4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 1.5rem 1.75rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .subtitle { font-size: 12.5px; color: var(--muted); }
+
+  .why {
+    background: var(--note-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.7rem 0.9rem;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin-bottom: 1.2rem;
+  }
+  .why strong { color: var(--ink); }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.3rem 0 0.5rem;
+  }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.6rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .step:last-child { border-bottom: none; }
+
+  .num {
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 20px;
+  }
+
+  .checkbox {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-content { flex: 1; }
+  .step-label { font-size: 15.5px; font-weight: 600; line-height: 1.4; margin-bottom: 3px; }
+  .step-detail { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+  .step-detail em { font-style: normal; font-weight: 700; color: var(--ink); }
+  code { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 12.5px; background: var(--badge-bg); padding: 1px 5px; border-radius: 3px; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11.5px; font-weight: 600;
+    padding: 1px 8px; border-radius: 3px;
+    background: var(--badge-bg); border: 1px solid var(--rule);
+    color: var(--ink); margin-top: 5px; letter-spacing: 0.02em;
+  }
+
+  .repeat {
+    margin-top: 1.4rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  .handoff {
+    margin-top: 1.2rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px dashed var(--ink);
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .handoff .section-label { margin: 0 0 0.35rem; }
+
+  footer {
+    margin-top: 1.25rem;
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0.6rem 0.8rem; max-width: none; }
+    @page { margin: 0.7cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Pittsburgh Fleet — ADB Re-Authorization</div>
+    <div class="subtitle" style="margin-top:3px;">One "Always allow" tap per device · 204 devices</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<div class="why">
+  <strong>Why:</strong> the 204 devices provisioned in Pittsburgh lost their ADB
+  authorization while shipping — Android revokes it after ~7 days with no
+  connection, even when "Always allow" was checked. Nothing is wrong with the
+  device or the OS. <strong>One tap re-authorizes this laptop.</strong> The
+  supervisor's sweep afterward disables the timeout so it never happens again.
+</div>
+
+<!-- BEFORE -->
+<div class="section-label">Before you start (once per laptop)</div>
+<div class="step">
+  <div class="checkbox"></div>
+  <div class="step-content">
+    <div class="step-label">Laptop is on the latest toolkit</div>
+    <div class="step-detail">A supervisor has run <code>./update.sh &amp;&amp; ./install.sh</code> — version shows <em>v1.2.5</em> or later. If unsure, ask before starting.</div>
+  </div>
+</div>
+
+<!-- PER DEVICE -->
+<div class="section-label">For each device</div>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="step-content">
+    <div class="step-label">Connect the Compute Pack to the laptop via USB-C</div>
+    <div class="step-detail">Use the cable at your station. Wait a moment for the headset to register the connection.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="step-content">
+    <div class="step-label">Put on / look into the headset → tap the dialog</div>
+    <div class="step-detail"><em>Allow USB debugging?</em> — check <em>"Always allow from this computer"</em> → tap <em>Allow</em>.</div>
+    <div class="step-detail" style="margin-top:2px;">If <em>USB Device Detected</em> also appears, tap <em>OK</em>.</div>
+    <div><span class="badge">Must check "Always allow"</span></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="step-content">
+    <div class="step-label">Confirm the laptop sees it as authorized</div>
+    <div class="step-detail">On the laptop run <code>adb devices</code> — the device must read <code>device</code>, not <code>unauthorized</code>.</div>
+    <div class="step-detail" style="margin-top:2px;">Still <code>unauthorized</code>? Re-seat the cable, make sure the headset is awake, and tap the dialog again.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="step-content">
+    <div class="step-label">Mark the device done &amp; move on</div>
+    <div class="step-detail">Tick it off on the cart sheet, disconnect the cable, next device. Leave each finished device powered on.</div>
+  </div>
+</div>
+
+<div class="repeat">Repeat for all 204 Pittsburgh devices</div>
+
+<!-- HANDOFF -->
+<div class="handoff">
+  <div class="section-label">When a cart is finished — hand off to supervisor</div>
+  Tell the supervisor which carts are done. They run the network sweep
+  <code>ML_DEV_TEST=1 ./ml_status.sh --fix</code> over WiFi, which sets
+  <code>adb_allowed_connection_time&nbsp;0</code> (disable the timeout) on the
+  re-authorized devices — so the authorization never expires again for the run
+  of the show. Newly provisioned devices get this automatically.
+</div>
+
+<footer>
+  <span>ml_toolkit v1.2.5 · ADB auth-timeout recovery</span>
+  <span>KAGAMI Osaka · 2026-06-18</span>
+</footer>
+
+</body>
+</html>
