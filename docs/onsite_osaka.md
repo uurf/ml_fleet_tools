@@ -8,6 +8,7 @@ Supervisor-grade reference for the two-show on-site deploy. **Per-device operato
 | [`playbook_blue_osaka.html`](playbook_blue_osaka.html) | BLUE operators (Phase A + Phase B) | EN/JA side-by-side, printable A4 |
 | [`setup_checklist.html`](setup_checklist.html) | All operators — one-time per laptop | EN, printable |
 | [`headset_checklist.html`](headset_checklist.html) | All operators — manual headset settings | EN, printable |
+| [`auth_recovery_card.html`](auth_recovery_card.html) | All operators — one-time re-auth of the 204 PGH devices whose ADB auth expired in shipping (then supervisor `ml_status.sh --fix`) | EN, printable |
 
 ## Fleet
 

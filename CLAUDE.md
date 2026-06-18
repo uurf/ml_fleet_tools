@@ -189,6 +189,7 @@ Key non-obvious settings and their ADB keys:
 | `docs/playbook_red_osaka.html` | RED operator playbook (EN/JA, printable A4). 9 sections / 33 steps covering pre-flight → power up → scan → drift check → deploy → dashboard → shutdown → SSD assets → verify. |
 | `docs/playbook_blue_osaka.html` | BLUE operator playbook (EN/JA, printable A4). Pre-flight + Phase A (USB bench, 204 devices) + Phase B (fleet flow, same shape as RED). |
 | `docs/setup_checklist.html` / `docs/flash_checklist.html` / `docs/headset_checklist.html` | Per-laptop / per-device / in-headset operator checklists. EN-only. Printable. |
+| `docs/auth_recovery_card.html` | Operator card (printable A4) for the one-time per-device ADB re-auth of the 204 Pittsburgh devices whose authorization expired in shipping (Android's `adb_allowed_connection_time` ~7-day timeout — see v1.2.5). Supervisor follow-on: `ml_status.sh --fix`. |
 | `tests/test_sheet_integration.sh` | Device-free regression suite for the per-show Sheets plumbing. Run from anywhere. |
 | `logs/` | Per-device deploy logs (gitignored) |
 | `status/` | Per-run status JSON from `ml_status.sh` (gitignored) |
