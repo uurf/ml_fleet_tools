@@ -201,6 +201,15 @@ collect_device() {
   local usb_on="false"
   [[ "$usb_debug" == "1" ]] && usb_on="true"
 
+  # ADB auth timeout: 0 = disabled (never expire). Unset/non-zero = Android's
+  # default ~7-day revoke, which silently de-authorizes the fleet after a week
+  # of no connection. Tracked so --fix can disable it. See ml_provision.sh.
+  local adb_auth_to
+  adb_auth_to=$(adb_s settings get global adb_allowed_connection_time)
+  [[ "$adb_auth_to" == "null" || "$adb_auth_to" == "" ]] && adb_auth_to="default"
+  local adb_auth_timeout_off="false"
+  [[ "$adb_auth_to" == "0" ]] && adb_auth_timeout_off="true"
+
   # ML2 uses OTA update system — check if auto-update is suppressed
   local auto_update
   auto_update=$(adb_s settings get global auto_update_enabled 2>/dev/null || echo "")
@@ -396,6 +405,8 @@ collect_device() {
     "hand_nav_on": $hand_nav_on,
     "developer_mode": $dev_on,
     "usb_debugging": $usb_on,
+    "adb_auth_timeout_off": $adb_auth_timeout_off,
+    "adb_auth_timeout_raw": "$adb_auth_to",
     "auto_update_off": "$auto_update_off"
   }
 }
@@ -431,6 +442,14 @@ fix_device() {
   brightness=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['screen_brightness'])" 2>/dev/null)
   [[ -n "$WANT_BRIGHTNESS" && "$brightness" != "$WANT_BRIGHTNESS" ]] && \
     adb_set system screen_brightness "$WANT_BRIGHTNESS"
+
+  # Disable the adb auth timeout so this laptop's authorization never expires.
+  # Android's default ~7-day revoke is what silently de-authorized the fleet
+  # after it shipped unconnected. 0 = never expire. Compare the raw value (a
+  # string) to sidestep Python True/False casing. Idempotent.
+  local adb_to_raw
+  adb_to_raw=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['adb_auth_timeout_raw'])" 2>/dev/null)
+  [[ "$adb_to_raw" != "0" ]] && adb_set global adb_allowed_connection_time 0
 
   echo "  Fixed: $serial"
 }

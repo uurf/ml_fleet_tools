@@ -411,9 +411,16 @@ section "Developer mode"
 if [[ "$MODE" == "check" ]]; then
   check_bool "Development settings enabled" "$(get_global development_settings_enabled)" "true"
   check_bool "USB debugging (ADB)" "$(get_global adb_enabled)" "true"
+  check_val  "ADB auth timeout disabled (never expire)" "$(get_global adb_allowed_connection_time)" "0"
 else
   apply "Enable developer mode"  put_global development_settings_enabled 1
   apply "Enable USB debugging"   put_global adb_enabled 1
+  # CRITICAL for fleet management: without this, Android revokes the laptop's
+  # adb authorization after ~7 days with no connection — even "Always allow" —
+  # silently de-authorizing the whole fleet between provisioning and show day.
+  # 0 = never expire (the "Disable adb authorization timeout" dev-option). This
+  # is why the Pittsburgh fleet went unauthorized after shipping unconnected.
+  apply "Disable ADB auth timeout (never expire)" put_global adb_allowed_connection_time 0
   if [[ "$BUILD_TYPE" == "userdebug" ]]; then
     sh "setprop persist.adb.auth 0" &>/dev/null || true
     printf "  %b  Pre-authorized ADB (userdebug build)\n" "$TICK"

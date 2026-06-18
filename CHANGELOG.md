@@ -10,6 +10,29 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.5] — 2026-06-18 — Disable ADB auth timeout (fleet was silently de-authorizing) + re-include scan fix
+
+### Fixed
+- **The fleet's adb authorizations were expiring after ~7 days.** Android revokes an authorized laptop key — *even "Always allow"* — for any computer that hasn't reconnected within `adb_allowed_connection_time` (default 7 days). That's why the Pittsburgh fleet, provisioned in late April/May and then **shipped unconnected for weeks**, showed "Allow USB debugging" / "failed to authenticate" on first power-up in Osaka — not a lost key, not a mistapped dialog. (Confirmed against the AOSP `AdbDebuggingManager` behavior: `0` = never expire.)
+- **`ml_provision.sh`** now sets `settings put global adb_allowed_connection_time 0` (disable the timeout) as part of the Developer-mode pass, and `--check` verifies it. Applied to every newly provisioned device so authorizations persist for the full show.
+- **`ml_status.sh`** now collects `adb_allowed_connection_time` (exposed in `--json` as `settings.adb_auth_timeout_off` / `adb_auth_timeout_raw`), and **`--fix` sets it to 0** — so already-provisioned devices (e.g. the ones provisioned in Osaka this week) can be corrected over WiFi without re-provisioning, before *they* hit the 7-day window.
+
+### Note
+- The scan-at-scale fix (v1.2.4) is re-included here — it had been reverted from `main` for mid-show stability, but operators are re-syncing (`./update.sh && ./install.sh`) for this auth fix anyway.
+- **Verify on one device before mass-applying:** confirm `adb shell settings put global adb_allowed_connection_time 0` actually reads back as `0` on the ML2 user build. If the write is blocked, use the Developer Options **"Disable adb authorization timeout"** toggle instead.
+
+---
+
+## [v1.2.4] — 2026-06-17 — ml_scan works at fleet scale (was tuned for ~5 devices)
+
+### Fixed
+- **`ml_scan.sh` no longer undercounts the fleet.** The probe gated every host on an ICMP ping with `-W "$TIMEOUT"` (=1). On macOS `ping -W` is **milliseconds**, so it waited 1 ms — no WiFi device answers ICMP that fast, so live devices were dropped before the port check. Removed the ICMP gate; probe ADB port 5555 directly. **`nc -w` alone does NOT bound the connect on macOS** (it hangs ~66 s on a dead host — the reason a gate existed at all), so the probe now uses `nc -z -G "$TIMEOUT" -w "$TIMEOUT"` (`-G` = connection timeout, seconds). Bumped `TIMEOUT` 1→2.
+- **`ml_scan.sh` device identification no longer renders a wall of "UNKNOWN" at scale.** `adb_identify` was sequential with a 0.4 s settle — fine at ~5 devices, racy and slow at 100+. Now throttled-parallel (`ID_PARALLEL=32`) with a 1.5 s settle, and it reports `unauthorized`/`offline` explicitly (via `adb get-state`) instead of hiding every non-ready device as "UNKNOWN". (Identification is display-only; it never affected which IPs get written.)
+
+> Context: first run of these tools against a full fleet (127 devices) rather than the ~5-device bench set they were validated on — classic scale shakeout. NOTE: this fixes *discovery*; a device showing `unauthorized` means its on-device `adb_keys` was wiped (factory reset/reflash) and needs a one-time "Allow" tap — it is **not** a laptop fleet-key problem (the fleet key authorizes by public-key fingerprint, unaffected by file re-encodes).
+
+---
+
 ## [v1.2.3] — 2026-06-17 — install.sh actually installs Homebrew bash (root cause of the 3.2 fleet)
 
 ### Fixed
