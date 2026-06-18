@@ -139,10 +139,19 @@ _sc_init() {
   : "${SHOW_NAME:=$show_id}"
   : "${SHOW_EXPECTED_APK:=}"
   : "${SHOW_EXPECTED_OS:=}"
-  # Expected kiosk (com.tindrum.kiosk) versionName. The kiosk package is
-  # shared across shows but built per show with a distinct versionName
-  # (e.g. 1.0b / 1.0r) so a mis-loaded kiosk is caught. Blank skips it.
+  # Expected kiosk (com.tindrum.kiosk) versionName — EXACT match (drift/build
+  # check). Pin to the current build (e.g. "1.3r") to flag out-of-date kiosks;
+  # leave blank during build churn to skip the exact check. See SHOW_KIOSK_SUFFIX
+  # for the (stable) wrong-show check that works even while this is blank.
   : "${SHOW_KIOSK_VERSION:=}"
+  # Kiosk versionName show-marker suffix — the kiosk is ONE shared package
+  # (com.tindrum.kiosk), so the per-show letter on its versionName is the only
+  # way to tell a RED kiosk from a BLUE one on a device. Scheme: "1.Xr" (RED) /
+  # "1.Xb" (BLUE) — X increments per build, suffix marks the show. ml_status
+  # enforces "versionName ends with this suffix" ALWAYS (independent of the
+  # blank-able SHOW_KIOSK_VERSION), so a mis-loaded kiosk is caught mid-churn.
+  # Blank skips the wrong-show check.
+  : "${SHOW_KIOSK_SUFFIX:=}"
   # Packages belonging to OTHER shows that must be uninstalled when
   # provisioning this show (space-separated). E.g. KAGAMI_BLUE removes the
   # RED show app com.tindrum.kagamu so a re-purposed device doesn't carry a
@@ -186,7 +195,7 @@ _sc_init() {
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
-         SHOW_REMOVE_PACKAGES SHOW_BRIGHTNESS SHOW_SHEETS_URL \
+         SHOW_KIOSK_SUFFIX SHOW_REMOVE_PACKAGES SHOW_BRIGHTNESS SHOW_SHEETS_URL \
          SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT
 }

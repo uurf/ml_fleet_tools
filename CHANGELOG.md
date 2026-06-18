@@ -10,6 +10,20 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.6] — 2026-06-18 — Per-show kiosk suffix check (wrong-show detection during build churn)
+
+### Added
+- **`SHOW_KIOSK_SUFFIX` config field** (`r` for KAGAMI, `b` for KAGAMI_BLUE). The kiosk is one shared package (`com.tindrum.kiosk`) built per show as `1.Xr` / `1.Xb` — suffix = show, X = build. `ml_status.sh` now **always** enforces that a device's kiosk `versionName` *ends with* this show's suffix → a mis-loaded kiosk (e.g. a BLUE kiosk on a RED device) is flagged (`WRONG-SHOW` in the table; `kiosk` issue on the dashboard) **independent of** the exact-version check.
+
+### Changed
+- **`SHOW_KIOSK_VERSION` is now the drift/build check only** and is **blanked during build churn** (RED + BLUE) so the dashboard doesn't false-flag every device as the dev increments `1.Xr`/`1.Xb`. Pin it to the current build once builds stabilize. The wrong-show check keeps working while it's blank.
+- `ml_status.sh --json` exposes `kiosk.expected_suffix`; `fleet_dashboard.html` flags wrong-show kiosks via the suffix.
+
+### For the developer
+- Kiosk `versionName` must carry the per-show suffix and increment: `1.0r → 1.1r → …` (RED), `1.0b → 1.1b → …` (BLUE). Keep `versionCode` an incrementing integer too. Show apps stay distinguished by package id (`com.tindrum.kagamu` vs `com.tindrum.kagami.blue`).
+
+---
+
 ## [v1.2.5] — 2026-06-18 — Disable ADB auth timeout (fleet was silently de-authorizing) + re-include scan fix
 
 ### Fixed

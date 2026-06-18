@@ -406,14 +406,18 @@ function deviceIssues(d) {
   if (!d.apk || !d.apk.installed) issues.push('apk');
   else if (d.apk.expected_version && d.apk.version && d.apk.version !== d.apk.expected_version) issues.push('apk');
 
-  // Kiosk: missing is trouble; a present kiosk with the wrong per-show
-  // versionName is also trouble. The shared com.tindrum.kiosk package is
-  // built per show with a distinct versionName (e.g. 1.0r / 1.0b) to tell
-  // shows apart; the expected value rides in the JSON as
-  // kiosk.expected_version (from SHOW_KIOSK_VERSION). Blank skips the check.
+  // Kiosk: missing is trouble. The shared com.tindrum.kiosk package is built
+  // per show as "1.Xr"/"1.Xb" — suffix = show, X = build. Two independent checks:
+  //  - WRONG SHOW: versionName must end with kiosk.expected_suffix (r/b). Stable,
+  //    works even mid-churn. (from SHOW_KIOSK_SUFFIX)
+  //  - DRIFT: exact match vs kiosk.expected_version (from SHOW_KIOSK_VERSION),
+  //    only when pinned; blank during build churn.
   const kiosk = d.kiosk || {};
   if (!kiosk.installed) issues.push('kiosk');
-  else if (kiosk.expected_version && kiosk.version && kiosk.version !== kiosk.expected_version) issues.push('kiosk');
+  else {
+    if (kiosk.expected_suffix && kiosk.version && !kiosk.version.endsWith(kiosk.expected_suffix)) issues.push('kiosk');
+    else if (kiosk.expected_version && kiosk.version && kiosk.version !== kiosk.expected_version) issues.push('kiosk');
+  }
 
   // Data files missing (root absent OR any expected subdir missing)
   if (data.root_exists === false) issues.push('data_missing');
