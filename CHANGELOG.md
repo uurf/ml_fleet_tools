@@ -10,6 +10,15 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.9] — 2026-06-19 — RED show app renamed (kagamu → kagami.red); scrub obsolete kagamu
+
+### Changed
+- **KAGAMI/RED `SHOW_PACKAGE` is now `com.tindrum.kagami.red`** (was `com.tindrum.kagamu`, now obsolete). This is what `ml_status`/dashboard check per device, so the dashboard now validates the current RED app.
+- **`com.tindrum.kagamu` is scrubbed on both fleets** — added to `SHOW_REMOVE_PACKAGES` in both confs (KAGAMI: `kagami.blue` + `kagamu`; KAGAMI_BLUE: `kagami.red` + `kagamu`). The provision pass removes it wherever a device still carries it. (Verified neither show lists its own `SHOW_PACKAGE` in its removal set.)
+- EXAMPLE.conf template and `ml_show.sh` default prompt updated off the obsolete `kagamu` name.
+
+---
+
 ## [v1.2.8] — 2026-06-19 — Reliable fleet shutdown (verify + retry) + honest run_parallel tally
 
 ### Fixed
