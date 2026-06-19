@@ -10,6 +10,17 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.2.7] — 2026-06-19 — ml_deploy connect: parallel, port-probe-first (no more hanging on powered-off devices)
+
+### Fixed
+- **`ml_deploy.sh connect` no longer crawls when devices are off.** It was a serial loop of bare `adb connect`, and a powered-off IP hangs on the OS TCP timeout (~60s on macOS) — so a fleet list with many off devices took ~an hour (e.g. 48 of 72 off ≈ 50 min). Now it does a **bounded, parallel reachability probe** (`nc -z -G 2 -w 2`, like the scanner) and only `adb connect`s the IPs that answer; powered-off entries are skipped in ~2s. Reports `Connected / Failed / Offline (skipped)`. Makes `connect` (and therefore the `connect`-then-`shutdown`/`status` flow, incl. nightly shutdown) usable at fleet scale.
+
+### Added (dev tooling, this cycle)
+- `utilities/build_canonical_map.py` — join physical fleet scans to the device↔serial record → canonical `serial→device#` (dashboard-loadable) + reconciliation buckets.
+- `apps_script/reconcile_tracking.gs` — durable copy of the Red↔Blue tracking-sheet maintenance functions.
+
+---
+
 ## [v1.2.6] — 2026-06-18 — Per-show kiosk suffix check (wrong-show detection during build churn)
 
 ### Added

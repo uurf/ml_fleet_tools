@@ -105,19 +105,40 @@ cmd_connect() {
   echo -e "${CYAN}Connecting to all devices...${RESET}"
   local devices
   devices=$(load_devices)
-  local count=0 failed=0
+  local total; total=$(printf '%s\n' "$devices" | grep -c . || true)
+
+  # Phase 1: bounded, parallel reachability probe. A bare `adb connect` to a
+  # powered-off IP hangs on the OS TCP timeout (~60s on macOS) — and serially
+  # that's ~an hour for a fleet with many off. Probe port 5555 first with a
+  # 2s-bounded nc (-G = connect timeout, macOS) so dead IPs are skipped fast,
+  # then only `adb connect` the ones that answer.
+  local alive_dir; alive_dir=$(mktemp -d)
+  local pids=() running=0
   while IFS= read -r ip; do
     [[ -z "$ip" ]] && continue
-    if adb connect "${ip}:5555" 2>&1 | grep -q "connected"; then
-      echo -e "  ${GREEN}✓${RESET} $ip"
-      ((count++)) || true
-    else
-      echo -e "  ${RED}✗${RESET} $ip (failed)"
-      ((failed++)) || true
+    { nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1 && echo "$ip" > "$alive_dir/$ip"; } &
+    pids+=($!); ((running++)) || true
+    if (( running >= MAX_PARALLEL )); then
+      wait "${pids[0]}" 2>/dev/null || true; pids=("${pids[@]:1}"); ((running--)) || true
     fi
   done <<< "$devices"
+  for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+
+  # Phase 2: adb connect only the reachable IPs (port already open → fast).
+  local count=0 failed=0 alive=0
+  for ipf in "$alive_dir"/*; do
+    [[ -e "$ipf" ]] || continue
+    ((alive++)) || true
+    local ip; ip=$(basename "$ipf")
+    if adb connect "${ip}:5555" 2>&1 | grep -q "connected"; then
+      echo -e "  ${GREEN}✓${RESET} $ip"; ((count++)) || true
+    else
+      echo -e "  ${RED}✗${RESET} $ip (port open, adb connect failed)"; ((failed++)) || true
+    fi
+  done
+  rm -rf "$alive_dir"
   echo ""
-  echo -e "Connected: ${GREEN}$count${RESET}  Failed: ${RED}$failed${RESET}"
+  echo -e "Connected: ${GREEN}$count${RESET}  Failed: ${RED}$failed${RESET}  Offline (skipped): ${DIM}$((total-alive))${RESET}"
 }
 
 # ---- Get list of currently connected ADB devices ----
