@@ -135,24 +135,37 @@ if [[ "${FASTBOOT_COUNT:-0}" -gt 0 ]]; then
   echo -e "  Device:     ${CYAN}$SERIAL${RESET}"
   echo -e "  State:      ${GREEN}already in fastboot — skipping reboot${RESET}"
 else
-  CONNECTED_AUTH=$(adb devices | grep -v "List of" | grep -c "device$" || true)
-  CONNECTED_UNAUTH=$(adb devices | grep -v "List of" | grep -c "unauthorized" || true)
-  CONNECTED=$(( ${CONNECTED_AUTH:-0} + ${CONNECTED_UNAUTH:-0} ))
+  # USB-only device list. Flashing is fastboot/USB, so WiFi ADB connections
+  # (ip:5555 — e.g. from a fleet scan) are irrelevant; exclude them, otherwise a
+  # single USB device looks like "multiple" and the flash is blocked (or, worse,
+  # could target the wrong serial). ANDROID_SERIAL overrides selection so a
+  # specific device can be flashed even amid clutter.
+  USB_SERIALS=$(adb devices | grep -v "List of" | grep -E "device$|unauthorized" | awk '{print $1}' | grep -v ':5555' || true)
+  USB_COUNT=$(printf '%s\n' "$USB_SERIALS" | grep -c . || true)
 
-  if [[ "${CONNECTED:-0}" -eq 0 ]]; then
+  if [[ -n "${ANDROID_SERIAL:-}" ]]; then
+    SERIAL="$ANDROID_SERIAL"
+  elif [[ "${USB_COUNT:-0}" -eq 0 ]]; then
     echo -e "${RED}No device found over USB.${RESET}"
-    echo "  Connect device via USB-C (booted or already in fastboot mode)"
+    echo "  Connect the device via USB-C (booted or already in fastboot mode)."
+    echo -e "  ${DIM}WiFi ADB connections don't count — flashing needs USB.${RESET}"
     exit 1
-  fi
-  if [[ "${CONNECTED:-0}" -gt 1 ]]; then
-    echo -e "${YELLOW}Multiple devices connected — connect only one at a time.${RESET}"
-    adb devices
+  elif [[ "${USB_COUNT:-0}" -gt 1 ]]; then
+    echo -e "${YELLOW}More than one USB device connected — flash one at a time:${RESET}"
+    # shellcheck disable=SC2086  # intentional word-split to list one per line
+    printf '    %s\n' $USB_SERIALS
+    echo -e "  Unplug the others, or set ${CYAN}ANDROID_SERIAL=<serial>${RESET} to pick one."
+    echo -e "  ${DIM}(WiFi ADB connections are already ignored; clear stale ones with 'adb disconnect'.)${RESET}"
     exit 1
+  else
+    SERIAL="$USB_SERIALS"
   fi
 
-  SERIAL=$(adb devices | grep -v "List of" | grep -E "device$|unauthorized" | awk '{print $1}' || true)
-
-  if [[ "$CONNECTED_AUTH" -eq 1 ]]; then
+  # Auth state of the SELECTED device — checked per-serial, so a cluttered
+  # adb list can't make us misread it. CONNECTED_AUTH drives the reboot path
+  # below (adb reboot-bootloader if authorized, else manual fastboot entry).
+  if adb devices | grep -qE "^${SERIAL}[[:space:]].*device$"; then
+    CONNECTED_AUTH=1
     BUILD_ID=$(adb -s "$SERIAL" shell getprop ro.build.id 2>/dev/null | tr -d '\r')
     LUMIN_VERSION=$(adb -s "$SERIAL" shell getprop ro.build.version.lumin 2>/dev/null | tr -d '\r' || echo "")
     CURRENT_OS="${LUMIN_VERSION:-$BUILD_ID}"
@@ -160,6 +173,7 @@ else
     echo -e "  Device:     ${CYAN}$DEVICE_MODEL${RESET} ($SERIAL)"
     echo -e "  Current OS: ${CYAN}${LUMIN_VERSION:-unknown}${RESET} ($BUILD_ID)"
   else
+    CONNECTED_AUTH=0
     CURRENT_OS="unknown (unauthorized)"
     echo -e "  Device:     ${CYAN}$SERIAL${RESET}"
     echo -e "  Current OS: ${YELLOW}unauthorized — proceeding to fastboot${RESET}"
