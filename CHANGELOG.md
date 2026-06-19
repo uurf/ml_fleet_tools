@@ -15,6 +15,11 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 ### Fixed
 - **`ml_deploy.sh shutdown` now actually powers the whole fleet down.** It used `run_parallel do_shutdown`, which only hit already-connected devices and never verified — so a device whose WiFi adb session had lapsed was silently skipped (the "5 didn't shut down, but did on a second run" symptom). New `cmd_shutdown`: bounded parallel probe of port 5555 → connect → power off → re-probe → **retry stragglers** until none answer (max 4 passes), then reports any that are still up to check physically. Honors `-d <ip>` for single-device. One command, fleet verified down.
 - **`run_parallel` tally/display fixed.** Jobs that finished during throttling were counted *silently* (not printed), so output showed only the last batch and `Success + Failed` didn't add up to the device count (e.g. "Success: 21 Failed: 1" on 26 devices). The throttle reap now prints ✓/✗ (with the failure reason) and counts correctly, like the final reap — so every device shows and the totals reconcile. Benefits `deploy`/`deploy-all` and `ml_status --fix`-style parallel runs too.
+- **`ml_os_flash.sh` device selection is clutter-proof.** It counted WiFi adb connections (`ip:5555`) as devices, so a single USB unit amid scan clutter tripped "multiple devices" and blocked the flash. Now it excludes `ip:5555` (fastboot is USB-only), honors `ANDROID_SERIAL` to target a specific device, gives a clearer multi-USB message, and derives the auth/reboot path per-selected-serial instead of from a global count — so a busy `adb devices` list can't block or mis-target a (destructive) flash.
+
+### Tooling (dev utilities)
+- `utilities/build_canonical_map.py` — join physical fleet scans to the device↔serial record → canonical `serial→device#` (dashboard-loadable) + reconciliation buckets (cross-fleet / unnumbered / not-on-record / on-record-not-scanned).
+- `apps_script/reconcile_tracking.gs` — durable, version-controlled copy of the Red↔Blue tracking-sheet maintenance functions (diagnose / diagnoseBlue / reconcileRed).
 
 ---
 
