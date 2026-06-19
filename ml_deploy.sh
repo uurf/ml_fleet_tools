@@ -105,19 +105,40 @@ cmd_connect() {
   echo -e "${CYAN}Connecting to all devices...${RESET}"
   local devices
   devices=$(load_devices)
-  local count=0 failed=0
+  local total; total=$(printf '%s\n' "$devices" | grep -c . || true)
+
+  # Phase 1: bounded, parallel reachability probe. A bare `adb connect` to a
+  # powered-off IP hangs on the OS TCP timeout (~60s on macOS) — and serially
+  # that's ~an hour for a fleet with many off. Probe port 5555 first with a
+  # 2s-bounded nc (-G = connect timeout, macOS) so dead IPs are skipped fast,
+  # then only `adb connect` the ones that answer.
+  local alive_dir; alive_dir=$(mktemp -d)
+  local pids=() running=0
   while IFS= read -r ip; do
     [[ -z "$ip" ]] && continue
-    if adb connect "${ip}:5555" 2>&1 | grep -q "connected"; then
-      echo -e "  ${GREEN}✓${RESET} $ip"
-      ((count++)) || true
-    else
-      echo -e "  ${RED}✗${RESET} $ip (failed)"
-      ((failed++)) || true
+    { nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1 && echo "$ip" > "$alive_dir/$ip"; } &
+    pids+=($!); ((running++)) || true
+    if (( running >= MAX_PARALLEL )); then
+      wait "${pids[0]}" 2>/dev/null || true; pids=("${pids[@]:1}"); ((running--)) || true
     fi
   done <<< "$devices"
+  for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+
+  # Phase 2: adb connect only the reachable IPs (port already open → fast).
+  local count=0 failed=0 alive=0
+  for ipf in "$alive_dir"/*; do
+    [[ -e "$ipf" ]] || continue
+    ((alive++)) || true
+    local ip; ip=$(basename "$ipf")
+    if adb connect "${ip}:5555" 2>&1 | grep -q "connected"; then
+      echo -e "  ${GREEN}✓${RESET} $ip"; ((count++)) || true
+    else
+      echo -e "  ${RED}✗${RESET} $ip (port open, adb connect failed)"; ((failed++)) || true
+    fi
+  done
+  rm -rf "$alive_dir"
   echo ""
-  echo -e "Connected: ${GREEN}$count${RESET}  Failed: ${RED}$failed${RESET}"
+  echo -e "Connected: ${GREEN}$count${RESET}  Failed: ${RED}$failed${RESET}  Offline (skipped): ${DIM}$((total-alive))${RESET}"
 }
 
 # ---- Get list of currently connected ADB devices ----
@@ -181,11 +202,24 @@ run_parallel() {
     [[ -z "$serial" ]] && continue
     local logfile="$LOG_DIR/${timestamp}_${serial//:/_}.log"
 
-    # Throttle parallelism
+    # Throttle parallelism. Reap finished jobs here too — and PRINT + count
+    # them (the old version counted silently, so jobs that completed during
+    # throttling never showed and the totals didn't add up to the device count).
     while (( running >= MAX_PARALLEL )); do
       for i in "${!pids[@]}"; do
         if ! kill -0 "${pids[$i]}" 2>/dev/null; then
-          wait "${pids[$i]}" && ((success++)) || ((fail++)) || true
+          local rserial="${serials[$i]}"
+          local rlog="$LOG_DIR/${timestamp}_${rserial//:/_}.log"
+          if wait "${pids[$i]}"; then
+            echo -e "  ${GREEN}✓${RESET} $rserial"
+            ((success++)) || true
+          else
+            local rwhy=""
+            rwhy=$(grep -iE "Failure|INSTALL_FAILED|adb: |signatures do not match|error" "$rlog" 2>/dev/null | tail -1) || true
+            [[ -n "$rwhy" ]] || rwhy=$(grep -v '^[[:space:]]*$' "$rlog" 2>/dev/null | tail -1) || true
+            echo -e "  ${RED}✗${RESET} $rserial — $rwhy"
+            ((fail++)) || true
+          fi
           unset 'pids[$i]'
           unset 'serials[$i]'
           ((running--)) || true
@@ -266,6 +300,65 @@ do_restart() {
 }
 do_reboot()  { local s="$1"; adb -s "$s" reboot; }
 do_shutdown(){ local s="$1"; adb -s "$s" shell reboot -p 2>/dev/null || adb -s "$s" shell svc power shutdown; }
+
+# Reliable fleet shutdown: probe → connect → power off → re-probe → retry.
+# The old path (run_parallel do_shutdown) only hit already-connected devices and
+# never verified, so a device whose WiFi adb session had lapsed was silently
+# skipped (the "5 didn't shut down, did on a second run" symptom). This re-probes
+# port 5555 after each pass and retries stragglers until none answer (or max
+# passes), so one command actually powers the fleet down.
+cmd_shutdown() {
+  local ips
+  if [[ -n "${SINGLE_DEVICE:-}" ]]; then
+    ips="${SINGLE_DEVICE%%:*}"            # -d <ip>: just that device
+  else
+    ips=$(load_devices)                   # whole fleet from the device file
+  fi
+  if [[ -z "$ips" ]]; then echo -e "${RED}No devices to shut down.${RESET}"; exit 1; fi
+  local max_tries=4 try=1
+
+  # bounded parallel probe of port 5555 across the device list -> echoes alive IPs
+  _alive_ips() {
+    local d; d=$(mktemp -d); local p=() r=0 ip
+    while IFS= read -r ip; do
+      [[ -z "$ip" ]] && continue
+      { nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1 && echo "$ip" >"$d/$ip"; } &
+      p+=($!); ((r++)) || true
+      if (( r >= MAX_PARALLEL )); then wait "${p[0]}" 2>/dev/null || true; p=("${p[@]:1}"); ((r--)) || true; fi
+    done <<< "$ips"
+    for _pp in "${p[@]}"; do wait "$_pp" 2>/dev/null || true; done
+    ls "$d" 2>/dev/null
+    rm -rf "$d"
+  }
+
+  while (( try <= max_tries )); do
+    local alive; alive=$(_alive_ips)
+    local n; n=$(printf '%s\n' "$alive" | grep -c . || true)
+    if (( n == 0 )); then
+      echo -e "  ${GREEN}✓ All devices powered off.${RESET}"
+      return 0
+    fi
+    echo -e "${CYAN}Pass $try — $n device(s) still up; powering off...${RESET}"
+    local sp=() sr=0 ip
+    while IFS= read -r ip; do
+      [[ -z "$ip" ]] && continue
+      { adb connect "${ip}:5555" >/dev/null 2>&1 || true; do_shutdown "${ip}:5555" >/dev/null 2>&1 || true; echo -e "  ${DIM}↓ $ip${RESET}"; } &
+      sp+=($!); ((sr++)) || true
+      if (( sr >= MAX_PARALLEL )); then wait "${sp[0]}" 2>/dev/null || true; sp=("${sp[@]:1}"); ((sr--)) || true; fi
+    done <<< "$alive"
+    for _pp in "${sp[@]}"; do wait "$_pp" 2>/dev/null || true; done
+    sleep 8   # let devices drop off WiFi before re-probing
+    ((try++)) || true
+  done
+
+  local left; left=$(_alive_ips); local nl; nl=$(printf '%s\n' "$left" | grep -c . || true)
+  if (( nl > 0 )); then
+    echo -e "${YELLOW}⚠ $nl device(s) still responding after $max_tries passes — check physically:${RESET}"
+    printf '    %s\n' $left
+    return 1
+  fi
+  echo -e "  ${GREEN}✓ All devices powered off.${RESET}"
+}
 do_shell()   { local s="$1"; shift; adb -s "$s" shell "$@"; }
 
 # Set the kiosk as the launcher/home. ML2 ships THREE HOME-category
@@ -689,7 +782,7 @@ case "$COMMAND" in
     ;;
   shutdown)
     echo -e "${YELLOW}Powering off all devices...${RESET}"
-    run_parallel do_shutdown
+    cmd_shutdown
     ;;
   shell)
     [[ -z "${1:-}" ]] && { echo "Usage: shell <command>"; exit 1; }
