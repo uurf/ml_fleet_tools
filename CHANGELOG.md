@@ -10,6 +10,13 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.3.1] — 2026-06-20 — ml_deploy locate: beep a device to find it physically
+
+### Added
+- **`ml_deploy.sh locate <ip>`** — audibly beeps a device (6× by default, `LOCATE_BEEPS=N` to change) so an operator can find it physically, non-destructively (no shutdown/reboot, no re-power). Uses `cmd notification post` with a unique tag per beep — the only sound path reachable from `adb shell` on the locked ML2 user build (no `tinyplay`; media-intent has no kiosk handler). Connects first, resolves the device# from the show inventory for the prompt, and cleanly refuses an unauthed device (for those, shut down the others and find the one still on). Verified on a device.
+
+---
+
 ## [v1.3.0] — 2026-06-20 — Finalized show packages/versions + per-show inventory + status table fix
 
 ### Changed — show config finalized (confirmed package/version list)
