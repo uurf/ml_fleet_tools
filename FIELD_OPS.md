@@ -121,11 +121,14 @@ and re-run. Nothing else changes.
 
 ---
 
-## Out of scope
+## Per-show Google Sheet routing (implemented)
 
-The Google Sheet name in `apps_script/Code.gs` is still single-show
-(server-side, deployed separately). Per-show sheet routing is a separate
-follow-up and is intentionally not handled here.
+Each show routes to its own tracking workbook via `SHOW_SHEETS_URL` in
+`shows/<id>.conf` (blank = no sheet sync). `apps_script/Code.gs` is the one
+canonical receiver, pasted into each workbook's bound Apps Script with its
+`SHEET_TAB_NAME` set; each deployment's URL goes in that show's
+`SHOW_SHEETS_URL`. So Sheet routing is per-show config, not a single hardcoded
+sheet.
 
 ---
 

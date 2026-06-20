@@ -113,11 +113,12 @@ APP_PERMISSIONS=(
 # remediation (which has no deploy after it to reinstall it). In the
 # flash→provision→deploy chain the device is freshly wiped so there
 # is nothing to remove anyway, and deploy installs the kiosk after.
-# Foreign show apps are still scrubbed via REMOVE_FRIENDLY_NAMES.
+# Foreign-show + obsolete apps are scrubbed via the active show's
+# SHOW_REMOVE_PACKAGES (exact package ids — e.g. com.tindrum.anark,
+# com.tindrum.medusa, com.tindrum.thelife, the other show's app, and the
+# obsolete com.tindrum.kagamu), seeded into REMOVE_PACKAGES below.
 # Do NOT re-add the kiosk here.
 REMOVE_PACKAGES=()
-# Also removed by fuzzy name match
-REMOVE_FRIENDLY_NAMES=("An Ark" "The Life" "Medusa")
 
 # Directories to delete from device storage. Foreign-show data only —
 # NOT com.tindrum.kiosk's data dir, for the same reason as above: a
@@ -585,30 +586,15 @@ if [[ "$MODE" == "check" ]]; then
     [[ -z "$pkg" ]] && continue
     printf "  %b  %-52s ${DIM}(run without --check to remove)${RESET}\n" "$SKIP" "Check for: $pkg"
   done
-  for name in "${REMOVE_FRIENDLY_NAMES[@]}"; do
-    printf "  %b  %-52s ${DIM}(run without --check to remove)${RESET}\n" "$SKIP" "Check for: $name"
-  done
 else
-  # Build combined list: explicit packages + fuzzy-match on friendly names
+  # Exact-package removal list (foreign-show + obsolete apps from
+  # SHOW_REMOVE_PACKAGES). Exact ids — no fuzzy name matching.
   PKGS_TO_REMOVE=("${REMOVE_PACKAGES[@]+"${REMOVE_PACKAGES[@]}"}")
 
-  # Fuzzy discovery: match package names against friendly name words
-  ALL_PKGS=$(sh "pm list packages -3 2>/dev/null" | sed 's/^package://' || echo "")
-  for name in "${REMOVE_FRIENDLY_NAMES[@]}"; do
-    name_lower=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
-    while IFS= read -r pkg; do
-      pkg_lower=$(echo "$pkg" | tr '[:upper:]' '[:lower:]')
-      if echo "$pkg_lower" | grep -qi "$name_lower"; then
-        PKGS_TO_REMOVE+=("$pkg")
-      fi
-    done <<< "$ALL_PKGS"
-  done
-
   if [[ ${#PKGS_TO_REMOVE[@]} -eq 0 ]]; then
-    printf "  %b  No matching packages found\n" "$SKIP"
+    printf "  %b  No packages configured to remove (SHOW_REMOVE_PACKAGES empty)\n" "$SKIP"
     echo ""
-    echo -e "  ${DIM}Apps may already be removed, or package names don't match friendly names.${RESET}"
-    echo -e "  ${DIM}To find them manually:${RESET}"
+    echo -e "  ${DIM}To inspect installed third-party packages:${RESET}"
     echo -e "  ${DIM}  adb -s $SERIAL shell pm list packages -3${RESET}"
   else
     for pkg in "${PKGS_TO_REMOVE[@]}"; do

@@ -600,17 +600,25 @@ print(
     s_usb=$(fmt_bool "$usb_on" "$c_usb")
     s_update=$(fmt_bool "$auto_off" "$c_update")
 
-    local apk_disp="$apk_ver"
-    [[ "$apk_ver" == "MISSING" ]] && apk_disp="${RED}MISSING${RESET}"
-    [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]] && apk_disp="${YELLOW}$apk_ver${RESET}"
+    # Build width-correct version/OS cells. KEY FIX: pad the PLAIN text to the
+    # column width FIRST, then wrap color — so ANSI escape codes never count
+    # toward the field width (that miscount smeared every column to the right of
+    # a colored/failing cell). mkcell emits real escapes + padded text; the row
+    # then prints the prebuilt cells with %s.
+    mkcell() { local t="$1" w="$2" c="${3:-}" p; printf -v p "%-${w}s" "$t"; [[ -n "$c" ]] && printf '%b%s%b' "$c" "$p" "$RESET" || printf '%s' "$p"; }
 
-    local kiosk_disp="$kiosk_ver"
-    [[ -n "$EXPECTED_KIOSK" && "$kiosk_ver" != "MISSING" && "$c_kiosk" == "fail" ]] && kiosk_disp="${YELLOW}$kiosk_ver${RESET}"
-    [[ "$c_kiosk_suffix" == "fail" ]] && kiosk_disp="${RED}$kiosk_ver WRONG-SHOW${RESET}"
-    [[ "$kiosk_ver" == "MISSING" ]] && kiosk_disp="${RED}MISSING${RESET}"
+    local os_color="" apk_text="$apk_ver" apk_color="" kiosk_text="$kiosk_ver" kiosk_color=""
+    [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && os_color="$YELLOW"
+    if [[ "$apk_ver" == "MISSING" ]]; then apk_text="MISSING"; apk_color="$RED"
+    elif [[ -n "$EXPECTED_APK" && "$c_apk" == "fail" ]]; then apk_color="$YELLOW"; fi
+    if [[ "$kiosk_ver" == "MISSING" ]]; then kiosk_text="MISSING"; kiosk_color="$RED"
+    elif [[ "$c_kiosk_suffix" == "fail" ]]; then kiosk_color="$RED"        # wrong-show: red version
+    elif [[ -n "$EXPECTED_KIOSK" && "$c_kiosk" == "fail" ]]; then kiosk_color="$YELLOW"; fi
 
-    local os_disp="$os_ver"
-    [[ -n "$EXPECTED_OS" && "$c_os" == "fail" ]] && os_disp="${YELLOW}$os_ver${RESET}"
+    local os_cell apk_cell kiosk_cell batt_disp="${battery}%"
+    os_cell=$(mkcell "$os_ver" 8 "$os_color")
+    apk_cell=$(mkcell "$apk_text" 10 "$apk_color")
+    kiosk_cell=$(mkcell "$kiosk_text" 10 "$kiosk_color")
 
     if $all_ok; then
       s_ok="${GREEN}✓${RESET}"
@@ -620,8 +628,8 @@ print(
       ((fail_count++)) || true
     fi
 
-    printf "%-18s %-8b %-10b %-10b %-7s%%  %b    %b    %b    %b    %b    %b    %b\n" \
-      "$ip" "$os_disp" "$apk_disp" "$kiosk_disp" "$battery" \
+    printf "%-18s %s %s %s %-8s  %b    %b    %b    %b    %b    %b    %b\n" \
+      "$ip" "$os_cell" "$apk_cell" "$kiosk_cell" "$batt_disp" \
       "$s_sleep" "$s_wifi" "$s_bt" \
       "$s_dev" "$s_usb" "$s_update" "$s_ok"
   done
