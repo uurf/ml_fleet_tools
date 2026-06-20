@@ -10,6 +10,27 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.3.0] — 2026-06-20 — Finalized show packages/versions + per-show inventory + status table fix
+
+### Changed — show config finalized (confirmed package/version list)
+- **`SHOW_PACKAGE`**: RED `com.tindrum.kagami.red` (was the obsolete `com.tindrum.kagamu`), BLUE `com.tindrum.kagami.blue`.
+- **`SHOW_EXPECTED_APK`**: `0.1` both shows (was stale `1.24` on RED / blank on BLUE — the stale value was flagging every device as wrong-APK).
+- **`SHOW_KIOSK_VERSION`**: `1.0r` / `1.0b` (pinned; `SHOW_KIOSK_SUFFIX` `r`/`b` enforces wrong-show regardless). Supervisor bumps these as builds iterate.
+- **`SHOW_REMOVE_PACKAGES`** (both shows): the other show's app + the obsolete set — `com.tindrum.kagamu com.tindrum.anark com.tindrum.medusa com.tindrum.thelife`. Verified neither show lists its own `SHOW_PACKAGE`.
+- **Dropped the fuzzy `REMOVE_FRIENDLY_NAMES` name-matching** in `ml_provision.sh` — superseded by exact package ids above (reliable; no false matches). EXAMPLE.conf / `ml_show.sh` default prompt updated off `kagamu`.
+
+### Fixed
+- **`ml_status.sh` table no longer smears when a cell fails.** The row `printf` used width specifiers (`%-10b`) on color-wrapped cells, so the ~11 invisible ANSI bytes counted toward the column width and every column right of a colored/failing cell shifted. Cells are now padded as plain text *first*, then colored — alignment holds whether a cell passes or fails. Battery also tidied (`95%` vs `95     %`).
+
+### Added — per-show inventory foundation
+- **`SHOW_INVENTORY_FILE`** resolves to `inventory/$SHOW.csv` (the canonical per-show roster: device#↔serial + the expected inventory the dashboard loads to flag missing devices), falling back to the legacy fleet-wide `asset_serial_list.csv` until per-show files exist. Mirrors the `SHOW_DEVICES_FILE` pattern.
+- **`build_canonical_map.py`** now writes `inventory/<RED_SHOW>.csv` + `inventory/<BLUE_SHOW>.csv` from the scans (plus the combined CSV + reconciliation buckets). New `--red-show`/`--blue-show`/`--inventory-dir`.
+
+### Docs
+- `FIELD_OPS.md`: removed the stale "Google Sheet is single-show / per-show routing not handled" note — per-show routing via `SHOW_SHEETS_URL` is implemented.
+
+---
+
 ## [v1.2.8] — 2026-06-19 — Reliable fleet shutdown (verify + retry) + honest run_parallel tally
 
 ### Fixed

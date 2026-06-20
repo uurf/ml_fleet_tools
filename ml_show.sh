@@ -144,7 +144,7 @@ cmd_init() {
     echo -e "  ${YELLOW}Required.${RESET}"
   done
   sec="$(prompt_default "WiFi security" "wpa2")"
-  pkg="$(prompt_default "Show app package" "com.tindrum.kagamu")"
+  pkg="$(prompt_default "Show app package" "com.tindrum.kagami.red")"
   bright="$(prompt_default "Screen brightness (raw settings value)" "12")"
   data_dir="$(prompt_default "Show data dir under /sdcard/" "Kagami")"
   data_req="$(prompt_default "Required entries under data dir (space-sep)" "data")"

@@ -192,12 +192,28 @@ _sc_init() {
     SHOW_DEVICES_FILE="$SHOW_DEVICES_FILE_DEFAULT"
   fi
 
+  # 6b. Inventory file — the canonical per-show roster (Device,Serial): the
+  # expected device inventory the dashboard loads to flag missing devices, and
+  # the device#↔serial map. Written by build_canonical_map.py from the scans;
+  # rows moved between shows by ml_show_migrate. Falls back to the legacy
+  # fleet-wide asset_serial_list.csv until the per-show files exist.
+  SHOW_INVENTORY_FILE_DEFAULT="$TOOLKIT_ROOT/inventory/$show_id.csv"
+  local legacy_inv="$TOOLKIT_ROOT/asset_serial_list.csv"
+  if [[ -f "$SHOW_INVENTORY_FILE_DEFAULT" ]]; then
+    SHOW_INVENTORY_FILE="$SHOW_INVENTORY_FILE_DEFAULT"
+  elif [[ -f "$legacy_inv" ]]; then
+    SHOW_INVENTORY_FILE="$legacy_inv"
+  else
+    SHOW_INVENTORY_FILE="$SHOW_INVENTORY_FILE_DEFAULT"
+  fi
+
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
          SHOW_KIOSK_SUFFIX SHOW_REMOVE_PACKAGES SHOW_BRIGHTNESS SHOW_SHEETS_URL \
          SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
-         SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT
+         SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT \
+         SHOW_INVENTORY_FILE SHOW_INVENTORY_FILE_DEFAULT
 }
 
 # Print the resolved show. Safe for read-only scripts.
