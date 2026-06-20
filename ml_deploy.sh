@@ -68,6 +68,7 @@ usage() {
   echo "    restart <package>     Stop then launch app on all devices"
   echo "    reboot                Reboot all devices"
   echo "    shutdown              Power off all devices (nightly end-of-day)"
+  echo "    locate <ip>          Beep a device repeatedly to find it physically (non-destructive)"
   echo "    shell <cmd>           Run any adb shell command on all devices"
   echo "    logs <package>        Stream logcat for a package from all devices"
   echo ""
@@ -361,6 +362,20 @@ cmd_shutdown() {
 }
 do_shell()   { local s="$1"; shift; adb -s "$s" shell "$@"; }
 
+# Audible locate: post N notifications (distinct tags so each re-alerts) on the
+# device — the only sound path reachable from adb shell on the locked ML2 user
+# build (no tinyplay; media-intent has no kiosk handler). Non-destructive: no
+# shutdown/reboot, no re-power. A unique tag per beep forces the chime each time
+# (same tag updates silently). Bumps the notification stream first.
+do_locate() {
+  local s="$1" n="${2:-6}" i
+  adb -s "$s" shell media volume --stream 5 --set 7 >/dev/null 2>&1 || true
+  for (( i=1; i<=n; i++ )); do
+    adb -s "$s" shell cmd notification post -S bigtext "mllocate$i" "LOCATE BEEP $i" >/dev/null 2>&1 || true
+    sleep 1
+  done
+}
+
 # Set the kiosk as the launcher/home. ML2 ships THREE HOME-category
 # activities (com.magicleap.homemenu, the kiosk, settings/.FallbackHome);
 # set-home-activity only picks the *preferred* one. Two traps:
@@ -393,7 +408,30 @@ do_set_home() {
 }
 
 # ---- Wrapper functions for export (needed for run_parallel subshell) ----
-export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell do_set_home 2>/dev/null || true
+export -f do_install do_push do_launch do_stop do_restart do_reboot do_shutdown do_shell do_set_home do_locate 2>/dev/null || true
+
+# Connect to one device and beep it repeatedly so an operator can find it
+# physically. Resolves its device# from the show inventory for the prompt.
+cmd_locate() {
+  local ip="${1%%:*}"
+  [[ -z "$ip" ]] && { echo -e "${RED}Usage: ml_deploy.sh locate <ip>${RESET}"; exit 1; }
+  local serial="${ip}:5555"
+  adb connect "$serial" >/dev/null 2>&1 || true
+  if ! adb devices | grep -qE "^${serial}[[:space:]].*device$"; then
+    echo -e "${RED}✗ $ip not reachable/authorized — can't beep (unauthed devices can't run shell).${RESET}"
+    echo -e "  ${DIM}For an unauthed device, shut down the others instead and find the one still on.${RESET}"
+    exit 1
+  fi
+  # Best-effort device# lookup from the inventory (Device,Serial)
+  local hw dev=""
+  hw=$(adb -s "$serial" shell getprop ro.serialno 2>/dev/null | tr -d '\r') || true
+  if [[ -n "$hw" && -f "${SHOW_INVENTORY_FILE:-}" ]]; then
+    dev=$(awk -F, -v s="$hw" 'BEGIN{IGNORECASE=1}{gsub(/\r/,"")} toupper($2)==toupper(s){print $1; exit}' "$SHOW_INVENTORY_FILE") || true
+  fi
+  echo -e "${CYAN}Beeping ${BOLD}$ip${RESET}${CYAN}${hw:+  ($hw)}${dev:+  device #$dev}${RESET} — listen for it..."
+  do_locate "$serial" "${LOCATE_BEEPS:-6}"
+  echo -e "  ${GREEN}done${RESET} ${DIM}(re-run to beep again)${RESET}"
+}
 
 # ---- Push with live progress ----------------------------------------
 # Single device: streams adb push output directly to terminal.
@@ -783,6 +821,9 @@ case "$COMMAND" in
   shutdown)
     echo -e "${YELLOW}Powering off all devices...${RESET}"
     cmd_shutdown
+    ;;
+  locate)
+    cmd_locate "${1:-}"
     ;;
   shell)
     [[ -z "${1:-}" ]] && { echo "Usage: shell <command>"; exit 1; }
