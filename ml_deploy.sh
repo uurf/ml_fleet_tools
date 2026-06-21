@@ -229,7 +229,7 @@ run_parallel() {
       sleep 0.1
     done
 
-    "$cmd_fn" "$serial" "$@" > "$logfile" 2>&1 &
+    "$cmd_fn" "$serial" "$@" </dev/null > "$logfile" 2>&1 &   # </dev/null: adb shell must not eat the loop's device list
     pids+=($!)
     serials+=("$serial")
     ((running++)) || true
@@ -323,7 +323,7 @@ cmd_shutdown() {
     local d; d=$(mktemp -d); local p=() r=0 ip
     while IFS= read -r ip; do
       [[ -z "$ip" ]] && continue
-      { nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1 && echo "$ip" >"$d/$ip"; } &
+      { nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1 && echo "$ip" >"$d/$ip"; } </dev/null &
       p+=($!); ((r++)) || true
       if (( r >= MAX_PARALLEL )); then wait "${p[0]}" 2>/dev/null || true; p=("${p[@]:1}"); ((r--)) || true; fi
     done <<< "$ips"
@@ -343,7 +343,7 @@ cmd_shutdown() {
     local sp=() sr=0 ip
     while IFS= read -r ip; do
       [[ -z "$ip" ]] && continue
-      { adb connect "${ip}:5555" >/dev/null 2>&1 || true; do_shutdown "${ip}:5555" >/dev/null 2>&1 || true; echo -e "  ${DIM}↓ $ip${RESET}"; } &
+      { adb connect "${ip}:5555" >/dev/null 2>&1 || true; do_shutdown "${ip}:5555" >/dev/null 2>&1 || true; echo -e "  ${DIM}↓ $ip${RESET}"; } </dev/null &
       sp+=($!); ((sr++)) || true
       if (( sr >= MAX_PARALLEL )); then wait "${sp[0]}" 2>/dev/null || true; sp=("${sp[@]:1}"); ((sr--)) || true; fi
     done <<< "$alive"
@@ -490,7 +490,7 @@ run_push() {
       sleep 0.5
     done
 
-    adb -s "$serial" push "$src" "$dest" > "$logfile" 2>&1 &
+    adb -s "$serial" push "$src" "$dest" </dev/null > "$logfile" 2>&1 &
     pids+=($!)
     serials+=("$serial")
     logfiles+=("$logfile")

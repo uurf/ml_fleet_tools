@@ -22,6 +22,15 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.3.3] — 2026-06-21 — Fix fleet-scale device drops: backgrounded adb shell ate the loop's stdin
+
+### Fixed (root cause of the status mass-drop, and a latent deploy/shutdown bug)
+- **`ml_status` silently dropped most devices at scale** — a sweep of 188 reachable devices produced only ~`MAX_PARALLEL` records (e.g. 8), with no error. Cause: `collect_device` runs backgrounded inside `while read … <<< "$ALIVE"`, and **`adb shell` reads stdin** — so the backgrounded adb consumed the loop's own device-list input, the loop hit EOF after the first batch, and the rest were never collected. (Stubs missed it because stub `adb` doesn't read stdin; *real* `adb shell` does — reproduced once the stub drained stdin.) Fixed: `</dev/null` on the backgrounded jobs **and** the `adb_s`/`adb_set` helpers, in the collect, `--fix`, and probe loops. Plus defense-in-depth: a post-collection sweep emits an **ERROR** record for any reachable device that produced no record, so `Total` always reconciles (OK + Issues + Error + Offline = device count) and a vanished job can never be a silent drop.
+- **Same pattern fixed in `ml_deploy`** (`run_parallel`, `cmd_shutdown`, `cmd_push`) — these background `adb shell`-calling work inside `while read … <<< "$list"` loops too, so fleet `deploy`/`shutdown`/`push` would drop devices at scale (likely a contributor to the earlier shutdown stragglers). All backgrounded jobs now `</dev/null`.
+- `ml_scan` was unaffected — its identify pass uses `for ip in "${array[@]}"` (no stdin read), which is why scans found the full fleet while status dropped it.
+
+> Validated device-free with a stdin-draining `adb` stub: 40/40 collected after the fix (8/40 before); run_parallel 30/30. Live full-fleet re-test still recommended to confirm at 190.
+
 ## [v1.3.2] — 2026-06-21 — ml_status/ml_scan reliability at fleet scale
 
 ### Fixed

@@ -132,7 +132,11 @@ collect_device() {
   local serial="$1"
   local out="$RUN_DIR/${serial//:/_}.json"
 
-  adb_s() { adb -s "$serial" shell "$@" 2>/dev/null | tr -d '\r' || echo ""; }
+  # </dev/null is REQUIRED: adb shell reads stdin, and when collect_device runs
+  # backgrounded inside a `while read … <<< "$list"` loop, a stdin-reading adb
+  # would EAT the loop's device list → the loop stops after the first batch and
+  # most devices are silently never collected (the ~MAX_PARALLEL-survivors bug).
+  adb_s() { adb -s "$serial" shell "$@" </dev/null 2>/dev/null | tr -d '\r' || echo ""; }
 
   # ── Versions ─────────────────────────────────────────────
   local os_version
@@ -450,7 +454,7 @@ fix_device() {
   local data_file="$RUN_DIR/${serial//:/_}.json"
   [[ ! -f "$data_file" ]] && return
 
-  adb_set() { adb -s "$serial" shell settings put "$@" 2>/dev/null; }
+  adb_set() { adb -s "$serial" shell settings put "$@" </dev/null 2>/dev/null; }
 
   local stay_awake
   stay_awake=$(python3 -c "import json,sys; d=json.load(open('$data_file')); print(d['settings']['stay_awake'])" 2>/dev/null)
@@ -788,7 +792,7 @@ while IFS= read -r ip; do
       adb connect "${ip}:5555" >/dev/null 2>&1 || true
       echo "$ip" > "$ALIVE_DIR/$ip"
     fi
-  } &
+  } </dev/null &
   PIDS+=($!)
   while (( ${#PIDS[@]} >= PROBE_PARALLEL )); do
     mapfile -t PIDS < <(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
@@ -807,7 +811,7 @@ echo -e "${CYAN}Collecting from $ALIVE_COUNT reachable device(s) [parallel $MAX_
 PIDS=()
 while IFS= read -r ip; do
   [[ -z "$ip" ]] && continue
-  collect_device "${ip}:5555" &
+  collect_device "${ip}:5555" </dev/null &   # </dev/null: don't let adb eat $ALIVE
   PIDS+=($!)
   while (( ${#PIDS[@]} >= MAX_PARALLEL )); do
     mapfile -t PIDS < <(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
@@ -815,6 +819,14 @@ while IFS= read -r ip; do
   done
 done <<< "$ALIVE"
 wait 2>/dev/null || true
+
+# Defense-in-depth: any reachable device that produced NO record (job killed/
+# hung/crashed for any reason) gets an ERROR stub so it's visible and Total
+# always reconciles with the device count — never a silent drop.
+while IFS= read -r ip; do
+  [[ -z "$ip" ]] && continue
+  [[ -f "$RUN_DIR/${ip}_5555.json" ]] || emit_error "$ip" "no record produced (collection job failed?)"
+done <<< "$ALIVE"
 
 # Offline stubs for expected devices that didn't answer the port probe.
 OFFLINE_COUNT=0
@@ -834,7 +846,7 @@ if $AUTO_FIX; then
   echo -e "${YELLOW}Auto-fixing settings on affected devices...${RESET}"
   while IFS= read -r ip; do
     [[ -z "$ip" ]] && continue
-    fix_device "${ip}:5555" &
+    fix_device "${ip}:5555" </dev/null &   # </dev/null: adb shell must not eat $ALIVE
     while (( $(jobs -r | wc -l) >= MAX_PARALLEL )); do sleep 0.2; done
   done <<< "$ALIVE"
   wait
