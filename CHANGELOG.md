@@ -17,6 +17,9 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 > Validated device-free (syntax, shellcheck, config resolution, dry-run end-to-end, inventory-move logic). Live migration test pending hardware.
 
+### Added — device→show registry backbone (not yet wired)
+- **`apps_script/registry.gs`** — a dedicated single-purpose Google Sheet web app: the canonical device→show membership store, separate from the drift-prone tracking/log sheets. **One row per device keyed on Serial** (`Serial|Show|Device|Status|Source|Updated`); a migration is an UPDATE of the `Show` cell (upsert-by-serial), so a device structurally cannot be in two shows at once. `doPost` upserts (tools POST, humans never edit); `doGet?format=inventory&show=X` returns `Device,Serial` CSV — exactly what `fleet_dashboard.html` loadCSV() consumes, so the dashboard can read live per-show inventory straight from it. Syntax-checked + upsert logic unit-tested. **Pending:** stand up the sheet + deploy; then wire the toolkit (single registry URL config + `ml_provision`/`ml_show_migrate` POST upserts) and the scan-vs-registry drift reconcile — deferred until the sheet exists and the read path (live-fetch vs supervisor-sync) is chosen.
+
 ---
 
 ## [v1.3.2] — 2026-06-21 — ml_status/ml_scan reliability at fleet scale
