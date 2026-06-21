@@ -10,6 +10,15 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.0] — 2026-06-21 — ml_show_migrate: migrate a device between shows
+
+### Added
+- **`ml_show_migrate.sh <from> <to>`** — migrate one **USB-connected** device between shows (e.g. KAGAMI/RED → KAGAMI_BLUE). Thin orchestrator over the tested chain, in a **fail-safe order**: (1) deploy the desired show's `builds/` over USB (app + kiosk, set home); (2) **confirm over USB** the desired app is installed and the kiosk versionName carries the desired suffix — **aborts here, before any destructive change, if `builds/` were wrong** (device stays on USB/current network, recoverable by re-running); (3) `ml_provision` over USB to scrub the other show's app (the destination's `SHOW_REMOVE_PACKAGES`), apply settings, and **switch to the desired wifi** (the device leaves USB/the current network at this point, by design); (4) move the device's serial row from `inventory/<from>.csv` to `inventory/<to>.csv` (device# travels unchanged). Prompts for from/to (implies the other when only two shows configured), has a `--dry-run` that prints the full plan and changes nothing, and `-d <usb-serial>` to target a specific USB device. Final verification is on the destination network (the device has left the source network) — the script prints the exact `scan`/`status` commands to run after switching the laptop's wifi.
+
+> Validated device-free (syntax, shellcheck, config resolution, dry-run end-to-end, inventory-move logic). Live migration test pending hardware.
+
+---
+
 ## [v1.3.2] — 2026-06-21 — ml_status/ml_scan reliability at fleet scale
 
 ### Fixed
@@ -21,6 +30,8 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 - Both: skip the server reset with `ML_NO_KILLSERVER=1`.
 
 > Diagnosed live at ~90 devices in Osaka. Validated device-free with stubbed nc/adb (accounting + ERROR/OFFLINE paths); stress-test against the live fleet pending (devices powered down to avoid overheating).
+
+---
 
 ## [v1.3.1] — 2026-06-20 — ml_deploy locate: beep a device to find it physically
 

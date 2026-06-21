@@ -21,6 +21,7 @@ There is no build system. All scripts are standalone bash and run directly:
 ./install.sh                        # First-time machine setup (macOS only, Homebrew)
 ./update.sh                         # Pull latest from main, protect fleet key
 ./ml_show.sh [use <id>|init]        # Select/create the active show (on-site setup for show 2)
+./ml_show_migrate.sh [--from <id>] [--to <id>] [--dry-run]  # Migrate one USB device between shows
 ./ml_os_flash.sh [version] [path]              # Flash OS, pre-auth ADB, skip OOBE, chain to provision
 ./ml_provision.sh [-d <ip>] [--check|--discover]  # Single-device: apply settings, WiFi, permissions
 ./ml_provision.sh --fleet [--check]            # Fleet: apply/check ADB-settable settings on the active show's devices
