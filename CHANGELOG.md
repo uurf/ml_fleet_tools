@@ -10,6 +10,18 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.3.2] — 2026-06-21 — ml_status/ml_scan reliability at fleet scale
+
+### Fixed
+- **`ml_status` no longer drops devices or reports false OFFLINE at scale.** Root causes, all fixed:
+  - It built its work list from `adb devices` (the connection table), which decays between runs → devices that were powered-on showed as OFFLINE / "0 online". Now it drives off the **expected device file**, port-probes each in parallel, `adb connect`s the responders (handshake), then collects — non-responders are the only OFFLINE.
+  - Per-device collection ran at `MAX_PARALLEL=30`; ~20 adb calls/device through one server collided and returned blank, **silently dropping ~2/3 of devices at ~90 scale**. Lowered to **8** (`ML_STATUS_PARALLEL` to override) and `collect_device` now runs with errexit disabled in its (backgrounded) subshell so a blank/partial read can't abort it before writing its record.
+  - A reachable-but-unreadable device is now emitted as **ERROR** (not silently dropped); the summary adds an `Error:` count and **`Total` reconciles** with the device-list count (OK + Issues + Error + Offline).
+- **`ml_scan` resets the adb server before identify** (`kill-server`), clearing the polluted-table state that produced the wall of "unknown" at scale.
+- Both: skip the server reset with `ML_NO_KILLSERVER=1`.
+
+> Diagnosed live at ~90 devices in Osaka. Validated device-free with stubbed nc/adb (accounting + ERROR/OFFLINE paths); stress-test against the live fleet pending (devices powered down to avoid overheating).
+
 ## [v1.3.1] — 2026-06-20 — ml_deploy locate: beep a device to find it physically
 
 ### Added

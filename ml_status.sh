@@ -22,7 +22,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/require_bash5.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEVICES_FILE="$SCRIPT_DIR/devices.txt"
 STATUS_DIR="$SCRIPT_DIR/status"
-MAX_PARALLEL=30
+# Per-device collection does ~20 adb calls each; at high parallelism through one
+# adb server those collide and return blank (devices silently dropped at ~90+
+# scale). 8 is the sweet spot that held; override with ML_STATUS_PARALLEL.
+MAX_PARALLEL="${ML_STATUS_PARALLEL:-8}"
+# Light reachability probe can run wider than collection.
+PROBE_PARALLEL="${ML_PROBE_PARALLEL:-48}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
@@ -117,6 +122,13 @@ online_devices() {
 
 # ── Collect data from a single device ────────────────────────
 collect_device() {
+  # Always invoked backgrounded (`collect_device &`), so this runs in its own
+  # subshell — disable errexit HERE so a blank/partial adb read (a no-match
+  # grep under pipefail) can't abort the job before it writes its record. That
+  # silent mid-function abort was dropping devices from the count at scale.
+  # The function gathers best-effort (blank fields where a read fails) and
+  # always writes one JSON. Total then reconciles with the device count.
+  set +e +o pipefail
   local serial="$1"
   local out="$RUN_DIR/${serial//:/_}.json"
 
@@ -131,6 +143,21 @@ collect_device() {
 
   local hw_serial
   hw_serial=$(adb_s getprop ro.serialno)
+
+  # Connected-but-blank guard: if the two cheapest reads both come back empty,
+  # the device answered the TCP connect but its shell isn't responding (adb
+  # contention, or handshake not settled). Retry once; if still blank, emit an
+  # ERROR record instead of silently producing a junk/empty row (the old
+  # behavior dropped these from the count entirely).
+  if [[ -z "$os_version" && -z "$hw_serial" ]]; then
+    sleep 0.5
+    os_version=$(adb_s getprop ro.build.version.lumin)
+    hw_serial=$(adb_s getprop ro.serialno)
+    if [[ -z "$os_version" && -z "$hw_serial" ]]; then
+      emit_error "${serial%:5555}" "connected but no shell response (adb contention?)"
+      return
+    fi
+  fi
 
   local apk_version=""
   local apk_code=""
@@ -457,6 +484,38 @@ fix_device() {
 }
 export -f fix_device 2>/dev/null || true
 
+# ── Emit a stub for a device that's reachable but unreadable ──
+# Port was open and adb connected, but shell reads came back blank (contention
+# or unstable session). online:true + error:true so it's counted and visibly
+# flagged, never silently dropped.
+emit_error() {
+  local ip="$1" why="${2:-unreadable}"
+  local serial="${ip}:5555"
+  local out="$RUN_DIR/${serial//:/_}.json"
+  cat > "$out" <<EOF
+{
+  "serial": "$serial",
+  "hw_serial": "",
+  "ip": "$ip",
+  "online": true,
+  "error": "$why",
+  "timestamp": "$TIMESTAMP",
+  "os_version": "",
+  "expected_os": "$EXPECTED_OS",
+  "build_id": "",
+  "battery": "0",
+  "charging": false,
+  "apk": { "package": "$TARGET_PACKAGE", "installed": false, "version": "", "version_code": "", "expected_version": "$EXPECTED_APK" },
+  "kiosk": { "package": "$KIOSK_PACKAGE", "installed": false, "version": "", "expected_version": "$EXPECTED_KIOSK", "expected_suffix": "$EXPECTED_KIOSK_SUFFIX" },
+  "disk": { "mount": "/sdcard", "total_kb": 0, "used_kb": 0, "available_kb": 0, "used_pct": 0, "warn_pct": $SHOW_DISK_WARN_PCT },
+  "data": { "root": "/sdcard/$SHOW_DATA_DIR", "root_exists": null, "required": [], "optional": [], "present": [], "missing": [], "extraneous": [] },
+  "packages": { "tindrum_all": [], "extraneous_tindrum": [] },
+  "settings": { "stay_awake": false, "stay_awake_raw": "", "wifi_connected": false, "wifi_ssid": "", "bluetooth_on": false, "screen_brightness": 0, "hand_nav_on": null, "developer_mode": false, "usb_debugging": false, "auto_update_off": "unknown" }
+}
+EOF
+}
+export -f emit_error 2>/dev/null || true
+
 # ── Emit a stub record for an EXPECTED-but-OFFLINE device ─────
 # A device in the show's device list that isn't reachable over adb
 # never gets collected — historically it just vanished from the
@@ -503,7 +562,7 @@ check() {
 # ── Render table ─────────────────────────────────────────────
 render_table() {
   local files=("$RUN_DIR"/*.json)
-  local total=0 pass_all=0 fail_count=0 offline_count=0
+  local total=0 pass_all=0 fail_count=0 offline_count=0 error_count=0
 
   # Header
   printf "\n"
@@ -522,6 +581,16 @@ render_table() {
       ((offline_count++)) || true
       local oip; oip=$(python3 -c "import json;print(json.load(open('$f'))['ip'])" 2>/dev/null)
       printf "%-18s ${RED}%s${RESET}\n" "$oip" "OFFLINE — in device list but unreachable"
+      continue
+    fi
+
+    # Error stub (online:true + error) — reachable but unreadable (adb
+    # contention / unstable session). Surfaced, never silently dropped.
+    local errmsg; errmsg=$(python3 -c "import json;print(json.load(open('$f')).get('error',''))" 2>/dev/null)
+    if [[ -n "$errmsg" ]]; then
+      ((error_count++)) || true
+      local eip; eip=$(python3 -c "import json;print(json.load(open('$f'))['ip'])" 2>/dev/null)
+      printf "%-18s ${YELLOW}%s${RESET}\n" "$eip" "ERROR — $errmsg (re-run; lower ML_STATUS_PARALLEL if persistent)"
       continue
     fi
 
@@ -635,7 +704,8 @@ print(
   done
 
   printf "\n"
-  printf "${BOLD}Total: $total   ${GREEN}All-OK: $pass_all${RESET}${BOLD}   ${RED}Issues: $fail_count   Offline: $offline_count${RESET}\n"
+  printf "${BOLD}Total: $total   ${GREEN}All-OK: $pass_all${RESET}${BOLD}   ${RED}Issues: $fail_count   ${YELLOW}Error: $error_count   ${RED}Offline: $offline_count${RESET}\n"
+  printf "${DIM}(Total should equal the device-list count: OK + Issues + Error + Offline)${RESET}\n"
   printf "Raw data: $RUN_DIR/\n\n"
 }
 
@@ -688,53 +758,85 @@ render_json() {
 }
 
 # ── Main ─────────────────────────────────────────────────────
-DEVICES=$(online_devices)
-
-if [[ -z "$DEVICES" ]]; then
-  echo -e "${RED}No devices online. Run: ./ml_deploy.sh connect${RESET}" >&2
-  exit 1
+# Start from a CLEAN adb table. A polluted table (stale offline entries from
+# prior scans/connects) makes shell reads return blank, dropping devices.
+# Skip with ML_NO_KILLSERVER=1 if other adb work is in flight.
+if [[ -z "${ML_NO_KILLSERVER:-}" ]]; then
+  adb kill-server >/dev/null 2>&1 || true
+  adb start-server >/dev/null 2>&1 || true
 fi
 
-COUNT=$(echo "$DEVICES" | wc -l | tr -d ' ')
-echo -e "${CYAN}Collecting status from $COUNT device(s)...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}" >&2
+# Work list = the EXPECTED device file, NOT adb's connection table (which decays
+# between runs → the old false-OFFLINE / "0 online" bug). Probe each IP's port
+# in parallel, adb-connect the responders so they handshake to "device" state,
+# then collect those; non-responders are genuinely offline. Every expected IP
+# yields exactly one record (full / ERROR / OFFLINE), so the totals reconcile.
+EXPECTED=$(load_devices | tr -d ' \t\r' | grep . || true)
+if [[ -z "$EXPECTED" ]]; then
+  echo -e "${RED}No devices in $(basename "$DEVICES_FILE").${RESET}" >&2
+  exit 1
+fi
+EXP_COUNT=$(printf '%s\n' "$EXPECTED" | grep -c . || true)
 
-# Parallel collection
+echo -e "${CYAN}Probing $EXP_COUNT device(s) [parallel $PROBE_PARALLEL]...${RESET} ${DIM}($TOOLKIT_VERSION)${RESET}" >&2
+ALIVE_DIR=$(mktemp -d)
 PIDS=()
-while IFS= read -r serial; do
-  [[ -z "$serial" ]] && continue
-  collect_device "$serial" &
+while IFS= read -r ip; do
+  [[ -z "$ip" ]] && continue
+  {
+    if nc -z -G 2 -w 2 "$ip" 5555 >/dev/null 2>&1; then
+      adb connect "${ip}:5555" >/dev/null 2>&1 || true
+      echo "$ip" > "$ALIVE_DIR/$ip"
+    fi
+  } &
   PIDS+=($!)
-  # Throttle
+  while (( ${#PIDS[@]} >= PROBE_PARALLEL )); do
+    mapfile -t PIDS < <(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
+    sleep 0.1
+  done
+done <<< "$EXPECTED"
+wait 2>/dev/null || true
+sleep 1   # let fresh connects settle to "device" state before shell reads
+
+ALIVE=$(ls "$ALIVE_DIR" 2>/dev/null || true)
+ALIVE_COUNT=$(printf '%s\n' "$ALIVE" | grep -c . || true)
+echo -e "${CYAN}Collecting from $ALIVE_COUNT reachable device(s) [parallel $MAX_PARALLEL]...${RESET}" >&2
+
+# Phase 2: collect reachable devices (bounded — low parallelism avoids the
+# adb-server contention that returned blank reads at ~90+ devices).
+PIDS=()
+while IFS= read -r ip; do
+  [[ -z "$ip" ]] && continue
+  collect_device "${ip}:5555" &
+  PIDS+=($!)
   while (( ${#PIDS[@]} >= MAX_PARALLEL )); do
     mapfile -t PIDS < <(for p in "${PIDS[@]}"; do kill -0 "$p" 2>/dev/null && echo "$p"; done)
     sleep 0.2
   done
-done <<< "$DEVICES"
-wait "${PIDS[@]}" 2>/dev/null || true
+done <<< "$ALIVE"
+wait 2>/dev/null || true
 
-# Emit stubs for expected-but-offline devices (present in the show
-# device list but not reachable over adb). Strip :5555 from online
-# serials to compare by IP; USB serials simply won't match an IP.
-ONLINE_IPS=$(printf '%s\n' "$DEVICES" | sed 's/:5555$//')
+# Offline stubs for expected devices that didn't answer the port probe.
 OFFLINE_COUNT=0
-while IFS= read -r exp_ip; do
-  exp_ip="${exp_ip//[$' \t\r']/}"
-  [[ -z "$exp_ip" ]] && continue
-  if ! grep -qxF "$exp_ip" <<< "$ONLINE_IPS"; then
-    emit_offline "$exp_ip"
+while IFS= read -r ip; do
+  [[ -z "$ip" ]] && continue
+  if [[ ! -e "$ALIVE_DIR/$ip" ]]; then
+    emit_offline "$ip"
     OFFLINE_COUNT=$((OFFLINE_COUNT+1))
   fi
-done < <(load_devices)
+done <<< "$EXPECTED"
+rm -rf "$ALIVE_DIR"
 [[ "$OFFLINE_COUNT" -gt 0 ]] && \
-  echo -e "${YELLOW}⚠ $OFFLINE_COUNT expected device(s) offline — shown as OFFLINE.${RESET}" >&2
+  echo -e "${YELLOW}⚠ $OFFLINE_COUNT device(s) offline (no port-5555 response).${RESET}" >&2
 
 # Auto-fix if requested (runs after collection)
 if $AUTO_FIX; then
   echo -e "${YELLOW}Auto-fixing settings on affected devices...${RESET}"
-  while IFS= read -r serial; do
-    [[ -z "$serial" ]] && continue
-    fix_device "$serial" &
-  done <<< "$DEVICES"
+  while IFS= read -r ip; do
+    [[ -z "$ip" ]] && continue
+    fix_device "${ip}:5555" &
+    while (( $(jobs -r | wc -l) >= MAX_PARALLEL )); do sleep 0.2; done
+  done <<< "$ALIVE"
   wait
   echo ""
 fi

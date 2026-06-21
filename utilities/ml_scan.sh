@@ -268,6 +268,14 @@ fi
 echo -e "  ${GREEN}Found ${#FOUND_IPS[@]} device(s) with ADB port open:${RESET}"
 echo ""
 
+# Start identify from a CLEAN adb table. A table polluted with stale offline
+# entries (from prior scans/connects) makes get-state return blank → the wall
+# of "unknown" we hit at scale. Reset first. Skip with ML_NO_KILLSERVER=1.
+if [[ -z "${ML_NO_KILLSERVER:-}" ]]; then
+  adb kill-server >/dev/null 2>&1 || true
+  adb start-server >/dev/null 2>&1 || true
+fi
+
 # ADB-identify all devices for display — throttled-parallel (sequential was
 # fine at ~5 devices but races/crawls at fleet scale, producing the wall of
 # "UNKNOWN"). Each job writes its result to a temp file; collect afterward.
