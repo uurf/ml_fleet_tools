@@ -158,6 +158,10 @@ _sc_init() {
   # foreign show app. ml_provision.sh seeds REMOVE_PACKAGES from this; applied
   # only in the provision pass, never in --check. Blank = remove nothing extra.
   : "${SHOW_REMOVE_PACKAGES:=}"
+  # CIDR subnet ml_scan probes for this show (e.g. 172.16.40.0/22). Blank =
+  # auto-detect. Set it to avoid under-scanning when the network is wider than
+  # a /24 (this fleet is a /22). --subnet on the CLI still overrides.
+  : "${SHOW_SUBNET:=}"
   # Google Apps Script web app URL for this show's tracking sheet. Each
   # show has its own bound workbook + deployment (see apps_script/Code.gs
   # header). Blank = no sheet sync for this show (update_sheet no-ops).
@@ -210,7 +214,7 @@ _sc_init() {
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
-         SHOW_KIOSK_SUFFIX SHOW_REMOVE_PACKAGES SHOW_BRIGHTNESS SHOW_SHEETS_URL \
+         SHOW_KIOSK_SUFFIX SHOW_REMOVE_PACKAGES SHOW_SUBNET SHOW_BRIGHTNESS SHOW_SHEETS_URL \
          SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT \
          SHOW_INVENTORY_FILE SHOW_INVENTORY_FILE_DEFAULT

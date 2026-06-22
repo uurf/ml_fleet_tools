@@ -80,15 +80,17 @@ detect_subnet() {
       if [[ -n "$ip" ]]; then
         # Get prefix length via ifconfig
         prefix=$(ifconfig "$iface" 2>/dev/null | awk '/netmask/{print $4}' | head -1)
-        # Convert hex netmask to CIDR
+        # Convert hex netmask to CIDR + compute the REAL network base from
+        # ip & mask (do NOT force /24 — this network is a /22, and ${ip%.*}.0
+        # is only correct for /24, which caused under-scanning).
         if [[ "$prefix" =~ ^0x ]]; then
-          local mask=$((16#${prefix#0x}))
-          local cidr=0
-          while (( mask > 0 )); do (( cidr += mask & 1 )); (( mask >>= 1 )); done
-          # Round to common values
-          [[ $cidr -ge 24 ]] && cidr=24
-          [[ $cidr -ge 16 && $cidr -lt 24 ]] && cidr=24
-          echo "${ip%.*}.0/${cidr}"
+          local maskval=$((16#${prefix#0x}))
+          local cidr=0 m=$maskval
+          while (( m > 0 )); do (( cidr += m & 1 )); (( m >>= 1 )); done
+          local IFS='.'; read -r a b c d <<< "$ip"; unset IFS
+          local ipnum=$(( (a<<24)|(b<<16)|(c<<8)|d ))
+          local net=$(( ipnum & maskval ))
+          printf '%d.%d.%d.%d/%d\n' "$(( (net>>24)&255 ))" "$(( (net>>16)&255 ))" "$(( (net>>8)&255 ))" "$(( net&255 ))" "$cidr"
           return
         fi
         echo "${ip%.*}.0/24"
@@ -197,12 +199,17 @@ echo -e "${BOLD}ML Fleet Scanner${RESET}"
 show_banner
 echo ""
 
-# Resolve subnet
-if [[ -z "$SUBNET" ]]; then
-  SUBNET=$(detect_subnet)
-  echo -e "  Detected subnet: ${CYAN}${SUBNET}${RESET}"
+# Resolve subnet. Priority: --subnet flag > SHOW_SUBNET (per-show config) >
+# auto-detect. The per-show value avoids the recurring "scanned too narrow a
+# range" miss (this network is a /22, auto-detect used to cap at /24).
+if [[ -n "$SUBNET" ]]; then
+  echo -e "  Using subnet:    ${CYAN}${SUBNET}${RESET} ${DIM}(--subnet)${RESET}"
+elif [[ -n "${SHOW_SUBNET:-}" ]]; then
+  SUBNET="$SHOW_SUBNET"
+  echo -e "  Using subnet:    ${CYAN}${SUBNET}${RESET} ${DIM}(SHOW_SUBNET, shows/$ML_SHOW.conf)${RESET}"
 else
-  echo -e "  Using subnet:    ${CYAN}${SUBNET}${RESET}"
+  SUBNET=$(detect_subnet)
+  echo -e "  Detected subnet: ${CYAN}${SUBNET}${RESET} ${DIM}(auto)${RESET}"
 fi
 echo -e "  Scanning port:   ${CYAN}${ADB_PORT}${RESET} (ADB)"
 echo ""
@@ -267,6 +274,14 @@ fi
 
 echo -e "  ${GREEN}Found ${#FOUND_IPS[@]} device(s) with ADB port open:${RESET}"
 echo ""
+
+# Start identify from a CLEAN adb table. A table polluted with stale offline
+# entries (from prior scans/connects) makes get-state return blank → the wall
+# of "unknown" we hit at scale. Reset first. Skip with ML_NO_KILLSERVER=1.
+if [[ -z "${ML_NO_KILLSERVER:-}" ]]; then
+  adb kill-server >/dev/null 2>&1 || true
+  adb start-server >/dev/null 2>&1 || true
+fi
 
 # ADB-identify all devices for display — throttled-parallel (sequential was
 # fine at ~5 devices but races/crawls at fleet scale, producing the wall of

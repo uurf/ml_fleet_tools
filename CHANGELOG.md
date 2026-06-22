@@ -10,6 +10,49 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.1] — 2026-06-22 — SHOW_SUBNET config + fix scanner auto-detect (/22, not /24)
+
+### Added / Fixed
+- **`SHOW_SUBNET` per-show config** — `ml_scan` now uses it when `--subnet` isn't given (priority: `--subnet` > `SHOW_SUBNET` > auto-detect). Set to `172.16.40.0/22` for both shows so nobody has to remember the flag; the fleet is a /22 and a /23 (or auto /24) under-scans, missing devices in `.42`/`.43`.
+- **Fixed `detect_subnet` auto-detect** — it computed the real CIDR from the netmask but then **forced /24** and used `${ip%.*}.0` (only valid for /24), so on this /22 it both narrowed the range *and* picked the wrong network base. Now it computes the network address as `ip & mask` for the true prefix (verified: `172.16.42.110` /22 → `172.16.40.0/22`).
+
+---
+
+## [v1.4.0] — 2026-06-21 — ml_show_migrate: migrate a device between shows
+
+### Added
+- **`ml_show_migrate.sh <from> <to>`** — migrate one **USB-connected** device between shows (e.g. KAGAMI/RED → KAGAMI_BLUE). Thin orchestrator over the tested chain, in a **fail-safe order**: (1) deploy the desired show's `builds/` over USB (app + kiosk, set home); (2) **confirm over USB** the desired app is installed and the kiosk versionName carries the desired suffix — **aborts here, before any destructive change, if `builds/` were wrong** (device stays on USB/current network, recoverable by re-running); (3) `ml_provision` over USB to scrub the other show's app (the destination's `SHOW_REMOVE_PACKAGES`), apply settings, and **switch to the desired wifi** (the device leaves USB/the current network at this point, by design); (4) move the device's serial row from `inventory/<from>.csv` to `inventory/<to>.csv` (device# travels unchanged). Prompts for from/to (implies the other when only two shows configured), has a `--dry-run` that prints the full plan and changes nothing, and `-d <usb-serial>` to target a specific USB device. Final verification is on the destination network (the device has left the source network) — the script prints the exact `scan`/`status` commands to run after switching the laptop's wifi.
+
+> Validated device-free (syntax, shellcheck, config resolution, dry-run end-to-end, inventory-move logic). Live migration test pending hardware.
+
+### Added — device→show registry backbone (not yet wired)
+- **`apps_script/registry.gs`** — a dedicated single-purpose Google Sheet web app: the canonical device→show membership store, separate from the drift-prone tracking/log sheets. **One row per device keyed on Serial** (`Serial|Show|Device|Status|Source|Updated`); a migration is an UPDATE of the `Show` cell (upsert-by-serial), so a device structurally cannot be in two shows at once. `doPost` upserts (tools POST, humans never edit); `doGet?format=inventory&show=X` returns `Device,Serial` CSV — exactly what `fleet_dashboard.html` loadCSV() consumes, so the dashboard can read live per-show inventory straight from it. Syntax-checked + upsert logic unit-tested. **Pending:** stand up the sheet + deploy; then wire the toolkit (single registry URL config + `ml_provision`/`ml_show_migrate` POST upserts) and the scan-vs-registry drift reconcile — deferred until the sheet exists and the read path (live-fetch vs supervisor-sync) is chosen.
+
+---
+
+## [v1.3.3] — 2026-06-21 — Fix fleet-scale device drops: backgrounded adb shell ate the loop's stdin
+
+### Fixed (root cause of the status mass-drop, and a latent deploy/shutdown bug)
+- **`ml_status` silently dropped most devices at scale** — a sweep of 188 reachable devices produced only ~`MAX_PARALLEL` records (e.g. 8), with no error. Cause: `collect_device` runs backgrounded inside `while read … <<< "$ALIVE"`, and **`adb shell` reads stdin** — so the backgrounded adb consumed the loop's own device-list input, the loop hit EOF after the first batch, and the rest were never collected. (Stubs missed it because stub `adb` doesn't read stdin; *real* `adb shell` does — reproduced once the stub drained stdin.) Fixed: `</dev/null` on the backgrounded jobs **and** the `adb_s`/`adb_set` helpers, in the collect, `--fix`, and probe loops. Plus defense-in-depth: a post-collection sweep emits an **ERROR** record for any reachable device that produced no record, so `Total` always reconciles (OK + Issues + Error + Offline = device count) and a vanished job can never be a silent drop.
+- **Same pattern fixed in `ml_deploy`** (`run_parallel`, `cmd_shutdown`, `cmd_push`) — these background `adb shell`-calling work inside `while read … <<< "$list"` loops too, so fleet `deploy`/`shutdown`/`push` would drop devices at scale (likely a contributor to the earlier shutdown stragglers). All backgrounded jobs now `</dev/null`.
+- `ml_scan` was unaffected — its identify pass uses `for ip in "${array[@]}"` (no stdin read), which is why scans found the full fleet while status dropped it.
+
+> Validated device-free with a stdin-draining `adb` stub: 40/40 collected after the fix (8/40 before); run_parallel 30/30. Live full-fleet re-test still recommended to confirm at 190.
+
+## [v1.3.2] — 2026-06-21 — ml_status/ml_scan reliability at fleet scale
+
+### Fixed
+- **`ml_status` no longer drops devices or reports false OFFLINE at scale.** Root causes, all fixed:
+  - It built its work list from `adb devices` (the connection table), which decays between runs → devices that were powered-on showed as OFFLINE / "0 online". Now it drives off the **expected device file**, port-probes each in parallel, `adb connect`s the responders (handshake), then collects — non-responders are the only OFFLINE.
+  - Per-device collection ran at `MAX_PARALLEL=30`; ~20 adb calls/device through one server collided and returned blank, **silently dropping ~2/3 of devices at ~90 scale**. Lowered to **8** (`ML_STATUS_PARALLEL` to override) and `collect_device` now runs with errexit disabled in its (backgrounded) subshell so a blank/partial read can't abort it before writing its record.
+  - A reachable-but-unreadable device is now emitted as **ERROR** (not silently dropped); the summary adds an `Error:` count and **`Total` reconciles** with the device-list count (OK + Issues + Error + Offline).
+- **`ml_scan` resets the adb server before identify** (`kill-server`), clearing the polluted-table state that produced the wall of "unknown" at scale.
+- Both: skip the server reset with `ML_NO_KILLSERVER=1`.
+
+> Diagnosed live at ~90 devices in Osaka. Validated device-free with stubbed nc/adb (accounting + ERROR/OFFLINE paths); stress-test against the live fleet pending (devices powered down to avoid overheating).
+
+---
+
 ## [v1.3.1] — 2026-06-20 — ml_deploy locate: beep a device to find it physically
 
 ### Added
