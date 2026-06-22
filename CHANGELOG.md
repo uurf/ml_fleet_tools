@@ -10,6 +10,14 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.1] — 2026-06-22 — SHOW_SUBNET config + fix scanner auto-detect (/22, not /24)
+
+### Added / Fixed
+- **`SHOW_SUBNET` per-show config** — `ml_scan` now uses it when `--subnet` isn't given (priority: `--subnet` > `SHOW_SUBNET` > auto-detect). Set to `172.16.40.0/22` for both shows so nobody has to remember the flag; the fleet is a /22 and a /23 (or auto /24) under-scans, missing devices in `.42`/`.43`.
+- **Fixed `detect_subnet` auto-detect** — it computed the real CIDR from the netmask but then **forced /24** and used `${ip%.*}.0` (only valid for /24), so on this /22 it both narrowed the range *and* picked the wrong network base. Now it computes the network address as `ip & mask` for the true prefix (verified: `172.16.42.110` /22 → `172.16.40.0/22`).
+
+---
+
 ## [v1.4.0] — 2026-06-21 — ml_show_migrate: migrate a device between shows
 
 ### Added
