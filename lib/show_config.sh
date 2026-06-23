@@ -211,13 +211,55 @@ _sc_init() {
     SHOW_INVENTORY_FILE="$SHOW_INVENTORY_FILE_DEFAULT"
   fi
 
+  # Canonical device→show registry (registry.gs web app) — the single, dedicated
+  # serial→show store, SHARED across shows (the registry has a Show column; one
+  # URL for all shows, unlike the per-show tracker sheets in SHOW_SHEETS_URL).
+  # Env-overridable; blank disables registry posting. Wired into ml_provision
+  # (provision_complete) so every commissioned/migrated device records itself.
+  : "${SHOW_REGISTRY_URL:=https://script.google.com/macros/s/AKfycbxdvol0CF2zt7mKvyGiNqnCAFuioRJsu7Mycfm8onHOzbgyTbdYBUwVZSDYLnWSiW88/exec}"
+
   ML_SHOW="$show_id"
   export ML_SHOW SHOW_NAME SHOW_SSID SHOW_WIFI_PASSWORD SHOW_WIFI_SECURITY \
          SHOW_PACKAGE SHOW_EXPECTED_APK SHOW_EXPECTED_OS SHOW_KIOSK_VERSION \
          SHOW_KIOSK_SUFFIX SHOW_REMOVE_PACKAGES SHOW_SUBNET SHOW_BRIGHTNESS SHOW_SHEETS_URL \
+         SHOW_REGISTRY_URL \
          SHOW_DATA_DIR SHOW_DATA_REQUIRED SHOW_DATA_OPTIONAL SHOW_DISK_WARN_PCT \
          SHOW_DEVICES_FILE SHOW_DEVICES_FILE_DEFAULT \
          SHOW_INVENTORY_FILE SHOW_INVENTORY_FILE_DEFAULT
+}
+
+# Upsert a device's show membership into the canonical registry (registry.gs).
+# registry_upsert <serial> <show> [device#] [status] [source]
+# No-op if SHOW_REGISTRY_URL is blank. Unlike update_sheet(), this WARNS on
+# failure (stderr) instead of silently swallowing it — a failed registry write
+# should be visible so the operator can re-run.
+registry_upsert() {
+  [[ -z "${SHOW_REGISTRY_URL:-}" ]] && return 0
+  local serial="$1" show="$2" device="${3:-}" status="${4:-active}" source="${5:-provision}"
+  local GREEN="${GREEN:-}" YELLOW="${YELLOW:-}" DIM="${DIM:-}" RESET="${RESET:-}"
+  if [[ -z "$serial" ]]; then
+    echo -e "  ${YELLOW}⚠ registry: empty serial — skipped${RESET}" >&2; return 0
+  fi
+  local out rc
+  out=$(REG_URL="$SHOW_REGISTRY_URL" SERIAL="$serial" SHOW="$show" DEVICE="$device" \
+        STATUS="$status" SOURCE="$source" python3 -c '
+import urllib.request, json, os, sys
+data=json.dumps({"serial":os.environ["SERIAL"],"show":os.environ["SHOW"],
+                 "device":os.environ["DEVICE"],"status":os.environ["STATUS"],
+                 "source":os.environ["SOURCE"]}).encode()
+req=urllib.request.Request(os.environ["REG_URL"], data=data,
+                           headers={"Content-Type":"application/json"})
+try:
+    sys.stdout.write(urllib.request.urlopen(req, timeout=15).read().decode())
+except Exception as e:
+    sys.stderr.write("ERR:"+str(e)); sys.exit(1)
+' 2>&1) && rc=0 || rc=$?
+  if [[ $rc -eq 0 && "$out" == *'"ok":true'* ]]; then
+    echo -e "  ${GREEN}✓${RESET} registry: $serial → $show ${DIM}(device ${device:-?})${RESET}" >&2
+  else
+    echo -e "  ${YELLOW}⚠ registry update FAILED for $serial${RESET} — ${out}" >&2
+    echo -e "    ${DIM}re-run, or POST {serial,show} to the registry manually${RESET}" >&2
+  fi
 }
 
 # Print the resolved show. Safe for read-only scripts.
