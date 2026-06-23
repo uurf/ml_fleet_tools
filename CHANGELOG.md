@@ -10,6 +10,15 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.2] — 2026-06-23 — Wire provisioning into the canonical device→show registry
+
+### Added
+- **`ml_provision` now records show membership in the registry** at `provision_complete` — `registry_upsert <serial> <show> <device#>` POSTs to the new `SHOW_REGISTRY_URL` (the `registry.gs` web app; one shared URL across shows). Fires on both fresh commissioning **and** the provision-based RED↔BLUE move (both reach `provision_complete` under the target show), so the canonical serial→show store stays current automatically. Keyed on the hardware serial (`ro.serialno`).
+- `SHOW_REGISTRY_URL` resolved + exported by `lib/show_config.sh` (shared; env-overridable; blank disables posting). `registry_upsert()` lives there too, reusable by other scripts.
+- **`registry_upsert` WARNS on failure** (stderr) instead of silently eating it — unlike `update_sheet()`, whose silent swallow is what made a missing sheet row a mystery. A failed registry write is now visible so the operator can re-run.
+
+> Validated live: success path posts + returns `ok`; failure path (bad URL) prints a warning and does **not** abort under `set -euo pipefail`. Per-show tracker sheets (`SHOW_SHEETS_URL` → `Code.gs`) are unchanged — the registry is the separate, dedicated membership store.
+
 ## [v1.4.1] — 2026-06-22 — SHOW_SUBNET config + fix scanner auto-detect (/22, not /24)
 
 ### Added / Fixed

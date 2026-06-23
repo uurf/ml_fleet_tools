@@ -752,6 +752,10 @@ if [[ "$MODE" != "check" ]]; then
     echo "$(date +%Y-%m-%dT%H:%M:%S),$DEVICE_NUMBER,$CASE_NUMBER,$OPERATOR_INITIALS,$DEVICE_SERIAL,$MAC,$DEVICE_IP,${LUMIN_VERSION:-$BUILD_ID},$BUILD_ID,$BUILD_TYPE" >> "$LOG_FILE"
     echo -e "${GREEN}${BOLD}Provisioning complete.${RESET}  ${DIM}(logged to provisioned_devices.csv)${RESET}"
     update_sheet "provision_complete" "$DEVICE_SERIAL" "$DEVICE_NUMBER" "$CASE_NUMBER" "$WIFI_CONNECTED" "$OPERATOR_INITIALS"
+    # Record show membership in the canonical registry (serial→show). Fires on
+    # both fresh commissioning and the provision-based RED↔BLUE move, since both
+    # reach provision_complete under the target show's ML_SHOW.
+    registry_upsert "$DEVICE_SERIAL" "$ML_SHOW" "$DEVICE_NUMBER" "active" "provision"
   fi
 else
   echo -e "${BOLD}Check complete.${RESET}"
