@@ -10,6 +10,13 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.4] — 2026-06-23 — SHOW_EXPECTED_OS is an allow-list (accept 1.12.1)
+
+### Changed
+- **`SHOW_EXPECTED_OS` now accepts a space-separated allow-list** — set to `"1.4.1 1.12.1"` for both shows. 1.12.1 is an *expected* alternate, not drift: flashing devices up from 1.4.1 to 1.12.1 revives ones with a dead input stack (hand/controller unresponsive), and the show runs fine on it. `ml_status` (new `check_in()` helper) and `fleet_dashboard.html` (`verBadge` + the OS issue flag) now treat the value as "is one of," so 1.12.1 devices stop false-flagging as wrong-OS. Single-value configs (apk/kiosk) are unaffected — a one-token list is exact match.
+
+> Open item: confirm ADB parity on 1.12.1 with one `ml_provision.sh --check` when the network's back (basic ADB already proven — those devices scan + report OS/serial over ADB).
+
 ## [v1.4.3] — 2026-06-23 — Kiosk drift target → 1.1 (red 1.1r, blue 1.1b)
 
 ### Changed
