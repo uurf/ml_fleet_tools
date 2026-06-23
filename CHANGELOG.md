@@ -10,6 +10,11 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.3] — 2026-06-23 — Kiosk drift target → 1.1 (red 1.1r, blue 1.1b)
+
+### Changed
+- `SHOW_KIOSK_VERSION` bumped `1.0`→`1.1` for both shows (KAGAMI `1.1r`, KAGAMI_BLUE `1.1b`). Config-only; suffix (`r`/`b`) unchanged. Devices still on `1.0` now flag as kiosk-drift in `status`/dashboard until the `1.1` build is deployed — the check working as intended. Drop the matching `kiosk-…-v1.1{b,r}.apk` into `builds/` for `deploy` to install.
+
 ## [v1.4.2] — 2026-06-23 — Wire provisioning into the canonical device→show registry
 
 ### Added
