@@ -563,6 +563,16 @@ check() {
   fi
 }
 
+# Like check(), but `want` is a space-separated ALLOW-LIST — pass if val is any
+# of them. Used for OS, where 1.12.x is an accepted alternate to 1.4.1 (newer
+# MLOS revives devices with a dead input stack on 1.4.1; expected drift).
+check_in() {
+  local val="$1" want="$2" w
+  if [[ "$want" == "" ]]; then echo "skip"; return; fi
+  for w in $want; do [[ "$val" == "$w" ]] && { echo "pass"; return; }; done
+  echo "fail"
+}
+
 # ── Render table ─────────────────────────────────────────────
 render_table() {
   local files=("$RUN_DIR"/*.json)
@@ -631,7 +641,7 @@ print(
     c_dev=$(check "$dev_on" "true")
     c_usb=$(check "$usb_on" "true")
     c_update=$(check "$auto_off" "true")
-    c_os=$(check "$os_ver" "$EXPECTED_OS")
+    c_os=$(check_in "$os_ver" "$EXPECTED_OS")   # allow-list: 1.4.1 OR 1.12.x
     c_apk=$(check "$apk_ver" "$EXPECTED_APK")
     c_kiosk=$(check "$kiosk_ver" "$EXPECTED_KIOSK")
     # Kiosk show-marker: versionName must END WITH this show's suffix (r/b).

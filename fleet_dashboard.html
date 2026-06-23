@@ -400,7 +400,7 @@ function deviceIssues(d) {
 
   // Wrong OS version. Expected rides in the JSON (expected_os, from
   // SHOW_EXPECTED_OS) so real loads enforce it, not just the demo. Blank skips.
-  if (d.expected_os && d.os_version && d.os_version !== d.expected_os) issues.push('os');
+  if (d.expected_os && d.os_version && !d.expected_os.trim().split(/\s+/).includes(d.os_version)) issues.push('os');
 
   // Wrong / missing show APK (apk.expected_version from SHOW_EXPECTED_APK).
   if (!d.apk || !d.apk.installed) issues.push('apk');
@@ -542,8 +542,11 @@ function countCell(items) {
 
 function verBadge(ver, expected) {
   if (!ver) return `<span class="ver-badge missing">MISSING</span>`;
-  if (expected && ver !== expected) return `<span class="ver-badge mismatch">${ver}</span>`;
-  if (expected && ver === expected) return `<span class="ver-badge ok">${ver}</span>`;
+  // `expected` may be a space-separated allow-list (e.g. OS "1.4.1 1.12.1").
+  // Single values still work (split → one-element list → exact match).
+  const ok = expected && expected.trim().split(/\s+/).includes(ver);
+  if (expected && !ok) return `<span class="ver-badge mismatch">${ver}</span>`;
+  if (ok) return `<span class="ver-badge ok">${ver}</span>`;
   return `<span class="ver-badge">${ver}</span>`;
 }
 
