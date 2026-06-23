@@ -10,6 +10,11 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.5] — 2026-06-23 — Correct v1.4.3: kiosk stays 1.0; RED show app → 1.1
+
+### Fixed
+- **v1.4.3 bumped the wrong field.** It set `SHOW_KIOSK_VERSION` to `1.1`, but the kiosk APKs are still `1.0r`/`1.0b` — reverted both kiosks to `1.0r`/`1.0b`. The actual revision was the **RED show app**: `SHOW_EXPECTED_APK` `0.1`→`1.1`. The show app's `versionName` carries **no show suffix** (the package `com.tindrum.kagami.red` already encodes the show — only the *shared* kiosk package needs the `r`/`b` suffix). BLUE show app unchanged (`0.1`, not yet rebuilt).
+
 ## [v1.4.4] — 2026-06-23 — SHOW_EXPECTED_OS is an allow-list (accept 1.12.1)
 
 ### Changed
