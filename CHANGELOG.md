@@ -10,6 +10,15 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.7] — 2026-06-24 — Local-liaison bilingual playbook set
+
+### Added
+- **`docs/status_dashboard_playbook.html`** and **`docs/fleet_power_playbook.html`** — bilingual (EN/JA) printable runbooks for the two remaining liaison scenarios: morning status → feed `fleet_dashboard.html` → read it, and EOD shutdown / reboot. Together with `deploy_apk_playbook.html` they cover the trainable local-liaison set (deploy / morning status / EOD shutdown).
+
+### Changed
+- All three liaison playbooks open with a **Red/Blue "Set the show first" gate** (`./ml_show.sh use KAGAMI | KAGAMI_BLUE`), lead the network step with the **show SSID** (not the transient `172.16.40.x` subnet), and keep on-screen text English in both columns.
+- `deploy_apk_playbook.html`: install path **wildcarded** (`builds/kagami-{red,blue}-v*.apk`) so it never rots per release; install detail states the real **~25 min / no-progress-bar** runtime; plainer "device that keeps dropping off" wording; dashboard hover-for-detail tip; USB-unplug + 30–50s force-off for stuck devices.
+
 ## [v1.4.6] — 2026-06-24 — Canonical-inventory sync tool, asset-map fixes, deploy playbook, BLUE app 1.1
 
 ### Added
