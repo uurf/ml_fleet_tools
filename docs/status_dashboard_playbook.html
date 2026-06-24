@@ -352,12 +352,12 @@
   <div class="step-content">
     <div class="lang-block">
       <div class="step-label">Read the board — green is good</div>
-      <div class="step-detail">Green rows are healthy. Flagged rows mean: wrong <b>OS</b> or <b>app</b>, kiosk wrong/missing, data-folder problem, <b>/sdcard</b> nearly full, hand-nav off, low battery, or <b>OFFLINE</b>. Use the filter dropdown to isolate one issue type.</div>
+      <div class="step-detail">Green rows are healthy. Flagged rows mean: wrong <b>OS</b> or <b>app</b>, kiosk wrong/missing, data-folder problem, <b>/sdcard</b> nearly full, hand-nav off, low battery, or <b>OFFLINE</b>. Use the filter dropdown to isolate one issue type, and <b>hover over a flag to see the detail</b> for that device.</div>
       <div class="watch"><b>OFFLINE</b> = the device didn't answer this run. Re-run status — most rejoin. If one stays offline but is powered and running, note it for the supervisor.</div>
     </div>
     <div class="lang-block ja">
       <div class="step-label">ボードを読む — 緑が正常</div>
-      <div class="step-detail">緑の行は正常です。flag された行の意味: <b>OS</b> または <b>app</b> が不正、kiosk が不正/欠落、データフォルダの問題、<b>/sdcard</b> の空き不足、ハンドナビ オフ、バッテリー低下、または <b>OFFLINE</b>。フィルター（filter）で特定の種類だけ表示できます。</div>
+      <div class="step-detail">緑の行は正常です。flag された行の意味: <b>OS</b> または <b>app</b> が不正、kiosk が不正/欠落、データフォルダの問題、<b>/sdcard</b> の空き不足、ハンドナビ オフ、バッテリー低下、または <b>OFFLINE</b>。フィルター（filter）で特定の種類だけ表示でき、<b>flag にカーソルを合わせる</b>とそのデバイスの詳細が表示されます。</div>
       <div class="watch"><b>OFFLINE</b> = その実行でデバイスが応答しなかった。status を再実行するとほとんど復帰します。電源が入って動作しているのに offline のままなら、デバイス# を控えてスーパーバイザーへ。</div>
     </div>
   </div>
@@ -388,7 +388,7 @@
   <div class="step-content">
     <div class="lang-block">
       <div class="step-label">Each <code>status</code> run is a fresh live read</div>
-      <div class="step-detail"><code>status</code> and <code>status --json</code> each re-probe the whole fleet from scratch, so two runs minutes apart can differ — a device can be online in one and offline in the next. That's normal. Re-run to confirm before acting, and don't chase a single flapping device's flags.</div>
+      <div class="step-detail"><code>status</code> and <code>status --json</code> each re-probe the whole fleet from scratch, so two runs minutes apart can differ — a device can be online in one and offline in the next. That's normal. Re-run to confirm before acting, and don't chase the flags on a single device that keeps dropping off.</div>
     </div>
     <div class="lang-block ja">
       <div class="step-label">各 <code>status</code> は毎回ライブで取得</div>

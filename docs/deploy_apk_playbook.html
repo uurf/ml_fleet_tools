@@ -368,20 +368,20 @@
   <div class="step-content">
     <div class="lang-block">
       <div class="step-label">Install the new APK</div>
-      <div class="step-detail">Push just the new app to all connected devices, in parallel — a clean in-place upgrade. This is the <em>heavy</em> step (~150 MB per device); expect several minutes. (The version in the file name changes each release.)</div>
+      <div class="step-detail">Push just the new app to all connected devices, in parallel — a clean in-place upgrade. This is the <em>heavy</em> step: ~150 MB to every device over wifi. <b>Even in ideal conditions this took ~25 minutes, and there's no progress bar — it will look frozen but isn't, so don't cancel it.</b> (The version changes each release, so the command uses a <code>v*</code> wildcard — it installs whichever build is in <code>builds/</code>, which is why step 1 keeps just one there.)</div>
       <div class="cmd"># Red:
-./ml_deploy.sh install builds/kagami-red-v1.1.apk
+./ml_deploy.sh install builds/kagami-red-v*.apk
 # Blue:
-./ml_deploy.sh install builds/kagami-blue-v1.1.apk</div>
+./ml_deploy.sh install builds/kagami-blue-v*.apk</div>
       <div class="watch">Goal: <b>Success: &lt;count&gt;&nbsp;&nbsp;Failed: 0</b>. A few fail → re-run the same command. Many fail → re-run <code>connect</code>, then install.</div>
     </div>
     <div class="lang-block ja">
       <div class="step-label">新しい APK をインストール</div>
-      <div class="step-detail">新しいアプリのみを、接続済みの全デバイスへ並列で配信します — その場でのクリーンなアップグレードです。ここはデータ量が多い<em>重い</em>手順（1デバイス約150MB）で、数分かかります。（ファイル名のバージョンはリリースごとに変わります。）</div>
+      <div class="step-detail">新しいアプリのみを、接続済みの全デバイスへ並列で配信します — その場でのクリーンなアップグレードです。ここは<em>重い</em>手順です: 全デバイスへ wifi 経由で約150MB。<b>理想的な条件でも約25分かかり、進捗バーはありません — 止まって見えても動いているので、中断しないでください。</b>（バージョンはリリースごとに変わるため、コマンドは <code>v*</code> ワイルドカードを使い、<code>builds/</code> にあるビルドをインストールします。だから手順1で1つだけにしておきます。）</div>
       <div class="cmd"># Red:
-./ml_deploy.sh install builds/kagami-red-v1.1.apk
+./ml_deploy.sh install builds/kagami-red-v*.apk
 # Blue:
-./ml_deploy.sh install builds/kagami-blue-v1.1.apk</div>
+./ml_deploy.sh install builds/kagami-blue-v*.apk</div>
       <div class="watch">目標: <b>Success: &lt;count&gt;&nbsp;&nbsp;Failed: 0</b>。数台失敗 → 同じコマンドを再実行。多数失敗 → <code>connect</code> を再実行してから install。</div>
     </div>
   </div>
@@ -447,7 +447,7 @@
   <div class="num">·</div>
   <div class="step-content">
     <div class="lang-block">
-      <div class="step-label">Don't trust a flapping device's flags</div>
+      <div class="step-label">Don't trust the flags on a device that keeps dropping off</div>
       <div class="step-detail">A device that's intermittently unresponsive can return partial reads that show up as false setting-flags. If one device flags oddly, verify on the device before acting. If it keeps dropping but is powered and running, it has likely lost WiFi-ADB — bench it (USB re-provision or flash) rather than chase the flags.</div>
     </div>
     <div class="lang-block ja">
