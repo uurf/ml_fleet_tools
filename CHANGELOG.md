@@ -10,6 +10,16 @@ Format: [Semantic Versioning](https://semver.org) — `major.minor.patch`
 
 ---
 
+## [v1.4.6] — 2026-06-24 — Canonical-inventory sync tool, asset-map fixes, deploy playbook, BLUE app 1.1
+
+### Added
+- **`utilities/ml_registry_sync.sh`** — bulk-build the canonical serial→show registry from an `ml_status --json` read (`--from-json`, `--map`, `--dry-run`). Used to build the RED inventory (183 devices); point it at BLUE next.
+- **`docs/deploy_apk_playbook.html`** — bilingual (EN/JA) printable runbook for pushing a new show-app APK to the fleet (power → update gate → scan → connect → baseline → install → reboot → verify). On-screen text kept in English in both columns to match the UI.
+
+### Fixed / Changed
+- **`asset_serial_list.csv`** — corrected device `120` (was mapped to the wrong serial `GB62XT0000M7`, which is actually `151`) and added the two missing devices `120` (`GA62XT0100BV`) and `317` (`G572XT1001DF`). No duplicate device#s remain; matches the live registry.
+- **`shows/KAGAMI_BLUE.conf`** — `SHOW_EXPECTED_APK` `0.1`→`1.1` in anticipation of the BLUE 1.1 build.
+
 ## [v1.4.5] — 2026-06-23 — Correct v1.4.3: kiosk stays 1.0; RED show app → 1.1
 
 ### Fixed
