@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploy APK(s) to the Fleet — Playbook</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+    --warn-bg: #fff8dc;
+    --warn-border: #d4b853;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 1.5rem 1.75rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ja {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS PGothic', sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .title-ja { font-size: 15px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .subtitle { font-size: 12.5px; color: var(--muted); }
+  .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 1.2rem; }
+  .meta em { font-style: normal; font-weight: 700; color: var(--ink); }
+
+  .draft-warning {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.4rem;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .draft-warning strong { display: block; margin-bottom: 2px; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+    display: flex;
+    gap: 1rem;
+  }
+  .section-label .en-h, .section-label .ja-h { flex: 1; }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.7rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-of-type { border-bottom: none; }
+
+  .num {
+    width: 20px;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: right;
+    margin-top: 1px;
+  }
+
+  .step-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .lang-block .step-label {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 3px;
+  }
+
+  .lang-block .step-detail {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .lang-block .step-detail + .step-detail { margin-top: 4px; }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .cmd {
+    display: block;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: #111;
+    color: #f4f4f4;
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin: 5px 0 2px;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .watch {
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--badge-bg);
+    border-left: 3px solid var(--ink);
+    border-radius: 0 3px 3px 0;
+    padding: 3px 8px;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .watch b { font-weight: 700; }
+
+  footer {
+    margin-top: 1.4rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--rule);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0.6rem 0.8rem; max-width: none; }
+    @page { margin: 0.7cm; size: A4; }
+    .step { page-break-inside: avoid; }
+    .section-label { page-break-after: avoid; }
+    .cmd { background: #111 !important; color: #f4f4f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .watch, .draft-warning { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Deploy APK(s) to the Fleet</div>
+    <div class="title-ja ja">フリートへの APK 配信手順</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<div class="meta">
+  Use when pushing a new show-app build to every device. Run from the show laptop, on the show's WiFi. &nbsp;·&nbsp;
+  <span class="ja">新しいショーアプリのビルドを全デバイスへ配信するときに使用します。ショー用ラップトップから、ショーの WiFi に接続して実行します。</span>
+</div>
+
+<div class="draft-warning">
+  <strong>On-screen text stays in English. &nbsp;<span class="ja" style="font-weight:600;">画面に表示される文字は英語のままです。</span></strong>
+  Commands, file names, and terminal output are intentionally left in English in both columns — that is exactly what appears in Terminal and on the device, so it stays matchable. Only the explanation is translated. <span class="ja">コマンド・ファイル名・ターミナルの出力は、両方の列で意図的に英語のままにしています。Terminal やデバイスに表示されるものと一致させるためです。説明文のみを翻訳しています。</span> <span class="ja">（日本語は翻訳者レビュー前の暫定版です。）</span>
+</div>
+
+<div class="meta" style="margin-top:-0.6rem;">
+  These commands assume the laptop is already set to the show — run <code>./ml_show.sh use KAGAMI</code> once if not. On the <code>dev</code> branch, prefix each command with <code>ML_DEV_TEST=1</code> and skip <code>./update.sh</code>. &nbsp;·&nbsp;
+  <span class="ja">以下のコマンドは、ラップトップが既にショーに設定されている前提です。未設定なら <code>./ml_show.sh use KAGAMI</code> を一度実行します。<code>dev</code> ブランチでは各コマンドの先頭に <code>ML_DEV_TEST=1</code> を付け、<code>./update.sh</code> は省略します。</span>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Before you start</span>
+  <span class="ja-h ja">開始前の準備</span>
+</div>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Stage the new APK in <code>builds/</code></div>
+      <div class="step-detail">Place the new show-app APK in <code>builds/</code> and remove the old version. <code>install</code> pushes exactly the file you name, so this is mostly hygiene — make sure the old build isn't lying around.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">新しい APK を <code>builds/</code> に配置</div>
+      <div class="step-detail">新しいショーアプリの APK を <code>builds/</code> に置き、古いバージョンを削除します。<code>install</code> は指定したファイルだけを配信するため、これは主に整理のためです — 古いビルドが残っていないことを確認します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm the expected version (supervisor)</div>
+      <div class="step-detail">The supervisor sets <code>SHOW_EXPECTED_APK</code> in the show config to the new version, so <code>status</code> goes green after the deploy. Operators do not edit this.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">期待バージョンの確認（スーパーバイザー）</div>
+      <div class="step-detail">スーパーバイザーがショー設定の <code>SHOW_EXPECTED_APK</code> を新しいバージョンに設定します。これにより配信後の <code>status</code> が緑になります。オペレーターはこれを編集しません。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Deploy steps</span>
+  <span class="ja-h ja">配信の手順</span>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Power up &amp; confirm the network</div>
+      <div class="step-detail">Power on the cabinets. Confirm the AP broadcasts the show SSID and the laptop is on it (or wired to the same subnet). Give devices ~2 min to boot and join.</div>
+      <div class="cmd">ipconfig getifaddr en0</div>
+      <div class="watch">Laptop should have a <b>172.16.40.x</b> address.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">電源を入れてネットワークを確認</div>
+      <div class="step-detail">キャビネット（cabinets）の電源を入れます。AP がショーの SSID を発信し、ラップトップが同じネットワーク（または同一サブネットの有線）に接続されていることを確認します。デバイスの起動と参加まで約2分待ちます。</div>
+      <div class="cmd">ipconfig getifaddr en0</div>
+      <div class="watch">ラップトップが <b>172.16.40.x</b> のアドレスを持っていること。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Clear the update gate</div>
+      <div class="step-detail">Every command checks your toolkit matches everyone else's. Run this first — it pulls the latest and protects the shared fleet key.</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">If you see the red box <b>Toolkit is out of date</b>, you skipped this.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">アップデートゲートを通過</div>
+      <div class="step-detail">各コマンドは、ツールキットが全員と同じバージョンかを確認します。最初にこれを実行します — 最新を取得し、共有のフリートキーを保護します。</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">赤いボックス <b>Toolkit is out of date</b> が出たら、この手順を飛ばしています。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Scan — run until the count stops growing</div>
+      <div class="step-detail">Build the device list. One pass undercounts a large fleet, so run it, then <code>--append</code> again until the number is stable.</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+      <div class="watch">Subnet line reads <b>172.16.40.0/22</b>; count settles (≈183 for red) and stops growing.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">スキャン — 台数が増えなくなるまで実行</div>
+      <div class="step-detail">デバイスリストを作成します。大規模フリートでは1回では台数が不足するため、実行後に <code>--append</code> を台数が安定するまで繰り返します。</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+      <div class="watch">subnet の行が <b>172.16.40.0/22</b>、台数が安定（RED は約183）して増えなくなること。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">6</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Connect to the fleet</div>
+      <div class="step-detail"><code>install</code> only reaches devices that are adb-connected, so connect first. This also flags any device whose auth lapsed.</div>
+      <div class="cmd">./ml_deploy.sh connect</div>
+      <div class="watch"><b>Connected</b> near the full count, <b>Failed: 0</b>. (<code>port open, adb connect failed</code> = that device needs re-auth.)</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリートに接続</div>
+      <div class="step-detail"><code>install</code> は adb 接続済みのデバイスにのみ届くため、先に接続します。認証が切れたデバイスもここで分かります。</div>
+      <div class="cmd">./ml_deploy.sh connect</div>
+      <div class="watch"><b>Connected</b> が満台数に近く、<b>Failed: 0</b>。（<code>port open, adb connect failed</code> = そのデバイスは再認証が必要。）</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">7</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Baseline status — the "before"</div>
+      <div class="step-detail">Confirm the fleet is healthy before changing anything. Because the expected version is already the new one, <em>every</em> device flags on the app column — that's expected, it's the proof you need the deploy. Look past it: <b>OS, Kiosk, and settings should be green</b>.</div>
+      <div class="cmd">./ml_status.sh</div>
+      <div class="watch">App column shows the <b>old</b> version everywhere; everything else green. A device flagged on something <em>other</em> than the app is a real one to check.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ベースラインの status —「変更前」</div>
+      <div class="step-detail">変更前にフリートが健全か確認します。期待バージョンが既に新版のため、<em>全</em>デバイスがアプリ列で flag されます — これは想定どおりで、配信が必要な証拠です。それ以外を見ます: <b>OS・Kiosk・設定が緑であること</b>。</div>
+      <div class="cmd">./ml_status.sh</div>
+      <div class="watch">アプリ列が全台 <b>旧</b>バージョン、それ以外は緑。アプリ <em>以外</em> で flag されたデバイスは、実際に確認すべきもの。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">8</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Install the new APK</div>
+      <div class="step-detail">Push just the new app to all connected devices, in parallel — a clean in-place upgrade. This is the <em>heavy</em> step (~150 MB per device); expect several minutes. (The version in the file name changes each release.)</div>
+      <div class="cmd">./ml_deploy.sh install builds/kagami-red-v1.1.apk</div>
+      <div class="watch">Goal: <b>Success: &lt;count&gt;&nbsp;&nbsp;Failed: 0</b>. A few fail → re-run the same command. Many fail → re-run <code>connect</code>, then install.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">新しい APK をインストール</div>
+      <div class="step-detail">新しいアプリのみを、接続済みの全デバイスへ並列で配信します — その場でのクリーンなアップグレードです。ここはデータ量が多い<em>重い</em>手順（1デバイス約150MB）で、数分かかります。（ファイル名のバージョンはリリースごとに変わります。）</div>
+      <div class="cmd">./ml_deploy.sh install builds/kagami-red-v1.1.apk</div>
+      <div class="watch">目標: <b>Success: &lt;count&gt;&nbsp;&nbsp;Failed: 0</b>。数台失敗 → 同じコマンドを再実行。多数失敗 → <code>connect</code> を再実行してから install。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">9</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Reboot the fleet</div>
+      <div class="step-detail">The APK is on disk, but a headset may still be running the old version. Reboot relaunches every device on the new app and triggers the boot-time asset scripts. Use <code>reboot</code>, not a manual relaunch — it's the clean, deterministic path.</div>
+      <div class="cmd">./ml_deploy.sh reboot</div>
+      <div class="watch">It fires and returns immediately. Devices take <b>~60–90s</b> to come back — <b>wait ~2 minutes</b> before verifying.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリートを再起動</div>
+      <div class="step-detail">APK はディスク上にありますが、ヘッドセットはまだ旧版を実行している場合があります。再起動で全デバイスを新アプリで起動し直し、起動時のアセットスクリプトも実行します。手動の再起動ではなく <code>reboot</code> を使います — クリーンで確実な方法です。</div>
+      <div class="cmd">./ml_deploy.sh reboot</div>
+      <div class="watch">コマンドは即座に戻ります。デバイスの復帰には <b>約60〜90秒</b>。確認の前に <b>約2分</b> 待ちます。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">10</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Verify — the proof</div>
+      <div class="step-detail">Run <code>status</code> again. It re-probes and reconnects on its own — no need to <code>connect</code> again. The app column should flip to the new version, green.</div>
+      <div class="cmd">./ml_status.sh</div>
+      <div class="watch">App column = <b>new</b> version (green); <b>All-OK</b> jumps to the full count. A few still <em>offline</em> = slow to rejoin; wait a minute and re-run.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">確認 — 証拠</div>
+      <div class="step-detail">もう一度 <code>status</code> を実行します。自身で再プローブ・再接続するため、<code>connect</code> は不要です。アプリ列が新バージョン・緑に変わります。</div>
+      <div class="cmd">./ml_status.sh</div>
+      <div class="watch">アプリ列が <b>新</b>バージョン（緑）、<b>All-OK</b> が満台数に増加。数台が <em>offline</em> のまま = 復帰が遅いだけ。1分待って再実行。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Reading the results</span>
+  <span class="ja-h ja">結果の読み方</span>
+</div>
+
+<div class="step">
+  <div class="num">·</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label"><code>status</code> and <code>status --json</code> are separate live reads</div>
+      <div class="step-detail">Each <code>status</code> run re-probes the whole fleet from scratch, so two runs minutes apart can differ — a device can be online in one and offline in the next. That's normal. <code>--json</code> is a separate run from the table, not the same data reformatted.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label"><code>status</code> と <code>status --json</code> は別々のライブ取得</div>
+      <div class="step-detail">各 <code>status</code> はフリート全体をゼロから再プローブするため、数分違う2回の実行で結果が異なることがあります — あるデバイスが片方で online、もう片方で offline になることも。これは正常です。<code>--json</code> は表とは別の実行であり、同じデータの整形ではありません。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">·</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Don't trust a flapping device's flags</div>
+      <div class="step-detail">A device that's intermittently unresponsive can return partial reads that show up as false setting-flags. If one device flags oddly, verify on the device before acting. If it keeps dropping but is powered and running, it has likely lost WiFi-ADB — bench it (USB re-provision or flash) rather than chase the flags.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">不安定なデバイスの flag は鵜呑みにしない</div>
+      <div class="step-detail">断続的に応答しないデバイスは、部分的な読み取りにより誤った設定 flag を返すことがあります。1台だけ不自然に flag される場合は、対応前にデバイス側で確認します。電源が入って動作しているのに頻繁に落ちる場合は WiFi-ADB を失っている可能性が高く、flag を追うより、ベンチで対処（USB で再プロビジョンまたはフラッシュ）します。</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Deploy APK(s) Playbook · KAGAMI / Tin Drum</span>
+  <span class="ja">APK 配信手順書 · ショー用ラップトップから実行</span>
+</footer>
+
+</body>
+</html>
