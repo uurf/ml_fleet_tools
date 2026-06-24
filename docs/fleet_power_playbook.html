@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Power — Shutdown &amp; Reboot — Playbook</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+    --warn-bg: #fff8dc;
+    --warn-border: #d4b853;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 1.5rem 1.75rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ja {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS PGothic', sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .title-ja { font-size: 15px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .subtitle { font-size: 12.5px; color: var(--muted); }
+  .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 1.2rem; }
+  .meta em { font-style: normal; font-weight: 700; color: var(--ink); }
+
+  .draft-warning {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.4rem;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .draft-warning strong { display: block; margin-bottom: 2px; }
+
+  .showgate {
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 0.65rem 0.9rem 0.55rem;
+    margin-bottom: 1.4rem;
+    page-break-inside: avoid;
+  }
+  .showgate .sg-head { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .showgate .sg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+    display: flex;
+    gap: 1rem;
+  }
+  .section-label .en-h, .section-label .ja-h { flex: 1; }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.7rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-of-type { border-bottom: none; }
+
+  .num {
+    width: 20px;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: right;
+    margin-top: 1px;
+  }
+
+  .step-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .lang-block .step-label {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 3px;
+  }
+
+  .lang-block .step-detail {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .lang-block .step-detail + .step-detail { margin-top: 4px; }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .cmd {
+    display: block;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: #111;
+    color: #f4f4f4;
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin: 5px 0 2px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .watch {
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--badge-bg);
+    border-left: 3px solid var(--ink);
+    border-radius: 0 3px 3px 0;
+    padding: 3px 8px;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .watch b { font-weight: 700; }
+
+  footer {
+    margin-top: 1.4rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--rule);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0.6rem 0.8rem; max-width: none; }
+    @page { margin: 0.7cm; size: A4; }
+    .step { page-break-inside: avoid; }
+    .section-label { page-break-after: avoid; }
+    .cmd { background: #111 !important; color: #f4f4f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .watch, .draft-warning { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Fleet Power — Shutdown &amp; Reboot</div>
+    <div class="title-ja ja">フリートの電源 — シャットダウンと再起動</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<div class="meta">
+  Power the whole fleet down at end of day, or reboot it when needed. From the show laptop, on the show's WiFi. &nbsp;·&nbsp;
+  <span class="ja">一日の終わりにフリート全体の電源を切る、または必要なときに再起動します。ショー用ラップトップから、ショーの WiFi に接続して実行します。</span>
+</div>
+
+<div class="showgate">
+  <div class="sg-cols">
+    <div class="lang-block">
+      <div class="sg-head">⚑ Set the show first — Red or Blue</div>
+      <div class="step-detail">Every command below acts on whichever show this laptop is set to. Set it once, then glance at the <b>Show</b> / <b>SSID</b> banner each command prints — wrong show means wrong fleet.</div>
+      <div class="cmd"># Red — Studio A cabinets, SSID KAGAMI
+./ml_show.sh use KAGAMI
+
+# Blue — flight cases, SSID KAGAMI-BLUE
+./ml_show.sh use KAGAMI_BLUE</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="sg-head">⚑ 最初にショーを設定 — Red か Blue</div>
+      <div class="step-detail">以下の各コマンドは、このラップトップが設定されているショーに対して実行されます。一度設定し、各コマンドが表示する <b>Show</b> / <b>SSID</b> バナーを毎回確認します — ショーを間違えると対象フリートを間違えます。</div>
+      <div class="cmd"># Red — Studio A cabinets, SSID KAGAMI
+./ml_show.sh use KAGAMI
+
+# Blue — flight cases, SSID KAGAMI-BLUE
+./ml_show.sh use KAGAMI_BLUE</div>
+    </div>
+  </div>
+</div>
+
+<div class="draft-warning">
+  <strong>On-screen text stays in English. &nbsp;<span class="ja" style="font-weight:600;">画面に表示される文字は英語のままです。</span></strong>
+  Commands and terminal output are kept in English in both columns — that is exactly what appears in Terminal, so it stays matchable. Only the explanation is translated. <span class="ja">コマンドとターミナルの出力は、両方の列で英語のままにしています。Terminal に表示されるものと一致させるためです。説明文のみを翻訳しています。（日本語は翻訳者レビュー前の暫定版です。）</span>
+</div>
+
+<div class="meta" style="margin-top:-0.6rem;">
+  Set the show first (box above). On the <code>dev</code> branch, prefix commands with <code>ML_DEV_TEST=1</code> and skip <code>./update.sh</code>. &nbsp;·&nbsp;
+  <span class="ja">先にショーを設定します（上のボックス）。<code>dev</code> ブランチでは各コマンドの先頭に <code>ML_DEV_TEST=1</code> を付け、<code>./update.sh</code> は省略します。</span>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">End of day — shut down the fleet</span>
+  <span class="ja-h ja">一日の終わり — フリートをシャットダウン</span>
+</div>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Confirm network &amp; clear the update gate</div>
+      <div class="step-detail">Laptop on <b>your show's SSID</b> — KAGAMI (red) / KAGAMI-BLUE (blue), not the house wifi — then run the gate.</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">Red box <b>Toolkit is out of date</b> = you skipped the gate.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ネットワーク確認とアップデートゲート通過</div>
+      <div class="step-detail">ラップトップが<b>自分のショーの SSID</b>（KAGAMI(red) / KAGAMI-BLUE(blue)、会場の wifi ではなく）に接続されていることを確認し、ゲートを実行します。</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">赤いボックス <b>Toolkit is out of date</b> = ゲートを飛ばしています。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Scan if the list is stale</div>
+      <div class="step-detail">Shutdown acts on the saved device list. If devices were added or moved since the last scan, refresh it first so none are missed. (If you already scanned today, skip this.)</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">リストが古ければスキャン</div>
+      <div class="step-detail">シャットダウンは保存済みのデバイスリストに対して実行されます。前回のスキャン以降にデバイスが追加・移動された場合は、漏れがないよう先に更新します。（当日すでにスキャン済みなら省略可。）</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Shut down the fleet</div>
+      <div class="step-detail">Powers off every device. It probes the list, sends the shutdown, then <em>re-checks and retries</em> up to 4 passes — so it confirms they actually went off, not just fired the command.</div>
+      <div class="cmd">./ml_deploy.sh shutdown</div>
+      <div class="watch">Goal: <b>✓ All devices powered off</b>. Or: <b>⚠ N still responding after 4 passes — check physically</b> (with the IP list).</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリートをシャットダウン</div>
+      <div class="step-detail">全デバイスの電源を切ります。リストをプローブし、シャットダウンを送信し、最大4パスまで<em>再確認・再試行</em>します — コマンドを送るだけでなく、実際に電源が切れたことを確認します。</div>
+      <div class="cmd">./ml_deploy.sh shutdown</div>
+      <div class="watch">目標: <b>✓ All devices powered off</b>。または: <b>⚠ N still responding after 4 passes — check physically</b>（IP リスト付き）。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Mop up any stragglers</div>
+      <div class="step-detail">A few may not take the command on the first run. <b>Re-run the same command</b> — as devices drop off the wifi frees up and the rest go down. Any that still won't go down — power them off by hand at the cabinet: <b>unplug the USB cable from the device, then hold the power button 30–50 seconds</b> (a stuck device won't shut down while USB is attached).</div>
+      <div class="cmd">./ml_deploy.sh shutdown</div>
+      <div class="watch">Safe to re-run as many times as needed. The leftover few are usually just slow to take the command, not broken.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">残りのデバイスを片付ける</div>
+      <div class="step-detail">最初の実行でコマンドを受け付けないデバイスが数台出ることがあります。<b>同じコマンドを再実行</b>します — デバイスが落ちるにつれ WiFi に余裕ができ、残りも電源が切れます。それでも切れないものは、キャビネットで手動で電源オフします: <b>デバイスから USB ケーブルを抜き、電源ボタンを30〜50秒長押し</b>します（固まったデバイスは USB 接続中はシャットダウンしません）。</div>
+      <div class="cmd">./ml_deploy.sh shutdown</div>
+      <div class="watch">何度でも再実行して問題ありません。残る数台は壊れているのではなく、コマンドの受け付けが遅いだけのことが多いです。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">When you need it — reboot</span>
+  <span class="ja-h ja">必要なとき — 再起動</span>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Reboot the fleet</div>
+      <div class="step-detail">Use to clear a stuck state across the fleet, or when a supervisor asks. (After an APK deploy the reboot is already part of that procedure — see the Deploy playbook; you don't reboot separately for that.)</div>
+      <div class="cmd">./ml_deploy.sh reboot</div>
+      <div class="watch">It fires and <b>returns immediately</b> — devices take <b>~60–90s</b> to come back and rejoin. Wait ~2 minutes before expecting them online.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">フリートを再起動</div>
+      <div class="step-detail">フリート全体の不調を解消したいとき、またはスーパーバイザーの指示があるときに使います。（APK 配信後の再起動はその手順に含まれています — Deploy 手順書を参照。配信のために別途再起動する必要はありません。）</div>
+      <div class="cmd">./ml_deploy.sh reboot</div>
+      <div class="watch">コマンドは即座に<b>戻ります</b> — デバイスの復帰・再参加には <b>約60〜90秒</b>。オンラインを期待する前に約2分待ちます。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Good to know</span>
+  <span class="ja-h ja">補足</span>
+</div>
+
+<div class="step">
+  <div class="num">·</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">"Still responding" is not a tool failure</div>
+      <div class="step-detail">It means that device didn't take the shutdown command this pass — re-run, or power it off by hand. Because the tool re-checks each pass, <b>✓ All devices powered off</b> genuinely means off, not just "command sent."</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">「Still responding」はツールの失敗ではない</div>
+      <div class="step-detail">そのデバイスが今回のパスでシャットダウンコマンドを受け付けなかった、という意味です — 再実行するか、手動で電源を切ります。ツールは各パスで再確認するため、<b>✓ All devices powered off</b> は「コマンド送信済み」ではなく、本当に電源が切れたことを意味します。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">·</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">These act on the device list</div>
+      <div class="step-detail">Both <code>shutdown</code> and <code>reboot</code> work from the saved list, so a stale list can miss recently-added devices. When in doubt, scan first (step 2).</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">これらはデバイスリストに対して動作する</div>
+      <div class="step-detail"><code>shutdown</code> も <code>reboot</code> も保存済みのリストに対して動作するため、リストが古いと最近追加されたデバイスを取りこぼすことがあります。不安なときは先にスキャン（手順2）します。</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Fleet Power — Shutdown &amp; Reboot · KAGAMI / Tin Drum</span>
+  <span class="ja">フリートの電源 — シャットダウンと再起動</span>
+</footer>
+
+</body>
+</html>

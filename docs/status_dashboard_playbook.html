@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Status &amp; Dashboard — Playbook</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #555;
+    --rule: #ccc;
+    --bg: #fff;
+    --badge-bg: #f0f0f0;
+    --warn-bg: #fff8dc;
+    --warn-border: #d4b853;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--bg);
+    padding: 1.5rem 1.75rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ja {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'MS PGothic', sans-serif;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .title-ja { font-size: 15px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .subtitle { font-size: 12.5px; color: var(--muted); }
+  .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 1.2rem; }
+  .meta em { font-style: normal; font-weight: 700; color: var(--ink); }
+
+  .draft-warning {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.4rem;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .draft-warning strong { display: block; margin-bottom: 2px; }
+
+  .showgate {
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 0.65rem 0.9rem 0.55rem;
+    margin-bottom: 1.4rem;
+    page-break-inside: avoid;
+  }
+  .showgate .sg-head { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .showgate .sg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.4rem 0 0.6rem;
+    display: flex;
+    gap: 1rem;
+  }
+  .section-label .en-h, .section-label .ja-h { flex: 1; }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.7rem 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+
+  .step:last-of-type { border-bottom: none; }
+
+  .num {
+    width: 20px;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: right;
+    margin-top: 1px;
+  }
+
+  .step-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .lang-block .step-label {
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 3px;
+  }
+
+  .lang-block .step-detail {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .lang-block .step-detail + .step-detail { margin-top: 4px; }
+
+  .step-detail em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .cmd {
+    display: block;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: #111;
+    color: #f4f4f4;
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin: 5px 0 2px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    background: var(--badge-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .watch {
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--badge-bg);
+    border-left: 3px solid var(--ink);
+    border-radius: 0 3px 3px 0;
+    padding: 3px 8px;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .watch b { font-weight: 700; }
+
+  footer {
+    margin-top: 1.4rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--rule);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { padding: 0.6rem 0.8rem; max-width: none; }
+    @page { margin: 0.7cm; size: A4; }
+    .step { page-break-inside: avoid; }
+    .section-label { page-break-after: avoid; }
+    .cmd { background: #111 !important; color: #f4f4f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .watch, .draft-warning { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Morning Status &amp; Dashboard</div>
+    <div class="title-ja ja">朝の status とダッシュボード</div>
+  </div>
+  <div class="subtitle" style="text-align:right;">KAGAMI / Tin Drum</div>
+</header>
+
+<div class="meta">
+  Run each morning to read the fleet's health and surface any device that needs attention before the show. From the show laptop, on the show's WiFi. &nbsp;·&nbsp;
+  <span class="ja">毎朝実行し、フリートの状態を確認して、ショー前に対応が必要なデバイスを洗い出します。ショー用ラップトップから、ショーの WiFi に接続して実行します。</span>
+</div>
+
+<div class="showgate">
+  <div class="sg-cols">
+    <div class="lang-block">
+      <div class="sg-head">⚑ Set the show first — Red or Blue</div>
+      <div class="step-detail">Every command below acts on whichever show this laptop is set to. Set it once, then glance at the <b>Show</b> / <b>SSID</b> banner each command prints — wrong show means wrong fleet.</div>
+      <div class="cmd"># Red — Studio A cabinets, SSID KAGAMI
+./ml_show.sh use KAGAMI
+
+# Blue — flight cases, SSID KAGAMI-BLUE
+./ml_show.sh use KAGAMI_BLUE</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="sg-head">⚑ 最初にショーを設定 — Red か Blue</div>
+      <div class="step-detail">以下の各コマンドは、このラップトップが設定されているショーに対して実行されます。一度設定し、各コマンドが表示する <b>Show</b> / <b>SSID</b> バナーを毎回確認します — ショーを間違えると対象フリートを間違えます。</div>
+      <div class="cmd"># Red — Studio A cabinets, SSID KAGAMI
+./ml_show.sh use KAGAMI
+
+# Blue — flight cases, SSID KAGAMI-BLUE
+./ml_show.sh use KAGAMI_BLUE</div>
+    </div>
+  </div>
+</div>
+
+<div class="draft-warning">
+  <strong>On-screen text stays in English. &nbsp;<span class="ja" style="font-weight:600;">画面に表示される文字は英語のままです。</span></strong>
+  Commands, file names, column headers, and on-screen labels are kept in English in both columns — that is exactly what appears in Terminal and in the dashboard, so it stays matchable. Only the explanation is translated. <span class="ja">コマンド・ファイル名・列見出し・画面のラベルは、両方の列で英語のままにしています。Terminal やダッシュボードに表示されるものと一致させるためです。説明文のみを翻訳しています。（日本語は翻訳者レビュー前の暫定版です。）</span>
+</div>
+
+<div class="meta" style="margin-top:-0.6rem;">
+  Set the show first (box above). On the <code>dev</code> branch, prefix commands with <code>ML_DEV_TEST=1</code> and skip <code>./update.sh</code>. &nbsp;·&nbsp;
+  <span class="ja">先にショーを設定します（上のボックス）。<code>dev</code> ブランチでは各コマンドの先頭に <code>ML_DEV_TEST=1</code> を付け、<code>./update.sh</code> は省略します。</span>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Collect the status</span>
+  <span class="ja-h ja">status を取得</span>
+</div>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Power up &amp; confirm the network</div>
+      <div class="step-detail">Cabinets on, AP broadcasting the show SSID, laptop on it (or wired to the same subnet). Give devices a couple minutes to boot and join.</div>
+      <div class="cmd">ipconfig getifaddr en0</div>
+      <div class="watch">Be on <b>your show's SSID</b> — KAGAMI (red) / KAGAMI-BLUE (blue), not the house wifi (check the macOS wifi menu). A returned address means you're connected.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">電源を入れてネットワークを確認</div>
+      <div class="step-detail">キャビネット（cabinets）の電源を入れ、AP がショーの SSID を発信し、ラップトップが同じネットワーク（または同一サブネットの有線）に接続されていることを確認します。デバイスの起動と参加まで数分待ちます。</div>
+      <div class="cmd">ipconfig getifaddr en0</div>
+      <div class="watch"><b>自分のショーの SSID</b> に接続していること — KAGAMI（red）/ KAGAMI-BLUE（blue）、会場の wifi ではなく（macOS の wifi メニューで確認）。アドレスが返れば接続済みです。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Clear the update gate</div>
+      <div class="step-detail">Pulls the latest toolkit and protects the shared fleet key, so everyone runs the same version.</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">If you see the red box <b>Toolkit is out of date</b>, you skipped this.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">アップデートゲートを通過</div>
+      <div class="step-detail">最新のツールキットを取得し、共有のフリートキーを保護します。全員が同じバージョンで実行するためです。</div>
+      <div class="cmd">./update.sh</div>
+      <div class="watch">赤いボックス <b>Toolkit is out of date</b> が出たら、この手順を飛ばしています。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Scan — run until the count stops growing</div>
+      <div class="step-detail">Refresh the device list. One pass undercounts; run it, then <code>--append</code> until the number is stable.</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+      <div class="watch">Count settles (≈183 for red) and stops growing.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">スキャン — 台数が増えなくなるまで実行</div>
+      <div class="step-detail">デバイスリストを更新します。1回では台数が不足するため、実行後に <code>--append</code> を台数が安定するまで繰り返します。</div>
+      <div class="cmd">./utilities/ml_scan.sh --yes
+./utilities/ml_scan.sh --append --yes</div>
+      <div class="watch">台数が安定（RED は約183）して増えなくなること。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Run status to a JSON file</div>
+      <div class="step-detail">This is what feeds the dashboard. <code>status</code> re-probes and connects on its own — no <code>connect</code> needed. The on-screen summary already tells the story; the JSON file is for the dashboard.</div>
+      <div class="cmd">./ml_status.sh --json &gt; status/latest.json</div>
+      <div class="watch">Read the summary line: <b>Total / All-OK / Issues / Error / Offline</b>. They should add up to the device count.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">status を JSON ファイルに出力</div>
+      <div class="step-detail">これがダッシュボードの入力になります。<code>status</code> は自身で再プローブ・再接続するため、<code>connect</code> は不要です。画面のサマリーだけでも状況は分かります。JSON ファイルはダッシュボード用です。</div>
+      <div class="cmd">./ml_status.sh --json &gt; status/latest.json</div>
+      <div class="watch">サマリー行を確認: <b>Total / All-OK / Issues / Error / Offline</b>。合計がデバイス台数と一致すること。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Load &amp; read the dashboard</span>
+  <span class="ja-h ja">ダッシュボードを読み込んで確認</span>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Open the dashboard</div>
+      <div class="step-detail">Opens <code>fleet_dashboard.html</code> in the browser. It starts empty — you load today's data into it.</div>
+      <div class="cmd">open fleet_dashboard.html</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ダッシュボードを開く</div>
+      <div class="step-detail">ブラウザで <code>fleet_dashboard.html</code> を開きます。最初は空です — 当日のデータを読み込みます。</div>
+      <div class="cmd">open fleet_dashboard.html</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">6</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Load JSON, then load CSV</div>
+      <div class="step-detail">Click <b>Load JSON</b> and pick <code>status/latest.json</code> — the rows fill in. Then click <b>Load CSV</b> and pick <code>asset_serial_list.csv</code> — that fills the <b>Device #</b> column. (Re-load the JSON after every new status run; the dashboard doesn't auto-refresh.)</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">Load JSON、続いて Load CSV</div>
+      <div class="step-detail"><b>Load JSON</b> をクリックして <code>status/latest.json</code> を選ぶと、行が表示されます。次に <b>Load CSV</b> をクリックして <code>asset_serial_list.csv</code> を選ぶと、<b>Device #</b> 列が埋まります。（status を実行するたびに JSON を読み込み直します。ダッシュボードは自動更新しません。）</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">7</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Read the board — green is good</div>
+      <div class="step-detail">Green rows are healthy. Flagged rows mean: wrong <b>OS</b> or <b>app</b>, kiosk wrong/missing, data-folder problem, <b>/sdcard</b> nearly full, hand-nav off, low battery, or <b>OFFLINE</b>. Use the filter dropdown to isolate one issue type, and <b>hover over a flag to see the detail</b> for that device.</div>
+      <div class="watch"><b>OFFLINE</b> = the device didn't answer this run. Re-run status — most rejoin. If one stays offline but is powered and running, note it for the supervisor.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">ボードを読む — 緑が正常</div>
+      <div class="step-detail">緑の行は正常です。flag された行の意味: <b>OS</b> または <b>app</b> が不正、kiosk が不正/欠落、データフォルダの問題、<b>/sdcard</b> の空き不足、ハンドナビ オフ、バッテリー低下、または <b>OFFLINE</b>。フィルター（filter）で特定の種類だけ表示でき、<b>flag にカーソルを合わせる</b>とそのデバイスの詳細が表示されます。</div>
+      <div class="watch"><b>OFFLINE</b> = その実行でデバイスが応答しなかった。status を再実行するとほとんど復帰します。電源が入って動作しているのに offline のままなら、デバイス# を控えてスーパーバイザーへ。</div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">8</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Escalate what you can't clear</div>
+      <div class="step-detail">A device that's still flagged after a re-run — wrong build, missing data, won't come online — goes to the supervisor with its <b>Device #</b> and <b>serial</b>. The morning job is to <em>surface</em> problems, not necessarily fix them.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">解決できないものはエスカレーション</div>
+      <div class="step-detail">再実行しても flag が残るデバイス（不正なビルド、データ欠落、オンラインにならない等）は、<b>Device #</b> と <b>serial</b> を添えてスーパーバイザーへ。朝の作業は問題を<em>洗い出す</em>ことが目的で、必ずしも修正までは行いません。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="section-label">
+  <span class="en-h">Good to know</span>
+  <span class="ja-h ja">補足</span>
+</div>
+
+<div class="step">
+  <div class="num">·</div>
+  <div class="step-content">
+    <div class="lang-block">
+      <div class="step-label">Each <code>status</code> run is a fresh live read</div>
+      <div class="step-detail"><code>status</code> and <code>status --json</code> each re-probe the whole fleet from scratch, so two runs minutes apart can differ — a device can be online in one and offline in the next. That's normal. Re-run to confirm before acting, and don't chase the flags on a single device that keeps dropping off.</div>
+    </div>
+    <div class="lang-block ja">
+      <div class="step-label">各 <code>status</code> は毎回ライブで取得</div>
+      <div class="step-detail"><code>status</code> も <code>status --json</code> も、毎回フリート全体をゼロから再プローブします。そのため数分違う2回の実行で結果が異なることがあります — あるデバイスが片方で online、もう片方で offline になることも。これは正常です。対応前に再実行して確認し、1台だけ不安定なデバイスの flag は追いすぎないようにします。</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Morning Status &amp; Dashboard · KAGAMI / Tin Drum</span>
+  <span class="ja">朝の status とダッシュボード</span>
+</footer>
+
+</body>
+</html>
