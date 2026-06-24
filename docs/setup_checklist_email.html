@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KAGAMI — Machine Setup Checklist (email version)</title>
+</head>
+<!--
+  EMAIL / PASTE VERSION of docs/setup_checklist.html
+  Every style is inlined and the layout is table-based so it survives
+  copy-paste into Apple Mail (which strips <style> blocks, class selectors,
+  and CSS grid/flex). To use: open this file in a browser, Select All (Cmd+A),
+  Copy (Cmd+C), then paste into a new Apple Mail message.
+  This file is intentionally not part of the printable doc set — edit
+  setup_checklist.html for the canonical version, then re-mirror here.
+-->
+<body style="margin:0; padding:0; background:#ffffff;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#ffffff;">
+<tr>
+<td align="center" style="padding:24px 20px;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="820" style="width:820px; max-width:820px; font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; color:#111111;">
+
+  <!-- ================= HEADER ================= -->
+  <tr>
+    <td style="border-bottom:2px solid #111111; padding-bottom:10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td valign="bottom" style="font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;">
+            <div style="font-size:20px; font-weight:700; color:#111111; letter-spacing:-0.01em;">Machine setup checklist</div>
+            <div style="font-size:15px; font-weight:600; color:#555555; margin-top:2px; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">マシンセットアップ・チェックリスト</div>
+            <div style="font-size:12.5px; color:#555555; margin-top:4px;">One-time setup per laptop · see SETUP.md for full instructions</div>
+            <div style="font-size:12.5px; color:#555555; margin-top:2px; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">ラップトップごとに1回のセットアップ・詳細は SETUP.md を参照</div>
+          </td>
+          <td valign="bottom" align="right" style="font-size:12.5px; color:#555555; white-space:nowrap;">KAGAMI / Tin Drum</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ================= BEFORE YOU START ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">Before you start</td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">開始前の準備</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Mac with a free USB-C port while plugged in to power</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">電源に接続した状態で、空きの USB-C ポートがある Mac が必要</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Fleet ADB key file from your team lead</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> — every machine connecting to fleet devices must use this key</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">チームリーダーからフリート ADB キーファイルを受け取る</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> — フリートデバイスに接続するすべてのマシンでこの ADB キーファイルを使用する必要があります</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Internet connection</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">インターネット接続</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= INSTALL ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">Install</td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">インストール</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Open Terminal</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">Press <strong style="color:#111111;">Cmd+Space</strong>, type <strong style="color:#111111;">Terminal</strong>, press Enter</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">ターミナルを開く</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><strong style="color:#111111;">Cmd+Space</strong> を押し、<strong style="color:#111111;">Terminal</strong> と入力して Enter を押す</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Run the installer</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111; word-break:break-all;">curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">Enter your Mac password if prompted. It installs the tools and clones the toolkit, then <strong style="color:#111111;">pauses to ask for the fleet key</strong> (next step).</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">インストーラーを実行</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111; word-break:break-all;">curl -fsSL https://raw.githubusercontent.com/uurf/ml_fleet_tools/main/install.sh | bash</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">求められたら Mac のパスワードを入力。ツールをインストールしツールキットをクローンした後、<strong style="color:#111111;">フリートキーの入力待ちで一時停止します</strong>（次のステップ）。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= FLEET ADB KEY ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">Fleet ADB key</td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">フリート ADB キー</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">When prompted, add the fleet key</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">Get <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> from your team lead and copy it into:</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">~/Developer/ml_toolkit/authorized_keys/</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">Then press <strong style="color:#111111;">Enter</strong>. The installer activates the key and finishes with <strong style="color:#111111;">Installation complete!</strong></div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">プロンプトが表示されたらフリートキーを追加</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">チームリーダーから <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> を受け取り、次の場所にコピーしてください:</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">~/Developer/ml_toolkit/authorized_keys/</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">その後 <strong style="color:#111111;">Enter</strong> を押す。インストーラーがキーを有効化し、<strong style="color:#111111;">Installation complete!</strong> と表示されて完了します。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Don't have the key yet? (fallback)</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">Type <strong style="color:#111111;">s</strong> at the prompt to skip.</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">Later, place <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> at the path above and run <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./install.sh</span> to finish. Look for <strong style="color:#111111;">Fleet ADB key installed</strong>.</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">まだキーが無い場合（暫定対応）</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">プロンプトで <strong style="color:#111111;">s</strong> を入力してスキップしてください。</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">後で <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">adbkey_kagami_fleet</span> を上記のパスに配置し、<span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./install.sh</span> を実行して完了。<strong style="color:#111111;">Fleet ADB key installed</strong> の表示を確認。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= OS IMAGE (OPTIONAL) ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">OS image <span style="font-size:9.5px; font-weight:700; letter-spacing:0.08em; color:#555555; border:1px solid #cccccc; border-radius:3px; padding:0 5px; margin-left:6px;">OPTIONAL</span></td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">OS イメージ <span style="font-size:9.5px; font-weight:700; letter-spacing:0.08em; color:#555555; border:1px solid #cccccc; border-radius:3px; padding:0 5px; margin-left:6px;">任意</span></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="padding:0 0 6px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="50%" valign="top" style="padding-right:18px; font-size:12px; line-height:1.5; color:#555555; font-style:italic;">Only needed if you will flash devices to a clean, factory MLOS state. Most operators can skip this section — flashing is occasional and only for specific problem devices.</td>
+        <td width="50%" valign="top" style="font-size:12px; line-height:1.5; color:#555555; font-style:italic; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">デバイスを工場出荷時のクリーンな MLOS 状態にフラッシュする場合のみ必要。ほとんどのオペレーターはこのセクションをスキップできます — フラッシュは特定の問題のあるデバイスに対してのみ行う作業です。</td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Download OS image from Magic Leap Hub</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">Package Manager → Device OS Versions → select version → Apply Changes → wait → Open Folder</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Magic Leap Hub から OS イメージをダウンロード</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">Package Manager → Device OS Versions → バージョンを選択 → Apply Changes → 待機 → Open Folder</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Copy image folder to toolkit and rename to version number</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">~/Developer/ml_toolkit/os_images/1.4.1/</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">Folder must contain <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">flashall_amd.sh</span> and <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">*.img</span> files</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">イメージフォルダをツールキットにコピーし、バージョン番号にリネーム</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">~/Developer/ml_toolkit/os_images/1.4.1/</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">フォルダには <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">flashall_amd.sh</span> と <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">*.img</span> ファイルが含まれている必要があります。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= SELECT THE SHOW ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">Select the show</td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">ショーを選択</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="border-bottom:1px solid #cccccc; padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Set the active show for this laptop</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">One-time per machine. Your team lead tells you which show — for the main show:</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">Confirm with <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">./ml_show.sh</span> — should report <strong style="color:#111111;">Active show: KAGAMI</strong>. Until this is set, every flash/provision/deploy command stops with a "no show configured" error.</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">このラップトップのアクティブショーを設定</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;">マシンごとに1回。どのショーかはチームリーダーが指示します — メインショーの場合:</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./ml_show.sh use KAGAMI</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">./ml_show.sh</span> を実行して確認 — <strong style="color:#111111;">Active show: KAGAMI</strong> と表示されれば正常です。設定が完了するまで、flash/provision/deploy の各コマンドは "no show configured" エラーで停止します。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= VERIFY ================= -->
+  <tr>
+    <td style="padding:22px 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555;">Verify</td>
+          <td width="50%" style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">確認</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr><td style="padding:9px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td width="26" valign="top" style="font-size:18px; line-height:1.2; color:#111111;">&#9744;</td>
+        <td width="50%" valign="top" style="padding-right:18px;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">Run flash script to confirm setup</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">With the show set and no device connected, it prints the show banner then stops at <strong style="color:#111111;">No device found over USB</strong> — that's success, not an error. A "no show configured" or "out of date" message means the step above (or the toolkit) still needs attention.</div>
+        </td>
+        <td width="50%" valign="top" style="font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          <div style="font-size:15.5px; font-weight:600; line-height:1.4; color:#111111;">フラッシュスクリプトを実行してセットアップを確認</div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:3px;"><span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./ml_os_flash.sh</span></div>
+          <div style="font-size:13.5px; color:#555555; line-height:1.55; margin-top:4px;">ショーが設定され、デバイス未接続の状態では、ショーバナーを表示後 <strong style="color:#111111;">No device found over USB</strong> で停止します — これはエラーではなく成功です。"no show configured" や "out of date" のメッセージが出る場合は、上記の手順（またはツールキット）の対応がまだ必要です。</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= NOTE ================= -->
+  <tr><td style="padding:18px 0 0 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #cccccc; border-radius:4px;">
+      <tr>
+        <td width="50%" valign="top" style="padding:12px 16px; font-size:13px; line-height:1.6; color:#555555;">
+          To update the toolkit later: <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./update.sh</span><br>
+          If a script tells you to update when you run it, this is the command to use.
+        </td>
+        <td width="50%" valign="top" style="padding:12px 16px; font-size:13px; line-height:1.6; color:#555555; font-family:-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;">
+          後でツールキットを更新するには: <span style="font-family:'SF Mono','Fira Code',Menlo,monospace; font-size:12.5px; background:#f0f0f0; border:1px solid #cccccc; border-radius:3px; padding:1px 5px; color:#111111;">cd ~/Developer/ml_toolkit && ./update.sh</span><br>
+          実行時にスクリプトが更新を求めてきた場合は、このコマンドを使用してください。
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ================= FOOTER ================= -->
+  <tr><td style="padding:16px 0 0 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td style="font-size:11.5px; color:#555555;">KAGAMI / Tin Drum &nbsp;·&nbsp; one-time machine setup</td>
+        <td align="right" style="font-size:11.5px; color:#555555;">docs/setup_checklist.html</td>
+      </tr>
+    </table>
+  </td></tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
